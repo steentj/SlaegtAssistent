@@ -1,0 +1,5 @@
+make a plan for the first sprint. The plan must consist of a one or more features, which can be developed in isolation. put all features in a folder under specs  /sprints with the name of the sprint. in the folder make another folder for each feature. name the folder after the feature.
+each feature must contain 3 files:
+1. 'Plan.md' as a series of numbered tasks. Plan these to be developed according to the principles of Test Driven Development (TDD)
+2. 'Requirements.md' for the scope, decisions and context 
+3. 'Validation.md' for how to know the implementation succeeded and can be merged

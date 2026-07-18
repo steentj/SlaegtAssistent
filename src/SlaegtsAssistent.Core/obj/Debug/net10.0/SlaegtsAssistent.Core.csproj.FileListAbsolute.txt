@@ -1,0 +1,11 @@
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/bin/Debug/net10.0/SlaegtsAssistent.Core.deps.json
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/bin/Debug/net10.0/SlaegtsAssistent.Core.dll
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/bin/Debug/net10.0/SlaegtsAssistent.Core.pdb
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.AssemblyInfoInputs.cache
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.AssemblyInfo.cs
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.csproj.CoreCompileInputs.cache
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.dll
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/refint/SlaegtsAssistent.Core.dll
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/SlaegtsAssistent.Core.pdb
+/Users/steen/Projects/SlaegtAssistent/src/SlaegtsAssistent.Core/obj/Debug/net10.0/ref/SlaegtsAssistent.Core.dll
