@@ -4,17 +4,19 @@
 Read a GEDCOM file from disk and turn it into an in-memory domain model (`Person`, `Family`,
 relationships) that later features (Markdown generation, tree visualization) can consume. Maps to
 `specs/Roadmap.md` Trin 1, bullet "Implementer GEDCOM-indlæsning" and `specs/TechStack.md`
-Afsnit 2 (`GedcomParser` NuGet).
+Afsnit 2 (GEDCOM parsing via NuGet library).
 
 ## In Scope
 - Loading a `.ged` file (given a file path or stream) and producing a strongly-typed domain model
   living in `SlaegtsAssistent.Core`.
 - Domain model covering the minimum fields needed for Trin 1's Markdown output: full name, birth
-  date/place, death date/place (if present), parents, and sex.
+  date/place, death date/place (if present), parents, sex, and stable GEDCOM record id.
 - Basic structural validation: a malformed/unreadable file surfaces a clear error rather than a
   cryptic exception or silent partial data.
-- Mapping from the third-party `GedcomParser` library's types into our own domain types, so the
+- Mapping from the third-party GEDCOM parsing library's output into our own domain types, so the
   rest of the app never depends directly on the third-party library's object model.
+- Re-import behavior: if the same GEDCOM is loaded again into an existing in-memory tree, records
+  with matching GEDCOM ids are merged/updated instead of duplicated.
 
 ## Out of Scope
 - Writing/exporting GEDCOM files (not required by any Trin 1 task).
@@ -25,9 +27,8 @@ Afsnit 2 (`GedcomParser` NuGet).
 - Performance tuning for very large GEDCOM files (optimize only if a real bottleneck appears).
 
 ## Decisions & Context
-- **Library:** `GedcomParser` NuGet package (per `TechStack.md`) is used for the low-level GEDCOM
-  tokenizing/parsing. Its types are wrapped, not exposed, so we can swap parsers later without
-  touching consumers.
+- **Library:** `Gedcom.Net.SDK` NuGet package is used for low-level GEDCOM tokenizing/parsing. Its
+  output is wrapped, not exposed, so we can swap parsers later without touching consumers.
 - **Domain model location:** `SlaegtsAssistent.Core/Domain/Person.cs` and
   `SlaegtsAssistent.Core/Domain/FamilyTree.cs` (or similar) — plain C# records/classes with no
   dependency on Avalonia or the parser library's types.

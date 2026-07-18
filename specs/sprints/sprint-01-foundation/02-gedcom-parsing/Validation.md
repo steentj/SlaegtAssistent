@@ -4,6 +4,8 @@
 - [ ] `dotnet test tests/SlaegtsAssistent.Core.Tests` passes, including all tests listed in
       `Plan.md` (single person, two-generation relationships, optional death fields, malformed
       file, missing file).
+- [ ] Domain `Person` preserves GEDCOM person id (`RecordId`) and repeated imports merge by that id
+      instead of creating duplicates.
 - [ ] `IGedcomLoader` / `GedcomLoader` and the domain types (`Person`, `FamilyTree`) live in
       `SlaegtsAssistent.Core` with **no** dependency on Avalonia or any UI project.
 - [ ] Domain types (`Person`, `FamilyTree`) are the only types returned from `GedcomLoader` —
