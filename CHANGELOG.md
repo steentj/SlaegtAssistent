@@ -15,3 +15,10 @@
 - [1e1a11c] Add .gitignore for .NET, xunit, and Avalonia
 - [b5b3ccc] Translate README to Danish and require Danish documentation
 - [57c9b07] Untrack App build artifacts
+
+## 2026-07-19
+- [28e42ef] Add project guidelines and conventions to AGENTS.md
+
+## 2026-07-23
+- [eb05d4c] Inserted  spec for new feature 3 in sprint 1: Add ui functionality for reading a gedcom file
+- [227110c] Implementeret UI-funktionalitet til at læse GEDCOM-fil og parse den til personlisten i UI'et
