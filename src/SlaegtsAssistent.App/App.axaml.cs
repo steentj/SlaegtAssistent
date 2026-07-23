@@ -44,6 +44,7 @@ public partial class App : Application
         services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();
         services.AddSingleton<IApplicationControlService, AvaloniaApplicationControlService>();
         services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();
+        services.AddSingleton<IMarkdownFileStore, FileSystemMarkdownFileStore>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>(provider => new MainWindow
         {

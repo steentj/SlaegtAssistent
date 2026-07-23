@@ -36,7 +36,7 @@ public class MainWindowViewModelTests
     public void SettingSelectedPerson_ShouldRaisePropertyChanged()
     {
         var viewModel = CreateViewModel();
-        var selectedPerson = new PersonListItemViewModel("@I1@", "Anna Jensen");
+        var selectedPerson = new PersonListItemViewModel("@I1@", "Anna Jensen", "/tmp/anna-jensen.md");
         var raisedPropertyNames = new List<string?>();
 
         viewModel.PropertyChanged += (_, args) => raisedPropertyNames.Add(args.PropertyName);
@@ -196,6 +196,40 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_ShouldLoadSelectedPersonsMarkdown_IntoEditor()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var markdownFileStore = new RecordingMarkdownFileStore(_ => "# Redigeret biografi");
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: markdownFileStore);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        viewModel.Editor.Should().NotBeNull();
+        viewModel.Editor!.MarkdownText.Should().Be("# Redigeret biografi");
+        markdownFileStore.LastReadPath.Should().NotBeNull();
+        markdownFileStore.LastReadPath.Should().EndWith(".md");
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_ShouldAskForOutputFolderAndThenLoad_WhenOutputIsMissing()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -351,7 +385,8 @@ public class MainWindowViewModelTests
         ISettingsDialogService? settingsDialogService = null,
         IUserDialogService? userDialogService = null,
         IApplicationControlService? applicationControlService = null,
-        IMarkdownBiographyExportService? markdownBiographyExportService = null)
+        IMarkdownBiographyExportService? markdownBiographyExportService = null,
+        IMarkdownFileStore? markdownFileStore = null)
     {
         return new MainWindowViewModel(
             gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
@@ -361,7 +396,8 @@ public class MainWindowViewModelTests
             settingsDialogService ?? new RecordingSettingsDialogService(null),
             userDialogService ?? new NullUserDialogService(),
             applicationControlService ?? new RecordingApplicationControlService(),
-            markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService());
+            markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService(),
+            markdownFileStore ?? new RecordingMarkdownFileStore());
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
@@ -493,6 +529,28 @@ public class MainWindowViewModelTests
         public void Exit()
         {
             Calls++;
+        }
+    }
+
+    private sealed class RecordingMarkdownFileStore : IMarkdownFileStore
+    {
+        private readonly Func<string, string> _read;
+
+        public RecordingMarkdownFileStore(Func<string, string>? read = null)
+        {
+            _read = read ?? (_ => string.Empty);
+        }
+
+        public string? LastReadPath { get; private set; }
+
+        public string Read(string path)
+        {
+            LastReadPath = path;
+            return _read(path);
+        }
+
+        public void Write(string path, string content)
+        {
         }
     }
 

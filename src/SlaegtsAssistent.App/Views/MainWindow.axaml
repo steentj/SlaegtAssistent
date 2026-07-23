@@ -57,14 +57,27 @@
 
             <TabControl Grid.Column="1">
                 <TabItem Header="Editor">
-                    <Border Padding="12">
-                        <TextBlock Text="Editor placeholder" />
-                    </Border>
+                    <Grid RowDefinitions="*,Auto" Margin="12" RowSpacing="8">
+                        <TextBox Grid.Row="0"
+                                 Text="{Binding Editor.MarkdownText, Mode=TwoWay}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                        <Button Grid.Row="1"
+                                Content="Gem"
+                                HorizontalAlignment="Right"
+                                Command="{Binding Editor.SaveCommand}" />
+                    </Grid>
                 </TabItem>
                 <TabItem Header="Preview">
-                    <Border Padding="12">
-                        <TextBlock Text="Preview placeholder" />
-                    </Border>
+                    <TextBox Margin="12"
+                             IsReadOnly="True"
+                             Text="{Binding Editor.PreviewHtml}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                 </TabItem>
             </TabControl>
         </Grid>

@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-07-23
-- [unreleased] Implementerede PoC markdown biografi
+- [unreleased] Sprint 1 afsluttet: Implementerede feature 1-6 med GEDCOM-flow, Markdown-biografier, menuer/indstillinger og editor med preview.
 
 ## 2026-07-19
 - [28e42ef] Add project guidelines and conventions to AGENTS.md
@@ -23,3 +23,4 @@
 - [eb05d4c] Inserted  spec for new feature 3 in sprint 1: Add ui functionality for reading a gedcom file
 - [227110c] Implementeret UI-funktionalitet til at læse GEDCOM-fil og parse den til personlisten i UI'et
 - [eb1f4d5] Update CHANGELOG.md with recent feature additions and specifications
+- [b1e7a4a] Implement JSON-based application settings service and biography export functionality

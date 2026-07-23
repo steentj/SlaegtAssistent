@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SlaegtsAssistent.App.Services;
+using SlaegtsAssistent.Core.Biography;
 using SlaegtsAssistent.Core.Domain;
 using SlaegtsAssistent.Core.Gedcom;
 
@@ -22,6 +23,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IUserDialogService _userDialogService;
     private readonly IApplicationControlService _applicationControlService;
     private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
+    private readonly IMarkdownFileStore _markdownFileStore;
 
     public MainWindowViewModel()
         : this(
@@ -32,7 +34,8 @@ public partial class MainWindowViewModel : ViewModelBase
             new NullSettingsDialogService(),
             new NullUserDialogService(),
             new NullApplicationControlService(),
-            new NullMarkdownBiographyExportService())
+            new NullMarkdownBiographyExportService(),
+            new NullMarkdownFileStore())
     {
     }
 
@@ -44,7 +47,8 @@ public partial class MainWindowViewModel : ViewModelBase
         ISettingsDialogService settingsDialogService,
         IUserDialogService userDialogService,
         IApplicationControlService applicationControlService,
-        IMarkdownBiographyExportService markdownBiographyExportService)
+        IMarkdownBiographyExportService markdownBiographyExportService,
+        IMarkdownFileStore markdownFileStore)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -54,6 +58,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _userDialogService = userDialogService;
         _applicationControlService = applicationControlService;
         _markdownBiographyExportService = markdownBiographyExportService;
+        _markdownFileStore = markdownFileStore;
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
@@ -74,6 +79,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? standardMarkdownOutputFolder;
+
+    [ObservableProperty]
+    private EditorViewModel? editor;
 
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
@@ -97,9 +105,10 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var familyTree = _gedcomLoader.Load(filePath);
             _markdownBiographyExportService.WriteBiographies(familyTree, StandardMarkdownOutputFolder!);
+            var outputFolder = StandardMarkdownOutputFolder!;
 
             var people = familyTree.People
-                .Select(CreatePersonListItem)
+                .Select(person => CreatePersonListItem(person, outputFolder))
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
                 .ToList();
@@ -107,7 +116,6 @@ public partial class MainWindowViewModel : ViewModelBase
             ReplacePeople(people);
             SelectedPerson = People.FirstOrDefault();
             SelectedGedcomFilePath = filePath;
-            ErrorMessage = null;
         }
         catch (GedcomLoadException exception)
         {
@@ -206,13 +214,42 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveSettings();
     }
 
-    private static PersonListItemViewModel CreatePersonListItem(Person person)
+    partial void OnSelectedPersonChanged(PersonListItemViewModel? value)
+    {
+        if (value is null)
+        {
+            Editor = null;
+            return;
+        }
+
+        var editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
+        try
+        {
+            editor.Load();
+            Editor = editor;
+            ErrorMessage = null;
+        }
+        catch (IOException exception)
+        {
+            Editor = null;
+            ErrorMessage = $"Kunne ikke læse Markdown-fil: {exception.Message}";
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Editor = null;
+            ErrorMessage = $"Manglende adgang til Markdown-fil: {exception.Message}";
+        }
+    }
+
+    private static PersonListItemViewModel CreatePersonListItem(Person person, string outputFolder)
     {
         var displayName = string.IsNullOrWhiteSpace(person.FullName)
             ? $"Unavngiven ({person.RecordId})"
             : person.FullName.Trim();
+        var markdownFileName = BiographyFileNameGenerator.Generate(person);
+        var markdownFilePath = Path.Combine(outputFolder, markdownFileName);
 
-        return new PersonListItemViewModel(person.RecordId, displayName);
+        return new PersonListItemViewModel(person.RecordId, displayName, markdownFilePath);
     }
 
     private void ReplacePeople(IEnumerable<PersonListItemViewModel> people)
@@ -292,6 +329,18 @@ public partial class MainWindowViewModel : ViewModelBase
     private sealed class NullMarkdownBiographyExportService : IMarkdownBiographyExportService
     {
         public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
+        {
+        }
+    }
+
+    private sealed class NullMarkdownFileStore : IMarkdownFileStore
+    {
+        public string Read(string path)
+        {
+            return string.Empty;
+        }
+
+        public void Write(string path, string content)
         {
         }
     }
