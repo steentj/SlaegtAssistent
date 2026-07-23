@@ -3,50 +3,70 @@
         xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="560"
         x:Class="SlaegtsAssistent.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="SlaegtsAssistent">
+        Title="Slægtsassistent">
 
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <Grid ColumnDefinitions="280,*" Margin="12" ColumnSpacing="12">
-        <Border Grid.Column="0" BorderThickness="1" Padding="8">
-            <DockPanel>
-                <Button DockPanel.Dock="Top"
-                        Content="Vaelg GEDCOM-fil"
-                        Command="{Binding SelectGedcomFileCommand}"
-                        Margin="0,0,0,8" />
-                <TextBlock DockPanel.Dock="Top"
-                           Text="{Binding ErrorMessage}"
-                           Foreground="IndianRed"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,8" />
-                <TextBlock DockPanel.Dock="Top" Text="Personer" FontWeight="SemiBold" Margin="0,0,0,8" />
-                <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PersonListItemViewModel">
-                            <TextBlock Text="{Binding DisplayName}" />
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </Border>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_Fil">
+                <MenuItem Header="Indlæs GEDCOM fil"
+                          Command="{Binding SelectGedcomFileCommand}" />
+                <Separator />
+                <MenuItem Header="Indstillinger"
+                          Command="{Binding OpenSettingsCommand}" />
+                <Separator />
+                <MenuItem Header="Afslut"
+                          Command="{Binding ExitApplicationCommand}" />
+            </MenuItem>
+            <MenuItem Header="_Hjælp">
+                <MenuItem Header="Generel introduktion"
+                          Command="{Binding ShowIntroductionCommand}" />
+                <MenuItem Header="Om"
+                          Command="{Binding ShowAboutCommand}" />
+            </MenuItem>
+        </Menu>
 
-        <TabControl Grid.Column="1">
-            <TabItem Header="Editor">
-                <Border Padding="12">
-                    <TextBlock Text="Editor placeholder" />
-                </Border>
-            </TabItem>
-            <TabItem Header="Preview">
-                <Border Padding="12">
-                    <TextBlock Text="Preview placeholder" />
-                </Border>
-            </TabItem>
-        </TabControl>
-    </Grid>
+        <Grid ColumnDefinitions="320,*" Margin="12" ColumnSpacing="12">
+            <Border Grid.Column="0" BorderThickness="1" Padding="8">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="{Binding ErrorMessage}"
+                               Foreground="IndianRed"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,8" />
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Personer"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,8" />
+                    <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PersonListItemViewModel">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <TabControl Grid.Column="1">
+                <TabItem Header="Editor">
+                    <Border Padding="12">
+                        <TextBlock Text="Editor placeholder" />
+                    </Border>
+                </TabItem>
+                <TabItem Header="Preview">
+                    <Border Padding="12">
+                        <TextBlock Text="Preview placeholder" />
+                    </Border>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DockPanel>
 </Window>

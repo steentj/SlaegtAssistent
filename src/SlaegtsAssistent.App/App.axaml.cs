@@ -38,6 +38,12 @@ public partial class App : Application
         services.AddSingleton(desktop);
         services.AddSingleton<IGedcomLoader, GedcomLoader>();
         services.AddSingleton<IGedcomFilePickerService, AvaloniaGedcomFilePickerService>();
+        services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
+        services.AddSingleton<IApplicationSettingsService, JsonApplicationSettingsService>();
+        services.AddSingleton<ISettingsDialogService, AvaloniaSettingsDialogService>();
+        services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();
+        services.AddSingleton<IApplicationControlService, AvaloniaApplicationControlService>();
+        services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>(provider => new MainWindow
         {

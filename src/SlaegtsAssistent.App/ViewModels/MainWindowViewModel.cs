@@ -1,6 +1,7 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,16 +16,48 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IGedcomLoader _gedcomLoader;
     private readonly IGedcomFilePickerService _gedcomFilePickerService;
+    private readonly IFolderPickerService _folderPickerService;
+    private readonly IApplicationSettingsService _applicationSettingsService;
+    private readonly ISettingsDialogService _settingsDialogService;
+    private readonly IUserDialogService _userDialogService;
+    private readonly IApplicationControlService _applicationControlService;
+    private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
 
     public MainWindowViewModel()
-        : this(new GedcomLoader(), new NullGedcomFilePickerService())
+        : this(
+            new GedcomLoader(),
+            new NullGedcomFilePickerService(),
+            new NullFolderPickerService(),
+            new NullApplicationSettingsService(),
+            new NullSettingsDialogService(),
+            new NullUserDialogService(),
+            new NullApplicationControlService(),
+            new NullMarkdownBiographyExportService())
     {
     }
 
-    public MainWindowViewModel(IGedcomLoader gedcomLoader, IGedcomFilePickerService gedcomFilePickerService)
+    public MainWindowViewModel(
+        IGedcomLoader gedcomLoader,
+        IGedcomFilePickerService gedcomFilePickerService,
+        IFolderPickerService folderPickerService,
+        IApplicationSettingsService applicationSettingsService,
+        ISettingsDialogService settingsDialogService,
+        IUserDialogService userDialogService,
+        IApplicationControlService applicationControlService,
+        IMarkdownBiographyExportService markdownBiographyExportService)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
+        _folderPickerService = folderPickerService;
+        _applicationSettingsService = applicationSettingsService;
+        _settingsDialogService = settingsDialogService;
+        _userDialogService = userDialogService;
+        _applicationControlService = applicationControlService;
+        _markdownBiographyExportService = markdownBiographyExportService;
+
+        var settings = _applicationSettingsService.Load();
+        StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
+        StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
     }
 
     [ObservableProperty]
@@ -36,13 +69,26 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string? selectedGedcomFilePath;
 
+    [ObservableProperty]
+    private string? standardGedcomInputFolder;
+
+    [ObservableProperty]
+    private string? standardMarkdownOutputFolder;
+
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
     [RelayCommand]
     private async Task SelectGedcomFileAsync()
     {
-        var filePath = await _gedcomFilePickerService.PickGedcomFileAsync();
+        var filePath = await _gedcomFilePickerService.PickGedcomFileAsync(StandardGedcomInputFolder);
         if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        SetDefaultInputFolderFromSelectedGedcom(filePath);
+
+        if (!await EnsureOutputFolderAsync(filePath))
         {
             return;
         }
@@ -50,6 +96,8 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var familyTree = _gedcomLoader.Load(filePath);
+            _markdownBiographyExportService.WriteBiographies(familyTree, StandardMarkdownOutputFolder!);
+
             var people = familyTree.People
                 .Select(CreatePersonListItem)
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
@@ -63,8 +111,99 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (GedcomLoadException exception)
         {
-            ErrorMessage = $"Kunne ikke indlaese GEDCOM-fil: {exception.Message}";
+            ErrorMessage = $"Kunne ikke indlæse GEDCOM-fil: {exception.Message}";
         }
+        catch (IOException exception)
+        {
+            ErrorMessage = $"Kunne ikke skrive Markdown-filer: {exception.Message}";
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            ErrorMessage = $"Manglende adgang til outputmappe: {exception.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenSettingsAsync()
+    {
+        var updatedSettings = await _settingsDialogService.EditSettingsAsync(new AppSettings
+        {
+            DefaultGedcomInputFolder = StandardGedcomInputFolder,
+            DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+        });
+
+        if (updatedSettings is null)
+        {
+            return;
+        }
+
+        StandardGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder);
+        StandardMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder);
+        SaveSettings();
+    }
+
+    [RelayCommand]
+    private Task ShowIntroductionAsync()
+    {
+        return _userDialogService.ShowInformationAsync(
+            "Generel introduktion",
+            "Slægtsassistent hjælper dig med at indlæse GEDCOM-data, generere Markdown-biografier " +
+            "og redigere indhold lokalt på din egen computer.");
+    }
+
+    [RelayCommand]
+    private Task ShowAboutAsync()
+    {
+        return _userDialogService.ShowInformationAsync(
+            "Om",
+            "Slægtsassistent er et lokalt værktøj til slægtsforskning med fokus på privatliv og " +
+            "manuel kvalitetssikring af biografier.");
+    }
+
+    [RelayCommand]
+    private void ExitApplication()
+    {
+        _applicationControlService.Exit();
+    }
+
+    private async Task<bool> EnsureOutputFolderAsync(string gedcomFilePath)
+    {
+        if (!string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder))
+        {
+            return true;
+        }
+
+        var gedcomFolder = NormalizeFolder(Path.GetDirectoryName(gedcomFilePath));
+        var selectedOutputFolder = await _folderPickerService.PickFolderAsync(
+            "Vælg standardmappe for Markdown-filer",
+            gedcomFolder ?? StandardGedcomInputFolder);
+
+        if (string.IsNullOrWhiteSpace(selectedOutputFolder))
+        {
+            ErrorMessage = "Du skal vælge en outputmappe til Markdown-filer, før GEDCOM-filen kan indlæses.";
+            return false;
+        }
+
+        StandardMarkdownOutputFolder = selectedOutputFolder;
+        SaveSettings();
+        return true;
+    }
+
+    private void SetDefaultInputFolderFromSelectedGedcom(string gedcomFilePath)
+    {
+        if (!string.IsNullOrWhiteSpace(StandardGedcomInputFolder))
+        {
+            return;
+        }
+
+        var folder = NormalizeFolder(Path.GetDirectoryName(gedcomFilePath));
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        StandardGedcomInputFolder = folder;
+        SaveSettings();
     }
 
     private static PersonListItemViewModel CreatePersonListItem(Person person)
@@ -85,11 +224,75 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void SaveSettings()
+    {
+        _applicationSettingsService.Save(new AppSettings
+        {
+            DefaultGedcomInputFolder = StandardGedcomInputFolder,
+            DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+        });
+    }
+
+    private static string? NormalizeFolder(string? folder)
+    {
+        return string.IsNullOrWhiteSpace(folder) ? null : folder.Trim();
+    }
+
     private sealed class NullGedcomFilePickerService : IGedcomFilePickerService
     {
-        public Task<string?> PickGedcomFileAsync()
+        public Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
         {
             return Task.FromResult<string?>(null);
+        }
+    }
+
+    private sealed class NullFolderPickerService : IFolderPickerService
+    {
+        public Task<string?> PickFolderAsync(string title, string? suggestedStartFolder)
+        {
+            return Task.FromResult<string?>(null);
+        }
+    }
+
+    private sealed class NullApplicationSettingsService : IApplicationSettingsService
+    {
+        public AppSettings Load()
+        {
+            return new AppSettings();
+        }
+
+        public void Save(AppSettings settings)
+        {
+        }
+    }
+
+    private sealed class NullUserDialogService : IUserDialogService
+    {
+        public Task ShowInformationAsync(string title, string message)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NullSettingsDialogService : ISettingsDialogService
+    {
+        public Task<AppSettings?> EditSettingsAsync(AppSettings currentSettings)
+        {
+            return Task.FromResult<AppSettings?>(null);
+        }
+    }
+
+    private sealed class NullApplicationControlService : IApplicationControlService
+    {
+        public void Exit()
+        {
+        }
+    }
+
+    private sealed class NullMarkdownBiographyExportService : IMarkdownBiographyExportService
+    {
+        public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
+        {
         }
     }
 }

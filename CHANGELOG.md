@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-07-23
-- [unreleased] Tilføj Sprint 1 Feature 3: UI-flow til valg og indlæsning af GEDCOM-fil samt opdateret feature-nummerering i sprint-specs.
+- [unreleased] Implementerede PoC markdown biografi
 
 ## 2026-07-19
 - [28e42ef] Add project guidelines and conventions to AGENTS.md
@@ -22,3 +22,4 @@
 ## 2026-07-23
 - [eb05d4c] Inserted  spec for new feature 3 in sprint 1: Add ui functionality for reading a gedcom file
 - [227110c] Implementeret UI-funktionalitet til at læse GEDCOM-fil og parse den til personlisten i UI'et
+- [eb1f4d5] Update CHANGELOG.md with recent feature additions and specifications

@@ -4,5 +4,5 @@ namespace SlaegtsAssistent.App.Services;
 
 public interface IGedcomFilePickerService
 {
-    Task<string?> PickGedcomFileAsync();
+    Task<string?> PickGedcomFileAsync(string? suggestedStartFolder);
 }

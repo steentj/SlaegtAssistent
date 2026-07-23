@@ -11,16 +11,31 @@ public class MainWindowViewModelTests
     [Fact]
     public void Constructor_ShouldStartWithEmptyPeopleAndNoSelection()
     {
-        var viewModel = new MainWindowViewModel();
+        var viewModel = CreateViewModel();
 
         viewModel.People.Should().BeEmpty();
         viewModel.SelectedPerson.Should().BeNull();
     }
 
     [Fact]
+    public void Constructor_ShouldLoadSavedSettings()
+    {
+        var settings = new AppSettings
+        {
+            DefaultGedcomInputFolder = "/tmp/input",
+            DefaultMarkdownOutputFolder = "/tmp/output",
+        };
+        var settingsService = new RecordingApplicationSettingsService(settings);
+        var viewModel = CreateViewModel(settingsService: settingsService);
+
+        viewModel.StandardGedcomInputFolder.Should().Be("/tmp/input");
+        viewModel.StandardMarkdownOutputFolder.Should().Be("/tmp/output");
+    }
+
+    [Fact]
     public void SettingSelectedPerson_ShouldRaisePropertyChanged()
     {
-        var viewModel = new MainWindowViewModel();
+        var viewModel = CreateViewModel();
         var selectedPerson = new PersonListItemViewModel("@I1@", "Anna Jensen");
         var raisedPropertyNames = new List<string?>();
 
@@ -36,12 +51,106 @@ public class MainWindowViewModelTests
     {
         var picker = new FakeGedcomFilePickerService(null);
         var loader = new RecordingGedcomLoader(path => throw new InvalidOperationException(path));
-        var viewModel = new MainWindowViewModel(loader, picker);
+        var viewModel = CreateViewModel(gedcomFilePickerService: picker, gedcomLoader: loader);
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
         loader.Calls.Should().Be(0);
         viewModel.People.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldUseConfiguredInputFolder_AsSuggestedStartFolder()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultGedcomInputFolder = "/tmp/start-her",
+            DefaultMarkdownOutputFolder = "/tmp/output",
+        });
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            settingsService: settingsService,
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            markdownBiographyExportService: exporter);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        picker.LastSuggestedStartFolder.Should().Be("/tmp/start-her");
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldSetInputFolder_FromSelectedGedcomFolder_WhenMissing()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            settingsService: settingsService,
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            markdownBiographyExportService: exporter);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        viewModel.StandardGedcomInputFolder.Should().Be(Path.GetDirectoryName(file.Path));
+        settingsService.SavedSettings.Should().NotBeNull();
+        settingsService.SavedSettings!.DefaultGedcomInputFolder.Should().Be(Path.GetDirectoryName(file.Path));
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldRequireOutputFolderBeforeLoading()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var folderPicker = new RecordingFolderPickerService(null);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            folderPickerService: folderPicker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings()));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        loader.Calls.Should().Be(0);
+        viewModel.ErrorMessage.Should().Be("Du skal vælge en outputmappe til Markdown-filer, før GEDCOM-filen kan indlæses.");
     }
 
     [Fact]
@@ -59,9 +168,18 @@ public class MainWindowViewModelTests
             "1 NAME Anna /Jensen/",
             "0 TRLR");
 
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var picker = new FakeGedcomFilePickerService(file.Path);
         var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
-        var viewModel = new MainWindowViewModel(loader, picker);
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: exporter);
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
@@ -73,6 +191,44 @@ public class MainWindowViewModelTests
         viewModel.SelectedPerson?.DisplayName.Should().Be("Anna Jensen");
         viewModel.ErrorMessage.Should().BeNull();
         viewModel.SelectedGedcomFilePath.Should().Be(file.Path);
+        exporter.Calls.Should().Be(1);
+        exporter.LastOutputFolder.Should().Be(outputFolder);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldAskForOutputFolderAndThenLoad_WhenOutputIsMissing()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var selectedOutputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var folderPicker = new RecordingFolderPickerService(selectedOutputFolder);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings());
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            folderPickerService: folderPicker,
+            gedcomLoader: loader,
+            settingsService: settingsService,
+            markdownBiographyExportService: exporter);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        loader.Calls.Should().Be(1);
+        viewModel.StandardMarkdownOutputFolder.Should().Be(selectedOutputFolder);
+        folderPicker.Calls.Should().Be(1);
+        exporter.LastOutputFolder.Should().Be(selectedOutputFolder);
+        settingsService.SavedSettings.Should().NotBeNull();
+        settingsService.SavedSettings!.DefaultMarkdownOutputFolder.Should().Be(selectedOutputFolder);
     }
 
     [Fact]
@@ -97,9 +253,16 @@ public class MainWindowViewModelTests
             "1 NAME Bo /Jensen/",
             "0 TRLR");
 
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var picker = new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]);
         var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
-        var viewModel = new MainWindowViewModel(loader, picker);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
@@ -113,14 +276,92 @@ public class MainWindowViewModelTests
     [Fact]
     public async Task SelectGedcomFileCommand_ShouldSetErrorMessage_WhenLoaderFails()
     {
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var picker = new FakeGedcomFilePickerService("/tmp/invalid.ged");
         var loader = new ThrowingGedcomLoader(new GedcomLoadException("Filen kunne ikke laeses."));
-        var viewModel = new MainWindowViewModel(loader, picker);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
-        viewModel.ErrorMessage.Should().Be("Kunne ikke indlaese GEDCOM-fil: Filen kunne ikke laeses.");
+        viewModel.ErrorMessage.Should().Be("Kunne ikke indlæse GEDCOM-fil: Filen kunne ikke laeses.");
         viewModel.People.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_ShouldPersistUpdatedFolders()
+    {
+        var settingsDialog = new RecordingSettingsDialogService(new AppSettings
+        {
+            DefaultGedcomInputFolder = "/tmp/ged-input",
+            DefaultMarkdownOutputFolder = "/tmp/markdown-output",
+        });
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings());
+        var viewModel = CreateViewModel(settingsDialogService: settingsDialog, settingsService: settingsService);
+
+        await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+        settingsDialog.Calls.Should().Be(1);
+        viewModel.StandardGedcomInputFolder.Should().Be("/tmp/ged-input");
+        viewModel.StandardMarkdownOutputFolder.Should().Be("/tmp/markdown-output");
+        settingsService.SavedSettings.Should().NotBeNull();
+        settingsService.SavedSettings!.DefaultGedcomInputFolder.Should().Be("/tmp/ged-input");
+        settingsService.SavedSettings!.DefaultMarkdownOutputFolder.Should().Be("/tmp/markdown-output");
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_ShouldKeepValues_WhenDialogIsCancelled()
+    {
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultGedcomInputFolder = "/tmp/old-input",
+            DefaultMarkdownOutputFolder = "/tmp/old-output",
+        });
+        var settingsDialog = new RecordingSettingsDialogService(null);
+        var viewModel = CreateViewModel(settingsDialogService: settingsDialog, settingsService: settingsService);
+
+        await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+        viewModel.StandardGedcomInputFolder.Should().Be("/tmp/old-input");
+        viewModel.StandardMarkdownOutputFolder.Should().Be("/tmp/old-output");
+        settingsService.SavedSettings.Should().BeNull();
+    }
+
+    [Fact]
+    public void ExitApplicationCommand_ShouldCallApplicationControlService()
+    {
+        var applicationControlService = new RecordingApplicationControlService();
+        var viewModel = CreateViewModel(applicationControlService: applicationControlService);
+
+        viewModel.ExitApplicationCommand.Execute(null);
+
+        applicationControlService.Calls.Should().Be(1);
+    }
+
+    private static MainWindowViewModel CreateViewModel(
+        IGedcomLoader? gedcomLoader = null,
+        IGedcomFilePickerService? gedcomFilePickerService = null,
+        IFolderPickerService? folderPickerService = null,
+        IApplicationSettingsService? settingsService = null,
+        ISettingsDialogService? settingsDialogService = null,
+        IUserDialogService? userDialogService = null,
+        IApplicationControlService? applicationControlService = null,
+        IMarkdownBiographyExportService? markdownBiographyExportService = null)
+    {
+        return new MainWindowViewModel(
+            gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            gedcomFilePickerService ?? new FakeGedcomFilePickerService(null),
+            folderPickerService ?? new RecordingFolderPickerService(null),
+            settingsService ?? new RecordingApplicationSettingsService(new AppSettings()),
+            settingsDialogService ?? new RecordingSettingsDialogService(null),
+            userDialogService ?? new NullUserDialogService(),
+            applicationControlService ?? new RecordingApplicationControlService(),
+            markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService());
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
@@ -139,8 +380,11 @@ public class MainWindowViewModelTests
             _path = path;
         }
 
-        public Task<string?> PickGedcomFileAsync()
+        public string? LastSuggestedStartFolder { get; private set; }
+
+        public Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
         {
+            LastSuggestedStartFolder = suggestedStartFolder;
             return Task.FromResult(_path);
         }
     }
@@ -154,9 +398,109 @@ public class MainWindowViewModelTests
             _paths = new Queue<string?>(paths);
         }
 
-        public Task<string?> PickGedcomFileAsync()
+        public Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
         {
             return Task.FromResult(_paths.Dequeue());
+        }
+    }
+
+    private sealed class RecordingFolderPickerService : IFolderPickerService
+    {
+        private readonly string? _folderToReturn;
+
+        public RecordingFolderPickerService(string? folderToReturn)
+        {
+            _folderToReturn = folderToReturn;
+        }
+
+        public int Calls { get; private set; }
+
+        public string? LastSuggestedStartFolder { get; private set; }
+
+        public Task<string?> PickFolderAsync(string title, string? suggestedStartFolder)
+        {
+            Calls++;
+            LastSuggestedStartFolder = suggestedStartFolder;
+            return Task.FromResult(_folderToReturn);
+        }
+    }
+
+    private sealed class RecordingApplicationSettingsService : IApplicationSettingsService
+    {
+        private readonly AppSettings _loadedSettings;
+
+        public RecordingApplicationSettingsService(AppSettings loadedSettings)
+        {
+            _loadedSettings = loadedSettings;
+        }
+
+        public AppSettings? SavedSettings { get; private set; }
+
+        public AppSettings Load()
+        {
+            return new AppSettings
+            {
+                DefaultGedcomInputFolder = _loadedSettings.DefaultGedcomInputFolder,
+                DefaultMarkdownOutputFolder = _loadedSettings.DefaultMarkdownOutputFolder,
+            };
+        }
+
+        public void Save(AppSettings settings)
+        {
+            SavedSettings = new AppSettings
+            {
+                DefaultGedcomInputFolder = settings.DefaultGedcomInputFolder,
+                DefaultMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder,
+            };
+        }
+    }
+
+    private sealed class RecordingSettingsDialogService : ISettingsDialogService
+    {
+        private readonly AppSettings? _result;
+
+        public RecordingSettingsDialogService(AppSettings? result)
+        {
+            _result = result;
+        }
+
+        public int Calls { get; private set; }
+
+        public Task<AppSettings?> EditSettingsAsync(AppSettings currentSettings)
+        {
+            Calls++;
+            return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class RecordingMarkdownBiographyExportService : IMarkdownBiographyExportService
+    {
+        public int Calls { get; private set; }
+
+        public string? LastOutputFolder { get; private set; }
+
+        public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
+        {
+            Calls++;
+            LastOutputFolder = outputDirectory;
+        }
+    }
+
+    private sealed class RecordingApplicationControlService : IApplicationControlService
+    {
+        public int Calls { get; private set; }
+
+        public void Exit()
+        {
+            Calls++;
+        }
+    }
+
+    private sealed class NullUserDialogService : IUserDialogService
+    {
+        public Task ShowInformationAsync(string title, string message)
+        {
+            return Task.CompletedTask;
         }
     }
 

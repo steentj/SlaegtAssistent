@@ -5,23 +5,16 @@ using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
+public sealed class AvaloniaFolderPickerService : IFolderPickerService
 {
-    private static readonly FilePickerFileType GedcomFileType = new("GEDCOM-filer")
-    {
-        Patterns = ["*.ged"],
-        AppleUniformTypeIdentifiers = ["public.text"],
-        MimeTypes = ["text/plain"],
-    };
-
     private readonly IClassicDesktopStyleApplicationLifetime _applicationLifetime;
 
-    public AvaloniaGedcomFilePickerService(IClassicDesktopStyleApplicationLifetime applicationLifetime)
+    public AvaloniaFolderPickerService(IClassicDesktopStyleApplicationLifetime applicationLifetime)
     {
         _applicationLifetime = applicationLifetime;
     }
 
-    public async Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
+    public async Task<string?> PickFolderAsync(string title, string? suggestedStartFolder)
     {
         var mainWindow = _applicationLifetime.MainWindow;
         if (mainWindow is null)
@@ -35,19 +28,18 @@ public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
             suggestedStartLocation = await mainWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
         }
 
-        var files = await mainWindow.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var folders = await mainWindow.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Vælg GEDCOM-fil",
+            Title = title,
             AllowMultiple = false,
-            FileTypeFilter = [GedcomFileType],
             SuggestedStartLocation = suggestedStartLocation,
         });
 
-        if (files.Count == 0)
+        if (folders.Count == 0)
         {
             return null;
         }
 
-        return files[0].TryGetLocalPath();
+        return folders[0].TryGetLocalPath();
     }
 }

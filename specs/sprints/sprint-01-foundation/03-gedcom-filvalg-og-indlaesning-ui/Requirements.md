@@ -15,7 +15,7 @@ feature dækker Trin 1-opgaven om at gøre GEDCOM-indlæsning tilgængelig fra b
 ## Out of Scope
 - Selve GEDCOM-parse-logikken og domænemappingen i `Core` (feature 02).
 - Generering af Markdown-filer (feature 04).
-- Editor/Preview-indhold for en valgt person (feature 05).
+- Editor/Preview-indhold for en valgt person (feature 06).
 - Avanceret MRU/filhistorik eller drag-and-drop.
 
 ## Decisions & Context
