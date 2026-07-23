@@ -16,7 +16,16 @@
     <Grid ColumnDefinitions="280,*" Margin="12" ColumnSpacing="12">
         <Border Grid.Column="0" BorderThickness="1" Padding="8">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="People" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <Button DockPanel.Dock="Top"
+                        Content="Vaelg GEDCOM-fil"
+                        Command="{Binding SelectGedcomFileCommand}"
+                        Margin="0,0,0,8" />
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="IndianRed"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8" />
+                <TextBlock DockPanel.Dock="Top" Text="Personer" FontWeight="SemiBold" Margin="0,0,0,8" />
                 <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PersonListItemViewModel">
