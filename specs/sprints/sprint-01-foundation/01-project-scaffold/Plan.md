@@ -46,7 +46,7 @@ no meaningful "test first" and are marked accordingly — keep them minimal and 
 8. **Build the two-pane shell (`MainWindow.axaml`)** *(no unit test — visual layout)*
    - `Grid` with two columns: left = `ListBox` bound to `People` / `SelectedPerson`; right =
      `TabControl` placeholder with an empty "Editor" and "Preview" tab (content added in feature
-     04).
+     05).
    - Set `MainWindowViewModel` as `DataContext` via the composition root.
 
 9. **Wire composition root** *(no unit test — startup wiring)*

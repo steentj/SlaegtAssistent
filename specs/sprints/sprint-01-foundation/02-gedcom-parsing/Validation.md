@@ -32,5 +32,5 @@
 
 ## Merge Criteria
 Merge when all Definition of Done items are checked, `dotnet test` is green, and a reviewer
-confirms the domain model (`Person`/`FamilyTree`) is stable enough for feature 03 (Markdown
+confirms the domain model (`Person`/`FamilyTree`) is stable enough for feature 04 (Markdown
 biography generation) to consume without expecting further breaking changes to field names/types.

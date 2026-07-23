@@ -21,7 +21,7 @@
    ```
    All tests pass, exit code 0.
 2. Run the app (`dotnet run --project src/SlaegtsAssistent.App`), open a person's generated
-   biography (from feature 03's output), type additional Markdown (e.g. a new heading or list),
+   biography (from feature 04's output), type additional Markdown (e.g. a new heading or list),
    switch to the Preview tab, and visually confirm the HTML reflects the new content.
 3. Click "Save", close and reopen the app (or reload the file), and confirm the edited content
    persisted to disk.

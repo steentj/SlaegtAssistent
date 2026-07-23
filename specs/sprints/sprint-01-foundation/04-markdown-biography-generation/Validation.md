@@ -32,4 +32,4 @@
 ## Merge Criteria
 Merge when all Definition of Done items are checked, `dotnet test` is green, and a reviewer
 confirms the Markdown template output is readable/sensible Danish prose scaffolding (not just
-technically correct) — since this file is what the user will read and edit directly in feature 04.
+technically correct) — since this file is what the user will read and edit directly in feature 05.

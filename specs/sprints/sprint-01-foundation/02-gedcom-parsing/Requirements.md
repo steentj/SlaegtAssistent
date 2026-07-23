@@ -22,8 +22,8 @@ Afsnit 2 (GEDCOM parsing via NuGet library).
 - Writing/exporting GEDCOM files (not required by any Trin 1 task).
 - Spouse/marriage/family-event modeling beyond what's needed to resolve parent-child relationships
   (deferred to the tree-visualization sprint, Trin 2).
-- UI for selecting/loading files (a simple "Open File" flow can be stubbed later; this feature
-  exposes a pure `IGedcomLoader` service consumed by the UI).
+- UI for selecting/loading files (covered by feature 03; this feature only exposes a pure
+  `IGedcomLoader` service consumed by the UI).
 - Performance tuning for very large GEDCOM files (optimize only if a real bottleneck appears).
 
 ## Decisions & Context
@@ -46,5 +46,6 @@ Afsnit 2 (GEDCOM parsing via NuGet library).
   to the Avalonia shell or Markdown generation.
 
 ## Dependencies
-- Requires `SlaegtsAssistent.Core` project to exist (created in feature 01). Feature 03 (Markdown
-  biography generation) depends on the `Person`/`FamilyTree` domain model produced here.
+- Requires `SlaegtsAssistent.Core` project to exist (created in feature 01). Feature 03 (GEDCOM
+  file selection UI) and feature 04 (Markdown biography generation) both depend on the
+  `Person`/`FamilyTree` domain model produced here.

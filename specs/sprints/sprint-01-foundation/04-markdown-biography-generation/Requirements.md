@@ -16,7 +16,7 @@ required by `specs/Roadmap.md` Trin 1: "Generer automatisk en standard Markdown-
   Markdown (required for meaningful snapshot-style tests).
 
 ## Out of Scope
-- Live preview / rendering Markdown to HTML (covered by feature 04).
+- Live preview / rendering Markdown to HTML (covered by feature 05).
 - AI enrichment of the prose (Trin 3 — out of this sprint entirely).
 - Re-generating/merging Markdown for a person who already has an edited file (out of scope for
   Trin 1; for now, generation only targets people without an existing file, and this feature
@@ -54,5 +54,5 @@ required by `specs/Roadmap.md` Trin 1: "Generer automatisk en standard Markdown-
 
 ## Dependencies
 - Requires the `Person`/`FamilyTree` domain model from feature 02 (GEDCOM Parsing). Does not
-  depend on feature 01 (UI shell) or feature 04 (editor/preview) — the UI wires this generator in
+  depend on feature 01 (UI shell) or feature 05 (editor/preview) — the UI wires this generator in
   later, but the generator itself needs no UI reference.

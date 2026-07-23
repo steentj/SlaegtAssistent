@@ -31,4 +31,4 @@
 ## Merge Criteria
 This feature can be merged when all Definition of Done items are checked, CI (or local
 `dotnet test`) is green, and a reviewer confirms the ViewModel layer has no Avalonia rendering
-dependency (so features 02–04 can unit-test their ViewModels the same way).
+dependency (so features 02–05 can unit-test their ViewModels the same way).

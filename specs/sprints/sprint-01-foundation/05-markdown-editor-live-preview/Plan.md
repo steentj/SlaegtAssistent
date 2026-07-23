@@ -55,7 +55,7 @@
       at the composition root.
 
 12. **Manual smoke test**
-    - Run the app, select a person (once feature 02/03 data is available, or a manually placed
+    - Run the app, select a person (once feature 02–04 data is available, or a manually placed
       `.md` file for isolated testing), type in the Editor tab, switch to Preview, and confirm the
       rendered HTML updates to match.
 

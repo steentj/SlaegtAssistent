@@ -8,6 +8,7 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
 *   **Opgaver:**
     *   Opsæt Avalonia UI med en simpel to-delt skærm (Venstre: Personliste, Højre: Editor/Preview).
     *   Implementer GEDCOM-indlæsning.
+    *   Tilføj UI-flow til at vælge en GEDCOM-fil fra disk og indlæse den i appen.
     *   Generer automatisk en standard Markdown-fil pr. person (f.eks. med fødselsdato, sted, forældre).
     *   Implementer Markdown-editor med "Live Preview"-faneblad.
 
