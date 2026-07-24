@@ -12,28 +12,42 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     *   Generer automatisk en standard Markdown-fil pr. person (f.eks. med fødselsdato, sted, forældre).
     *   Implementer Markdown-editor med "Live Preview"-faneblad.
 
-### Trin 2: Grafisk Slægtstræ & Eksport SPRINT 2
+### Trin 2: PoC-forfinelse & udvidet GEDCOM SPRINT 2
+*   **Mål:** Gøre PoC'en hurtigere at arbejde i, tydeligere at gemme i, og mere datadækkende før grafisk træ/eksport.
+*   **Opgaver:**
+    *   Tilføj personfilter over personlisten for hurtig søgning.
+    *   Vis renderet web-preview som standard og tilføj skift (radio/toggle) mellem webvisning og rå HTML.
+    *   Tilføj `Fil -> Gem`, der gemmer alle ændrede filer i den aktuelle session.
+    *   Vis advarsel ved lukning med ugemte ændringer (Gem / Kassér / Annullér).
+    *   Vis hover-pop-up på personlisten med rå GEDCOM-information for personen.
+    *   Udvid GEDCOM-indlæsning med `SOUR`, `OBJE`, hændelser (`EVEN` m.fl.) samt `CENS` inkl. relevante underfelter.
+    *   Giv UI'et en let modernisering (spacing, typografi, farver og tydelige hover/focus-states).
+    *   **Ekstra forslag:** Tilføj statusfelt med aktiv person/fil og gemmestatus.
+    *   **Ekstra forslag:** Definér eksplicit mapping-tabel for GEDCOM-tags/sub-tags i sprintens requirements.
+    *   **Ekstra forslag:** Gør modernisering målbar via konkrete UI-kriterier.
+
+### Trin 3: Grafisk Slægtstræ & Eksport SPRINT 3
 *   **Mål:** Opsætte output fra applikationen
 *   **Opgaver:**
     *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
     *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.
     *   Implementering af udskriftsfunktion samt eksport af slægtstræ (SVG/PNG) og biografier (PDF/DOCX/ODT) via lokal Python/Pandoc-sidecar.
 
-### Trin 3: Den Lokale AI-Assistent
+### Trin 4: Den Lokale AI-Assistent
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 4: Lokale Bøger som Sandhed (RAG)
+### Trin 5: Lokale Bøger som Sandhed (RAG)
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 5: Transkriberings-modulet (HTR)
+### Trin 6: Transkriberings-modulet (HTR)
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.

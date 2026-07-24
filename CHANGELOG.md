@@ -24,3 +24,7 @@
 - [227110c] Implementeret UI-funktionalitet til at læse GEDCOM-fil og parse den til personlisten i UI'et
 - [eb1f4d5] Update CHANGELOG.md with recent feature additions and specifications
 - [b1e7a4a] Implement JSON-based application settings service and biography export functionality
+- [7ee2352] Implement Markdown file handling and editor functionality with GEDCOM integration
+
+## 2026-07-24
+- [a73ed6d] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.
