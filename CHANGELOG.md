@@ -28,3 +28,4 @@
 
 ## 2026-07-24
 - [a73ed6d] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.
+- [1f1cb44] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.

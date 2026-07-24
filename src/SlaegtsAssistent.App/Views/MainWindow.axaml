@@ -45,6 +45,10 @@
                                Text="Personer"
                                FontWeight="SemiBold"
                                Margin="0,0,0,8" />
+                    <TextBox DockPanel.Dock="Top"
+                             Text="{Binding PersonFilterText, Mode=TwoWay}"
+                             PlaceholderText="Filtrer personer (navn eller id)"
+                             Margin="0,0,0,8" />
                     <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PersonListItemViewModel">

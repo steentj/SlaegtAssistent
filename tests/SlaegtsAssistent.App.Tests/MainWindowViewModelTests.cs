@@ -196,6 +196,130 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task PersonFilterText_ShouldFilterPeopleByName()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "anna";
+
+        viewModel.People.Should().HaveCount(1);
+        viewModel.People[0].DisplayName.Should().Be("Anna Jensen");
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldFilterCaseInsensitive()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "ANNA";
+
+        viewModel.People.Should().HaveCount(1);
+        viewModel.People[0].DisplayName.Should().Be("Anna Jensen");
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldShowAllPeople_WhenFilterIsEmpty()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "anna";
+        viewModel.PersonFilterText = string.Empty;
+
+        viewModel.People.Select(person => person.DisplayName)
+            .Should()
+            .ContainInOrder("Anna Jensen", "Bo Jensen");
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldFilterPeopleByRecordId()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "i2";
+
+        viewModel.People.Should().HaveCount(1);
+        viewModel.People[0].RecordId.Should().Be("@I2@");
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_ShouldLoadSelectedPersonsMarkdown_IntoEditor()
     {
         using var file = CreateTemporaryGedcomFile(

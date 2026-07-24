@@ -24,6 +24,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IApplicationControlService _applicationControlService;
     private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
     private readonly IMarkdownFileStore _markdownFileStore;
+    private readonly List<PersonListItemViewModel> _allPeople = [];
 
     public MainWindowViewModel()
         : this(
@@ -83,6 +84,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private EditorViewModel? editor;
 
+    [ObservableProperty]
+    private string personFilterText = string.Empty;
+
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
     [RelayCommand]
@@ -113,7 +117,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
                 .ToList();
 
-            ReplacePeople(people);
+            ReplaceAllPeople(people);
             SelectedPerson = People.FirstOrDefault();
             SelectedGedcomFilePath = filePath;
         }
@@ -250,6 +254,37 @@ public partial class MainWindowViewModel : ViewModelBase
         var markdownFilePath = Path.Combine(outputFolder, markdownFileName);
 
         return new PersonListItemViewModel(person.RecordId, displayName, markdownFilePath);
+    }
+
+    partial void OnPersonFilterTextChanged(string value)
+    {
+        ApplyPersonFilter();
+    }
+
+    private void ReplaceAllPeople(IEnumerable<PersonListItemViewModel> people)
+    {
+        _allPeople.Clear();
+        _allPeople.AddRange(people);
+        ApplyPersonFilter();
+    }
+
+    private void ApplyPersonFilter()
+    {
+        var searchTerm = PersonFilterText?.Trim();
+        var selectedRecordId = SelectedPerson?.RecordId;
+
+        var filteredPeople = string.IsNullOrWhiteSpace(searchTerm)
+            ? _allPeople
+            : _allPeople.Where(person =>
+                person.DisplayName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
+                person.RecordId.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase));
+
+        ReplacePeople(filteredPeople);
+
+        if (string.IsNullOrWhiteSpace(selectedRecordId) || !People.Any(person => person.RecordId == selectedRecordId))
+        {
+            SelectedPerson = People.FirstOrDefault();
+        }
     }
 
     private void ReplacePeople(IEnumerable<PersonListItemViewModel> people)
