@@ -31,3 +31,5 @@
 - [1f1cb44] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.
 - [6603281] Implement person filtering functionality in MainWindowViewModel and update UI with filter input in MainWindow.axaml; add unit tests for filtering by name and record ID.
 - [28092de] Add preview mode functionality to EditorViewModel and MainWindow
+- [872ca25] Add preview mode functionality to EditorViewModel and MainWindow
+- [01f213b] Enhance file handling and editor functionality: support additional GEDCOM file extensions, implement dirty tracking in EditorViewModel, and add SaveAll command in MainWindowViewModel with corresponding UI updates.

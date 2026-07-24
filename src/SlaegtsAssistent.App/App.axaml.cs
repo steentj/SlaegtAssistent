@@ -42,14 +42,13 @@ public partial class App : Application
         services.AddSingleton<IApplicationSettingsService, JsonApplicationSettingsService>();
         services.AddSingleton<ISettingsDialogService, AvaloniaSettingsDialogService>();
         services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();
+        services.AddSingleton<IUnsavedChangesDialogService, AvaloniaUnsavedChangesDialogService>();
         services.AddSingleton<IApplicationControlService, AvaloniaApplicationControlService>();
         services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();
         services.AddSingleton<IMarkdownFileStore, FileSystemMarkdownFileStore>();
         services.AddSingleton<MainWindowViewModel>();
-        services.AddSingleton<MainWindow>(provider => new MainWindow
-        {
-            DataContext = provider.GetRequiredService<MainWindowViewModel>(),
-        });
+        services.AddSingleton<MainWindow>(provider => new MainWindow(
+            provider.GetRequiredService<MainWindowViewModel>()));
 
         return services.BuildServiceProvider();
     }

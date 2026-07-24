@@ -3,6 +3,7 @@ using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.Core.Domain;
 using SlaegtsAssistent.Core.Gedcom;
+using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Tests;
 
@@ -196,6 +197,40 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_ShouldLoadPeople_WhenSelectedFileHasNoExtension()
+    {
+        using var file = CreateTemporaryGedcomFileWithoutExtension(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var picker = new FakeGedcomFilePickerService(file.Path);
+        var loader = new RecordingGedcomLoader(path => new GedcomLoader().Load(path));
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: picker,
+            gedcomLoader: loader,
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: exporter);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        loader.Calls.Should().Be(1);
+        viewModel.People.Should().HaveCount(1);
+        viewModel.People[0].DisplayName.Should().Be("Anna Jensen");
+        viewModel.SelectedGedcomFilePath.Should().Be(file.Path);
+    }
+
+    [Fact]
     public async Task PersonFilterText_ShouldFilterPeopleByName()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -355,6 +390,178 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SaveAllCommand_ShouldSaveAllDirtyEditors()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var markdownFileStore = new RecordingMarkdownFileStore(_ => "# Original tekst");
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: markdownFileStore);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        var anna = viewModel.People.Single(person => person.DisplayName == "Anna Jensen");
+        var bo = viewModel.People.Single(person => person.DisplayName == "Bo Jensen");
+
+        viewModel.SelectedPerson = anna;
+        viewModel.Editor!.MarkdownText = "# Anna ændret";
+        viewModel.SelectedPerson = bo;
+        viewModel.Editor!.MarkdownText = "# Bo ændret";
+
+        viewModel.HasDirtyEditors.Should().BeTrue();
+        viewModel.SaveAllCommand.CanExecute(null).Should().BeTrue();
+
+        viewModel.SaveAllCommand.Execute(null);
+
+        markdownFileStore.Writes.Should().Contain(write =>
+            write.Path == anna.MarkdownFilePath && write.Content == "# Anna ændret");
+        markdownFileStore.Writes.Should().Contain(write =>
+            write.Path == bo.MarkdownFilePath && write.Content == "# Bo ændret");
+        viewModel.HasDirtyEditors.Should().BeFalse();
+        viewModel.SaveAllCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmCloseAsync_ShouldAllowClose_WithoutPrompt_WhenNothingIsDirty()
+    {
+        var unsavedChangesDialogService = new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér);
+        var viewModel = CreateViewModel(unsavedChangesDialogService: unsavedChangesDialogService);
+
+        var canClose = await viewModel.ConfirmCloseAsync();
+
+        canClose.Should().BeTrue();
+        unsavedChangesDialogService.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ConfirmCloseAsync_ShouldSaveAndAllowClose_WhenUserChoosesGem()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var markdownFileStore = new RecordingMarkdownFileStore(_ => "# Original tekst");
+        var unsavedChangesDialogService = new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Gem);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: markdownFileStore,
+            unsavedChangesDialogService: unsavedChangesDialogService);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Ændret";
+
+        var canClose = await viewModel.ConfirmCloseAsync();
+
+        canClose.Should().BeTrue();
+        unsavedChangesDialogService.Calls.Should().Be(1);
+        markdownFileStore.LastWriteContent.Should().Be("# Ændret");
+        viewModel.HasDirtyEditors.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmCloseAsync_ShouldAllowClose_WhenUserChoosesKassér()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var markdownFileStore = new RecordingMarkdownFileStore(_ => "# Original tekst");
+        var unsavedChangesDialogService = new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Kassér);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: markdownFileStore,
+            unsavedChangesDialogService: unsavedChangesDialogService);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Ændret";
+
+        var canClose = await viewModel.ConfirmCloseAsync();
+
+        canClose.Should().BeTrue();
+        unsavedChangesDialogService.Calls.Should().Be(1);
+        markdownFileStore.LastWriteContent.Should().BeNull();
+        viewModel.HasDirtyEditors.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ConfirmCloseAsync_ShouldCancelClose_WhenUserChoosesAnnuller()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var markdownFileStore = new RecordingMarkdownFileStore(_ => "# Original tekst");
+        var unsavedChangesDialogService = new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: markdownFileStore,
+            unsavedChangesDialogService: unsavedChangesDialogService);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Ændret";
+
+        var canClose = await viewModel.ConfirmCloseAsync();
+
+        canClose.Should().BeFalse();
+        unsavedChangesDialogService.Calls.Should().Be(1);
+        markdownFileStore.LastWriteContent.Should().BeNull();
+        viewModel.HasDirtyEditors.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_ShouldAskForOutputFolderAndThenLoad_WhenOutputIsMissing()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -492,14 +699,48 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void ExitApplicationCommand_ShouldCallApplicationControlService()
+    public async Task ExitApplicationCommand_ShouldCallApplicationControlService_WhenNothingIsDirty()
     {
         var applicationControlService = new RecordingApplicationControlService();
         var viewModel = CreateViewModel(applicationControlService: applicationControlService);
 
-        viewModel.ExitApplicationCommand.Execute(null);
+        await viewModel.ExitApplicationCommand.ExecuteAsync(null);
 
         applicationControlService.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExitApplicationCommand_ShouldNotExit_WhenUserCancelsUnsavedChanges()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var applicationControlService = new RecordingApplicationControlService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            gedcomLoader: new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            applicationControlService: applicationControlService,
+            unsavedChangesDialogService: new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Ændret";
+
+        await viewModel.ExitApplicationCommand.ExecuteAsync(null);
+
+        applicationControlService.Calls.Should().Be(0);
+        viewModel.HasDirtyEditors.Should().BeTrue();
     }
 
     private static MainWindowViewModel CreateViewModel(
@@ -509,6 +750,7 @@ public class MainWindowViewModelTests
         IApplicationSettingsService? settingsService = null,
         ISettingsDialogService? settingsDialogService = null,
         IUserDialogService? userDialogService = null,
+        IUnsavedChangesDialogService? unsavedChangesDialogService = null,
         IApplicationControlService? applicationControlService = null,
         IMarkdownBiographyExportService? markdownBiographyExportService = null,
         IMarkdownFileStore? markdownFileStore = null)
@@ -520,6 +762,7 @@ public class MainWindowViewModelTests
             settingsService ?? new RecordingApplicationSettingsService(new AppSettings()),
             settingsDialogService ?? new RecordingSettingsDialogService(null),
             userDialogService ?? new NullUserDialogService(),
+            unsavedChangesDialogService ?? new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér),
             applicationControlService ?? new RecordingApplicationControlService(),
             markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService(),
             markdownFileStore ?? new RecordingMarkdownFileStore());
@@ -528,6 +771,13 @@ public class MainWindowViewModelTests
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
     {
         var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ged");
+        File.WriteAllLines(filePath, lines);
+        return new TemporaryGedcomFile(filePath);
+    }
+
+    private static TemporaryGedcomFile CreateTemporaryGedcomFileWithoutExtension(params string[] lines)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         File.WriteAllLines(filePath, lines);
         return new TemporaryGedcomFile(filePath);
     }
@@ -647,6 +897,24 @@ public class MainWindowViewModelTests
         }
     }
 
+    private sealed class RecordingUnsavedChangesDialogService : IUnsavedChangesDialogService
+    {
+        private readonly UnsavedChangesDecision _result;
+
+        public RecordingUnsavedChangesDialogService(UnsavedChangesDecision result)
+        {
+            _result = result;
+        }
+
+        public int Calls { get; private set; }
+
+        public Task<UnsavedChangesDecision> AskAsync()
+        {
+            Calls++;
+            return Task.FromResult(_result);
+        }
+    }
+
     private sealed class RecordingApplicationControlService : IApplicationControlService
     {
         public int Calls { get; private set; }
@@ -667,6 +935,9 @@ public class MainWindowViewModelTests
         }
 
         public string? LastReadPath { get; private set; }
+        public string? LastWritePath { get; private set; }
+        public string? LastWriteContent { get; private set; }
+        public List<(string Path, string Content)> Writes { get; } = [];
 
         public string Read(string path)
         {
@@ -676,6 +947,9 @@ public class MainWindowViewModelTests
 
         public void Write(string path, string content)
         {
+            LastWritePath = path;
+            LastWriteContent = content;
+            Writes.Add((path, content));
         }
     }
 

@@ -42,6 +42,23 @@ public class EditorViewModelTests
 
         fileStore.LastReadPath.Should().Be(path);
         viewModel.MarkdownText.Should().Be("# Test");
+        viewModel.IsDirty.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkdownText_ShouldMarkEditorDirty_AfterLoad()
+    {
+        const string path = "/tmp/person.md";
+        var fileStore = new RecordingMarkdownFileStore
+        {
+            ReadResult = "# Test",
+        };
+        var viewModel = new EditorViewModel(path, fileStore);
+
+        viewModel.Load();
+        viewModel.MarkdownText = "# Redigeret";
+
+        viewModel.IsDirty.Should().BeTrue();
     }
 
     [Fact]
@@ -58,6 +75,7 @@ public class EditorViewModelTests
 
         fileStore.LastWritePath.Should().Be(path);
         fileStore.LastWriteContent.Should().Be("## Gem mig");
+        viewModel.IsDirty.Should().BeFalse();
     }
 
     [Fact]

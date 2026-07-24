@@ -10,6 +10,7 @@ public partial class EditorViewModel : ViewModelBase
 {
     private readonly string _filePath;
     private readonly IMarkdownFileStore _markdownFileStore;
+    private bool _suppressDirtyTracking;
 
     public EditorViewModel(string filePath, IMarkdownFileStore markdownFileStore)
     {
@@ -22,6 +23,9 @@ public partial class EditorViewModel : ViewModelBase
 
     [ObservableProperty]
     private PreviewMode previewMode = PreviewMode.Web;
+
+    [ObservableProperty]
+    private bool isDirty;
 
     public string PreviewHtml => string.IsNullOrWhiteSpace(MarkdownText)
         ? string.Empty
@@ -60,19 +64,34 @@ public partial class EditorViewModel : ViewModelBase
 
     public void Load()
     {
-        MarkdownText = _markdownFileStore.Read(_filePath);
+        _suppressDirtyTracking = true;
+        try
+        {
+            MarkdownText = _markdownFileStore.Read(_filePath);
+            IsDirty = false;
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
     }
 
     [RelayCommand]
     private void Save()
     {
         _markdownFileStore.Write(_filePath, MarkdownText ?? string.Empty);
+        IsDirty = false;
     }
 
     partial void OnMarkdownTextChanged(string value)
     {
         OnPropertyChanged(nameof(PreviewHtml));
         OnPropertyChanged(nameof(PreviewWebUri));
+
+        if (!_suppressDirtyTracking)
+        {
+            IsDirty = true;
+        }
     }
 
     partial void OnPreviewModeChanged(PreviewMode value)

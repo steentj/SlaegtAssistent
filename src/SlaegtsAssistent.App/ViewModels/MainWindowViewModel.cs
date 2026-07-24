@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,10 +22,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IApplicationSettingsService _applicationSettingsService;
     private readonly ISettingsDialogService _settingsDialogService;
     private readonly IUserDialogService _userDialogService;
+    private readonly IUnsavedChangesDialogService _unsavedChangesDialogService;
     private readonly IApplicationControlService _applicationControlService;
     private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
     private readonly IMarkdownFileStore _markdownFileStore;
     private readonly List<PersonListItemViewModel> _allPeople = [];
+    private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
 
     public MainWindowViewModel()
         : this(
@@ -34,6 +37,7 @@ public partial class MainWindowViewModel : ViewModelBase
             new NullApplicationSettingsService(),
             new NullSettingsDialogService(),
             new NullUserDialogService(),
+            new NullUnsavedChangesDialogService(),
             new NullApplicationControlService(),
             new NullMarkdownBiographyExportService(),
             new NullMarkdownFileStore())
@@ -47,6 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IApplicationSettingsService applicationSettingsService,
         ISettingsDialogService settingsDialogService,
         IUserDialogService userDialogService,
+        IUnsavedChangesDialogService unsavedChangesDialogService,
         IApplicationControlService applicationControlService,
         IMarkdownBiographyExportService markdownBiographyExportService,
         IMarkdownFileStore markdownFileStore)
@@ -57,6 +62,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _applicationSettingsService = applicationSettingsService;
         _settingsDialogService = settingsDialogService;
         _userDialogService = userDialogService;
+        _unsavedChangesDialogService = unsavedChangesDialogService;
         _applicationControlService = applicationControlService;
         _markdownBiographyExportService = markdownBiographyExportService;
         _markdownFileStore = markdownFileStore;
@@ -86,6 +92,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string personFilterText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasDirtyEditors;
 
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
@@ -172,9 +181,42 @@ public partial class MainWindowViewModel : ViewModelBase
             "manuel kvalitetssikring af biografier.");
     }
 
-    [RelayCommand]
-    private void ExitApplication()
+    public async Task<bool> ConfirmCloseAsync()
     {
+        if (!HasDirtyEditors)
+        {
+            return true;
+        }
+
+        var decision = await _unsavedChangesDialogService.AskAsync();
+        if (decision == UnsavedChangesDecision.Gem)
+        {
+            SaveAll();
+            return true;
+        }
+
+        return decision == UnsavedChangesDecision.Kassér;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveAll))]
+    private void SaveAll()
+    {
+        foreach (var editor in _editors.Values.Where(editor => editor.IsDirty).ToList())
+        {
+            editor.SaveCommand.Execute(null);
+        }
+
+        UpdateDirtyState();
+    }
+
+    [RelayCommand]
+    private async Task ExitApplicationAsync()
+    {
+        if (!await ConfirmCloseAsync())
+        {
+            return;
+        }
+
         _applicationControlService.Exit();
     }
 
@@ -226,23 +268,35 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
-        try
+        if (!_editors.TryGetValue(value.MarkdownFilePath, out var editor))
         {
-            editor.Load();
-            Editor = editor;
-            ErrorMessage = null;
+            editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
+            editor.PropertyChanged += EditorOnPropertyChanged;
+
+            try
+            {
+                editor.Load();
+                _editors.Add(value.MarkdownFilePath, editor);
+            }
+            catch (IOException exception)
+            {
+                editor.PropertyChanged -= EditorOnPropertyChanged;
+                ErrorMessage = $"Kunne ikke læse Markdown-fil: {exception.Message}";
+                Editor = null;
+                return;
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                editor.PropertyChanged -= EditorOnPropertyChanged;
+                ErrorMessage = $"Manglende adgang til Markdown-fil: {exception.Message}";
+                Editor = null;
+                return;
+            }
         }
-        catch (IOException exception)
-        {
-            Editor = null;
-            ErrorMessage = $"Kunne ikke læse Markdown-fil: {exception.Message}";
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            Editor = null;
-            ErrorMessage = $"Manglende adgang til Markdown-fil: {exception.Message}";
-        }
+
+        Editor = editor;
+        ErrorMessage = null;
+        UpdateDirtyState();
     }
 
     private static PersonListItemViewModel CreatePersonListItem(Person person, string outputFolder)
@@ -310,6 +364,25 @@ public partial class MainWindowViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(folder) ? null : folder.Trim();
     }
 
+    private bool CanSaveAll()
+    {
+        return HasDirtyEditors;
+    }
+
+    private void EditorOnPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(EditorViewModel.IsDirty))
+        {
+            UpdateDirtyState();
+        }
+    }
+
+    private void UpdateDirtyState()
+    {
+        HasDirtyEditors = _editors.Values.Any(editor => editor.IsDirty);
+        SaveAllCommand.NotifyCanExecuteChanged();
+    }
+
     private sealed class NullGedcomFilePickerService : IGedcomFilePickerService
     {
         public Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
@@ -343,6 +416,14 @@ public partial class MainWindowViewModel : ViewModelBase
         public Task ShowInformationAsync(string title, string message)
         {
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NullUnsavedChangesDialogService : IUnsavedChangesDialogService
+    {
+        public Task<UnsavedChangesDecision> AskAsync()
+        {
+            return Task.FromResult(UnsavedChangesDecision.Annullér);
         }
     }
 

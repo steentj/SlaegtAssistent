@@ -1,5 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -7,13 +8,6 @@ namespace SlaegtsAssistent.App.Services;
 
 public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
 {
-    private static readonly FilePickerFileType GedcomFileType = new("GEDCOM-filer")
-    {
-        Patterns = ["*.ged"],
-        AppleUniformTypeIdentifiers = ["public.text"],
-        MimeTypes = ["text/plain"],
-    };
-
     private readonly IClassicDesktopStyleApplicationLifetime _applicationLifetime;
 
     public AvaloniaGedcomFilePickerService(IClassicDesktopStyleApplicationLifetime applicationLifetime)
@@ -35,19 +29,29 @@ public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
             suggestedStartLocation = await mainWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
         }
 
-        var files = await mainWindow.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Vælg GEDCOM-fil",
-            AllowMultiple = false,
-            FileTypeFilter = [GedcomFileType],
-            SuggestedStartLocation = suggestedStartLocation,
-        });
+        var files = await mainWindow.StorageProvider.OpenFilePickerAsync(
+            CreateOpenOptions(suggestedStartLocation));
 
         if (files.Count == 0)
         {
             return null;
         }
 
-        return files[0].TryGetLocalPath();
+        return ResolveSelectedFilePath(files[0].Path);
+    }
+
+    public static FilePickerOpenOptions CreateOpenOptions(IStorageFolder? suggestedStartLocation)
+    {
+        return new FilePickerOpenOptions
+        {
+            Title = "Vælg GEDCOM-fil",
+            AllowMultiple = false,
+            SuggestedStartLocation = suggestedStartLocation,
+        };
+    }
+
+    public static string? ResolveSelectedFilePath(Uri path)
+    {
+        return path.LocalPath;
     }
 }

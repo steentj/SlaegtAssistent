@@ -19,6 +19,8 @@
             <MenuItem Header="_Fil">
                 <MenuItem Header="Indlæs GEDCOM fil"
                           Command="{Binding SelectGedcomFileCommand}" />
+                <MenuItem Header="Gem"
+                          Command="{Binding SaveAllCommand}" />
                 <Separator />
                 <MenuItem Header="Indstillinger"
                           Command="{Binding OpenSettingsCommand}" />
@@ -72,7 +74,7 @@
                         <Button Grid.Row="1"
                                 Content="Gem"
                                 HorizontalAlignment="Right"
-                                Command="{Binding Editor.SaveCommand}" />
+                                Command="{Binding SaveAllCommand}" />
                     </Grid>
                 </TabItem>
                 <TabItem Header="Preview">
