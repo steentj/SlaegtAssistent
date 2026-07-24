@@ -349,6 +349,7 @@ public class MainWindowViewModelTests
 
         viewModel.Editor.Should().NotBeNull();
         viewModel.Editor!.MarkdownText.Should().Be("# Redigeret biografi");
+        viewModel.Editor.PreviewMode.Should().Be(PreviewMode.Web);
         markdownFileStore.LastReadPath.Should().NotBeNull();
         markdownFileStore.LastReadPath.Should().EndWith(".md");
     }

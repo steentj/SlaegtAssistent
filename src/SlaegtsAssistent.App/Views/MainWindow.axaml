@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:wv="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.WebView"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="560"
@@ -75,13 +76,27 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Preview">
-                    <TextBox Margin="12"
-                             IsReadOnly="True"
-                             Text="{Binding Editor.PreviewHtml}"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                    <Grid Margin="12" RowDefinitions="Auto,*" RowSpacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <RadioButton Content="Webvisning"
+                                         GroupName="PreviewMode"
+                                         IsChecked="{Binding Editor.IsWebPreviewSelected, Mode=TwoWay}" />
+                            <RadioButton Content="Rå HTML"
+                                         GroupName="PreviewMode"
+                                         IsChecked="{Binding Editor.IsHtmlPreviewSelected, Mode=TwoWay}" />
+                        </StackPanel>
+                        <Grid Grid.Row="1">
+                            <wv:NativeWebView Source="{Binding Editor.PreviewWebUri}"
+                                              IsVisible="{Binding Editor.IsWebPreviewSelected}" />
+                            <TextBox IsVisible="{Binding Editor.IsHtmlPreviewSelected}"
+                                     IsReadOnly="True"
+                                     Text="{Binding Editor.PreviewHtml}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                        </Grid>
+                    </Grid>
                 </TabItem>
             </TabControl>
         </Grid>

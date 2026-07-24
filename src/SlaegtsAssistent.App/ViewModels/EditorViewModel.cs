@@ -1,3 +1,4 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Markdig;
@@ -19,9 +20,43 @@ public partial class EditorViewModel : ViewModelBase
     [ObservableProperty]
     private string markdownText = string.Empty;
 
+    [ObservableProperty]
+    private PreviewMode previewMode = PreviewMode.Web;
+
     public string PreviewHtml => string.IsNullOrWhiteSpace(MarkdownText)
         ? string.Empty
         : Markdown.ToHtml(MarkdownText);
+
+    public Uri PreviewWebUri => string.IsNullOrWhiteSpace(PreviewHtml)
+        ? new Uri("about:blank")
+        : new Uri(
+            "data:text/html;charset=utf-8," +
+            Uri.EscapeDataString(
+                $"<!doctype html><html><head><meta charset=\"utf-8\"></head><body>{PreviewHtml}</body></html>"));
+
+    public bool IsWebPreviewSelected
+    {
+        get => PreviewMode == PreviewMode.Web;
+        set
+        {
+            if (value)
+            {
+                PreviewMode = PreviewMode.Web;
+            }
+        }
+    }
+
+    public bool IsHtmlPreviewSelected
+    {
+        get => PreviewMode == PreviewMode.Html;
+        set
+        {
+            if (value)
+            {
+                PreviewMode = PreviewMode.Html;
+            }
+        }
+    }
 
     public void Load()
     {
@@ -37,5 +72,12 @@ public partial class EditorViewModel : ViewModelBase
     partial void OnMarkdownTextChanged(string value)
     {
         OnPropertyChanged(nameof(PreviewHtml));
+        OnPropertyChanged(nameof(PreviewWebUri));
+    }
+
+    partial void OnPreviewModeChanged(PreviewMode value)
+    {
+        OnPropertyChanged(nameof(IsWebPreviewSelected));
+        OnPropertyChanged(nameof(IsHtmlPreviewSelected));
     }
 }

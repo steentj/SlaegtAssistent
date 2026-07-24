@@ -71,6 +71,42 @@ public class EditorViewModelTests
         viewModel.PreviewHtml.Should().BeEmpty();
     }
 
+    [Fact]
+    public void PreviewMode_ShouldDefaultToWeb()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore());
+
+        viewModel.PreviewMode.Should().Be(PreviewMode.Web);
+        viewModel.IsWebPreviewSelected.Should().BeTrue();
+        viewModel.IsHtmlPreviewSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PreviewMode_ShouldSwitchBetweenWebAndHtml()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore());
+
+        viewModel.IsHtmlPreviewSelected = true;
+
+        viewModel.PreviewMode.Should().Be(PreviewMode.Html);
+        viewModel.IsHtmlPreviewSelected.Should().BeTrue();
+        viewModel.IsWebPreviewSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PreviewWebUri_ShouldContainRenderedHtml()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore())
+        {
+            MarkdownText = "# Hej",
+        };
+
+        viewModel.PreviewWebUri.Should().NotBeNull();
+        viewModel.PreviewWebUri.Scheme.Should().Be("data");
+        viewModel.PreviewWebUri.ToString().Should().Contain("data:text/html");
+        viewModel.PreviewWebUri.ToString().Should().Contain("Hej");
+    }
+
     private sealed class RecordingMarkdownFileStore : IMarkdownFileStore
     {
         public string ReadResult { get; set; } = string.Empty;
