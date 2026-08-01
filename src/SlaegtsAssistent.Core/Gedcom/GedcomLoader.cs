@@ -54,7 +54,8 @@ public sealed class GedcomLoader : IGedcomLoader
         ParsedFamily? currentFamily = null;
         ParsedSource? currentSource = null;
         ParsedMedia? currentMedia = null;
-        string? currentEventTag = null;
+        ParsedEvent? currentEvent = null;
+        ParsedCensus? currentCensus = null;
         ParsedSource? currentPersonSource = null;
         ParsedMedia? currentPersonMedia = null;
         bool currentSourceData = false;
@@ -76,7 +77,8 @@ public sealed class GedcomLoader : IGedcomLoader
                 currentFamily = null;
                 currentSource = null;
                 currentMedia = null;
-                currentEventTag = null;
+                currentEvent = null;
+                currentCensus = null;
                 currentPersonSource = null;
                 currentPersonMedia = null;
                 currentSourceData = false;
@@ -143,7 +145,8 @@ public sealed class GedcomLoader : IGedcomLoader
                     level,
                     tag,
                     value,
-                    ref currentEventTag,
+                    ref currentEvent,
+                    ref currentCensus,
                     ref currentPersonSource,
                     ref currentPersonMedia,
                     ref currentSourceData);
@@ -176,14 +179,16 @@ public sealed class GedcomLoader : IGedcomLoader
         int level,
         string tag,
         string? value,
-        ref string? currentEventTag,
+        ref ParsedEvent? currentEvent,
+        ref ParsedCensus? currentCensus,
         ref ParsedSource? currentSource,
         ref ParsedMedia? currentMedia,
         ref bool currentSourceData)
     {
         if (level == 1)
         {
-            currentEventTag = null;
+            currentEvent = null;
+            currentCensus = null;
             currentSource = null;
             currentMedia = null;
             currentSourceData = false;
@@ -200,7 +205,17 @@ public sealed class GedcomLoader : IGedcomLoader
 
                 case "BIRT":
                 case "DEAT":
-                    currentEventTag = tag;
+                case "BAPM":
+                case "CHR":
+                case "BURI":
+                case "EVEN":
+                    currentEvent = new ParsedEvent(tag, NormalizeToken(value));
+                    person.Events.Add(currentEvent);
+                    break;
+
+                case "CENS":
+                    currentCensus = new ParsedCensus();
+                    person.Census.Add(currentCensus);
                     break;
 
                 case "SOUR":
@@ -229,32 +244,79 @@ public sealed class GedcomLoader : IGedcomLoader
             return;
         }
 
-        if (level != 2 || currentEventTag is null)
+        if (level != 2)
         {
             return;
         }
 
-        if (tag == "DATE")
+        if (currentEvent is not null)
         {
-            if (currentEventTag == "BIRT")
+            switch (tag)
             {
-                person.BirthDate = NormalizeToken(value);
+                case "DATE":
+                    currentEvent.Date = NormalizeToken(value);
+                    if (currentEvent.Tag == "BIRT")
+                    {
+                        person.BirthDate = currentEvent.Date;
+                    }
+                    else if (currentEvent.Tag == "DEAT")
+                    {
+                        person.DeathDate = currentEvent.Date;
+                    }
+
+                    break;
+
+                case "PLAC":
+                    currentEvent.Place = NormalizeToken(value);
+                    if (currentEvent.Tag == "BIRT")
+                    {
+                        person.BirthPlace = currentEvent.Place;
+                    }
+                    else if (currentEvent.Tag == "DEAT")
+                    {
+                        person.DeathPlace = currentEvent.Place;
+                    }
+
+                    break;
+
+                case "TYPE":
+                    currentEvent.Type = NormalizeToken(value);
+                    break;
+
+                case "NOTE":
+                    currentEvent.Note = NormalizeToken(value);
+                    break;
+
+                case "SOUR":
+                    currentEvent.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                    break;
             }
-            else
-            {
-                person.DeathDate = NormalizeToken(value);
-            }
+
+            return;
         }
-        else if (tag == "PLAC")
+
+        if (currentCensus is null)
         {
-            if (currentEventTag == "BIRT")
-            {
-                person.BirthPlace = NormalizeToken(value);
-            }
-            else
-            {
-                person.DeathPlace = NormalizeToken(value);
-            }
+            return;
+        }
+
+        switch (tag)
+        {
+            case "DATE":
+                currentCensus.Date = NormalizeToken(value);
+                break;
+
+            case "PLAC":
+                currentCensus.Place = NormalizeToken(value);
+                break;
+
+            case "NOTE":
+                currentCensus.Note = NormalizeToken(value);
+                break;
+
+            case "SOUR":
+                currentCensus.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                break;
         }
     }
 
@@ -419,6 +481,8 @@ public sealed class GedcomLoader : IGedcomLoader
             person.DeathPlace = parsedPerson.DeathPlace;
             person.Sources.Clear();
             person.Media.Clear();
+            person.Events.Clear();
+            person.Census.Clear();
 
             foreach (var parsedSource in parsedPerson.Sources)
             {
@@ -428,6 +492,16 @@ public sealed class GedcomLoader : IGedcomLoader
             foreach (var parsedMedia in parsedPerson.Media)
             {
                 person.Media.Add(CreateMedia(tree, parsedMedia, parsedGedcom.Media));
+            }
+
+            foreach (var parsedEvent in parsedPerson.Events)
+            {
+                person.Events.Add(CreateEvent(tree, parsedEvent, parsedGedcom.Sources));
+            }
+
+            foreach (var parsedCensus in parsedPerson.Census)
+            {
+                person.Census.Add(CreateCensus(tree, parsedCensus, parsedGedcom.Sources));
             }
         }
 
@@ -522,6 +596,48 @@ public sealed class GedcomLoader : IGedcomLoader
 
         CopyMedia(parsedMedia, media, overwriteWithNull: false);
         return media;
+    }
+
+    private static GedcomEvent CreateEvent(
+        FamilyTree tree,
+        ParsedEvent parsedEvent,
+        IReadOnlyCollection<ParsedSource> parsedSources)
+    {
+        var gedcomEvent = new GedcomEvent(parsedEvent.Tag)
+        {
+            Value = parsedEvent.Value,
+            Date = parsedEvent.Date,
+            Place = parsedEvent.Place,
+            Type = parsedEvent.Type,
+            Note = parsedEvent.Note
+        };
+
+        foreach (var parsedSource in parsedEvent.Sources)
+        {
+            gedcomEvent.Sources.Add(CreateSource(tree, parsedSource, parsedSources));
+        }
+
+        return gedcomEvent;
+    }
+
+    private static Census CreateCensus(
+        FamilyTree tree,
+        ParsedCensus parsedCensus,
+        IReadOnlyCollection<ParsedSource> parsedSources)
+    {
+        var census = new Census
+        {
+            Date = parsedCensus.Date,
+            Place = parsedCensus.Place,
+            Note = parsedCensus.Note
+        };
+
+        foreach (var parsedSource in parsedCensus.Sources)
+        {
+            census.Sources.Add(CreateSource(tree, parsedSource, parsedSources));
+        }
+
+        return census;
     }
 
     private static void CopySource(ParsedSource source, Source target)
@@ -797,6 +913,44 @@ public sealed class GedcomLoader : IGedcomLoader
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
 
         public IList<ParsedMedia> Media { get; } = new List<ParsedMedia>();
+
+        public IList<ParsedEvent> Events { get; } = new List<ParsedEvent>();
+
+        public IList<ParsedCensus> Census { get; } = new List<ParsedCensus>();
+    }
+
+    private sealed class ParsedEvent
+    {
+        public ParsedEvent(string tag, string? value)
+        {
+            Tag = tag;
+            Value = value;
+        }
+
+        public string Tag { get; }
+
+        public string? Value { get; }
+
+        public string? Date { get; set; }
+
+        public string? Place { get; set; }
+
+        public string? Type { get; set; }
+
+        public string? Note { get; set; }
+
+        public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
+    }
+
+    private sealed class ParsedCensus
+    {
+        public string? Date { get; set; }
+
+        public string? Place { get; set; }
+
+        public string? Note { get; set; }
+
+        public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
     }
 
     private sealed class ParsedFamily

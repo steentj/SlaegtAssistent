@@ -1,0 +1,36 @@
+0 HEAD
+1 SOUR SlaegtsAssistentTests
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @S1@ SOUR
+1 TITL Folketælling 1911
+1 AUTH Arkivet
+0 @I1@ INDI
+1 NAME Anna /Jensen/
+1 SEX F
+1 BIRT
+2 DATE 12 MAR 1900
+2 PLAC Aarhus
+2 SOUR @S1@
+1 BAPM
+2 DATE 20 APR 1900
+2 PLAC Aarhus Domkirke
+2 TYPE Dåb
+2 NOTE Dåb registreret i kirkebogen
+2 SOUR @S1@
+1 EVEN Flytning
+2 DATE 01 MAY 1920
+2 PLAC København
+2 TYPE Bopæl
+2 NOTE Flyttede til København
+2 SOUR @S1@
+1 CENS
+2 DATE 01 FEB 1911
+2 PLAC Aarhus
+2 NOTE Registreret i folketællingen
+2 SOUR @S1@
+1 BURI
+2 DATE 03 JAN 1980
+2 PLAC Aarhus
+0 TRLR

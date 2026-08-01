@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-08-01
+- [108830d] Add GEDCOM event and census handling: implement Census and GedcomEvent classes, update Person class to include events and census lists, enhance GedcomLoader for parsing events and census records, and add tests for event and census mapping.
+- [299cb9a] Add source and media handling: implement Media and Source classes, update Person class to include sources and media lists, enhance GedcomLoader for parsing and mapping sources and media records, and add tests for source and media loading.
 - [69bab6d] Implement raw GEDCOM handling and status display in MainWindowViewModel; update UI to show active person, file paths, and save status; enhance tests for new functionality.
 - [4c33aaf] Implement raw GEDCOM handling and status display in MainWindowViewModel; update UI to show active person, file paths, and save status; enhance tests for new functionality.
 - [1911783] Add support for sources and media in FamilyTree; implement loading and mapping of source and media records in GedcomLoader; enhance tests for source and media handling.

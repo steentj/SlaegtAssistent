@@ -134,6 +134,75 @@ public class GedcomLoaderTests
     }
 
     [Fact]
+    public void Load_EventsAndCensusFixture_MapsEventsAndCensusFields()
+    {
+        var tree = _loader.Load(FixturePath("events-and-census.ged"));
+        var person = tree.FindPerson("@I1@");
+
+        person.Should().NotBeNull();
+        person!.Events.Should().HaveCount(4);
+        person.Events.Select(genericEvent => genericEvent.Tag)
+            .Should()
+            .Equal("BIRT", "BAPM", "EVEN", "BURI");
+
+        var baptism = person.Events.Single(genericEvent => genericEvent.Tag == "BAPM");
+        baptism.Date.Should().Be("20 APR 1900");
+        baptism.Place.Should().Be("Aarhus Domkirke");
+        baptism.Type.Should().Be("Dåb");
+        baptism.Note.Should().Be("Dåb registreret i kirkebogen");
+        baptism.Sources.Should().ContainSingle(source => source.RecordId == "@S1@");
+
+        var move = person.Events.Single(genericEvent => genericEvent.Tag == "EVEN");
+        move.Value.Should().Be("Flytning");
+        move.Date.Should().Be("01 MAY 1920");
+        move.Place.Should().Be("København");
+        move.Type.Should().Be("Bopæl");
+        move.Note.Should().Be("Flyttede til København");
+
+        var census = person.Census.Should().ContainSingle().Subject;
+        census.Date.Should().Be("01 FEB 1911");
+        census.Place.Should().Be("Aarhus");
+        census.Note.Should().Be("Registreret i folketællingen");
+        census.Sources.Should().ContainSingle(source => source.RecordId == "@S1@");
+    }
+
+    [Fact]
+    public void Load_EventsAndCensusFixture_ContinuesMappingLegacyBirthAndDeathFields()
+    {
+        var fixturePath = CreateTemporaryFixture(
+            """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Anna /Jensen/
+            1 BIRT
+            2 DATE 12 MAR 1900
+            2 PLAC Aarhus
+            1 DEAT
+            2 DATE 03 JAN 1980
+            2 PLAC Aarhus
+            0 TRLR
+            """);
+
+        try
+        {
+            var person = _loader.Load(fixturePath).FindPerson("@I1@");
+
+            person.Should().NotBeNull();
+            person!.BirthDate.Should().Be("12 MAR 1900");
+            person.BirthPlace.Should().Be("Aarhus");
+            person.DeathDate.Should().Be("03 JAN 1980");
+            person.DeathPlace.Should().Be("Aarhus");
+            person.Events.Select(genericEvent => genericEvent.Tag)
+                .Should()
+                .Equal("BIRT", "DEAT");
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
     public void Load_WhenReimportingWithExistingTree_MergesByRecordIdInsteadOfDuplicating()
     {
         var existingTree = _loader.Load(FixturePath("two-generations.ged"));
