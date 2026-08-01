@@ -1,0 +1,30 @@
+0 HEAD
+1 SOUR SlaegtsAssistentTests
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @S1@ SOUR
+1 TITL Kirkebog for Aarhus
+1 AUTH Aarhus Sogn
+1 PUBL Aarhus Arkiv, 1900
+1 TEXT Fødselsregister
+1 REPO @R1@
+1 DATA Fødsler
+2 DATE 1900
+2 TEXT Original registrering
+0 @M1@ OBJE
+1 FILE scans/anna-birth.jpg
+1 FORM jpeg
+1 TITL Fødselsregistrering
+1 TYPE Foto
+1 NOTE Scannet original
+0 @I1@ INDI
+1 NAME Anna /Jensen/
+1 SEX F
+1 SOUR @S1@
+2 PAGE 42
+2 DATA Personregistrering
+3 DATE 12 MAR 1900
+3 TEXT Notat fra kildehenvisningen
+1 OBJE @M1@
+0 TRLR

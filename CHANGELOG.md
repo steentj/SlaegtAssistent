@@ -2,6 +2,8 @@
 
 ## 2026-08-01
 - [69bab6d] Implement raw GEDCOM handling and status display in MainWindowViewModel; update UI to show active person, file paths, and save status; enhance tests for new functionality.
+- [4c33aaf] Implement raw GEDCOM handling and status display in MainWindowViewModel; update UI to show active person, file paths, and save status; enhance tests for new functionality.
+- [1911783] Add support for sources and media in FamilyTree; implement loading and mapping of source and media records in GedcomLoader; enhance tests for source and media handling.
 
 ## 2026-07-24
 - [a73ed6d] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.
@@ -27,7 +29,7 @@
 - [e9f5594] Sprint 1: Feature 1 - first commit
 - [7176c63] Sprint 1: Feature 2 - Implement GEDCOM parsing with record merging and error handling
 - [95337aa] Implement GEDCOM parsing with record merging and error handling
-- [35568ff] Add .gitignore file to exclude build artifacts and temporary files
+- [35568ff] Add .gitignore file to exclude build artifacts
 - [1e1a11c] Add .gitignore for .NET, xunit, and Avalonia
 - [b5b3ccc] Translate README to Danish and require Danish documentation
 - [57c9b07] Untrack App build artifacts

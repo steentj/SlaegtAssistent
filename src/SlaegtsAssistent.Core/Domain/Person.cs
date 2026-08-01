@@ -31,4 +31,8 @@ public sealed class Person
     public IList<Person> Parents { get; } = new List<Person>();
 
     public IList<Person> Children { get; } = new List<Person>();
+
+    public IList<Source> Sources { get; } = new List<Source>();
+
+    public IList<Media> Media { get; } = new List<Media>();
 }

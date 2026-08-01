@@ -61,6 +61,79 @@ public class GedcomLoaderTests
     }
 
     [Fact]
+    public void Load_SourcesAndMediaFixture_MapsRecordsAndPersonReferences()
+    {
+        var tree = _loader.Load(FixturePath("sources-and-media.ged"));
+
+        var source = tree.FindSource("@S1@");
+        var media = tree.FindMedia("@M1@");
+        var person = tree.FindPerson("@I1@");
+
+        source.Should().NotBeNull();
+        source!.Title.Should().Be("Kirkebog for Aarhus");
+        source.Author.Should().Be("Aarhus Sogn");
+        source.Publication.Should().Be("Aarhus Arkiv, 1900");
+        source.Text.Should().Be("Original registrering");
+        source.Repository.Should().Be("@R1@");
+        source.Data.Should().Be("Fødsler");
+        source.Date.Should().Be("1900");
+
+        media.Should().NotBeNull();
+        media!.File.Should().Be("scans/anna-birth.jpg");
+        media.Form.Should().Be("jpeg");
+        media.Title.Should().Be("Fødselsregistrering");
+        media.Type.Should().Be("Foto");
+        media.Note.Should().Be("Scannet original");
+
+        person.Should().NotBeNull();
+        person!.Sources.Should().ContainSingle();
+        person.Sources[0].RecordId.Should().Be("@S1@");
+        person.Sources[0].Title.Should().Be("Kirkebog for Aarhus");
+        person.Sources[0].Page.Should().Be("42");
+        person.Sources[0].Data.Should().Be("Personregistrering");
+        person.Sources[0].Date.Should().Be("12 MAR 1900");
+        person.Sources[0].Text.Should().Be("Notat fra kildehenvisningen");
+        person.Media.Should().ContainSingle();
+        person.Media[0].RecordId.Should().Be("@M1@");
+        person.Media[0].File.Should().Be("scans/anna-birth.jpg");
+    }
+
+    [Fact]
+    public void Load_SourcesAndMediaFixture_MapsInlinePersonData()
+    {
+        var fixturePath = CreateTemporaryFixture(
+            """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Anna /Jensen/
+            1 SOUR
+            2 TITL Lokal kilde
+            2 PAGE Side 3
+            1 OBJE
+            2 FILE lokal.jpg
+            2 FORM jpeg
+            0 TRLR
+            """);
+
+        try
+        {
+            var person = _loader.Load(fixturePath).FindPerson("@I1@");
+
+            person.Should().NotBeNull();
+            person!.Sources.Should().ContainSingle();
+            person.Sources[0].Title.Should().Be("Lokal kilde");
+            person.Sources[0].Page.Should().Be("Side 3");
+            person.Media.Should().ContainSingle();
+            person.Media[0].File.Should().Be("lokal.jpg");
+            person.Media[0].Form.Should().Be("jpeg");
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
     public void Load_WhenReimportingWithExistingTree_MergesByRecordIdInsteadOfDuplicating()
     {
         var existingTree = _loader.Load(FixturePath("two-generations.ged"));
@@ -109,5 +182,12 @@ public class GedcomLoaderTests
             ".."));
 
         return Path.Combine(projectDirectory, "Fixtures", "Gedcom", fileName);
+    }
+
+    private static string CreateTemporaryFixture(string content)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ged");
+        File.WriteAllText(path, content);
+        return path;
     }
 }
