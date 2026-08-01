@@ -58,14 +58,58 @@ public sealed class BiographyDocumentTests
     }
 
     [Fact]
-    public void Updater_ChangesOnlySelectedMetadataAndPreservesBody()
+    public void Parse_UsesVisibleBirthFactWhenItDiffersFromFrontMatter()
+    {
+        var metadata = new BiographyDocumentMetadata(
+            1,
+            "@I1@",
+            "Anna Jensen",
+            new BiographyFactsSnapshot("Anna Jensen", "F", "12 MAR 1900", "Aarhus", null, null, []));
+        var content = BiographyDocumentSerializer.Serialize(
+            metadata,
+            "# Anna Jensen\n\n## Fakta\n- **Født:** 13 MAR 1900 i Aarhus\n\n## Biografi\nTekst.\n");
+
+        var document = BiographyDocumentParser.Parse(content);
+
+        document.Metadata!.Facts.BirthDate.Should().Be("13 MAR 1900");
+        document.Metadata.Facts.BirthPlace.Should().Be("Aarhus");
+    }
+
+    [Fact]
+    public void DifferenceService_DoesNotTreatUnrepresentedLegacyFieldsAsDifferences()
+    {
+        var legacyFacts = BiographyDocumentParser.ExtractVisibleFacts(
+            "# Anna Jensen\n\n## Fakta\n- **Født:** 12 MAR 1900 i Aarhus\n",
+            new BiographyFactsSnapshot(null, null, null, null, null, null, [])
+            {
+                RepresentedFields = new HashSet<string>(StringComparer.Ordinal),
+            });
+        var gedcomFacts = new BiographyFactsSnapshot(
+            "Anna Jensen",
+            "F",
+            "12 MAR 1900",
+            "Aarhus",
+            null,
+            null,
+            ["@I2@"]);
+
+        var differences = new BiographyDifferenceService().Compare(legacyFacts, gedcomFacts);
+
+        differences.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Updater_ChangesSelectedMetadataAndVisibleFactButPreservesBiography()
     {
         var metadata = new BiographyDocumentMetadata(
             1,
             "@I1@",
             "Anna Jensen",
             new BiographyFactsSnapshot("Anna Jensen", "F", "12 MAR 1900", null, null, null, []));
-        var document = new BiographyDocument(metadata, "# Anna Jensen\n\nMin tekst.\n", true);
+        var document = new BiographyDocument(
+            metadata,
+            "# Anna Jensen\n\n## Fakta\n- **Født:** 12 MAR 1900\n\n## Biografi\nMin tekst.\n",
+            true);
         var gedcomFacts = new BiographyFactsSnapshot(
             "Anna Jensen", "F", "13 MAR 1900", "Aarhus", null, null, []);
 
@@ -79,7 +123,8 @@ public sealed class BiographyDocumentTests
                     ["Fødested"] = true,
                 }));
 
-        updated.Body.Should().Be(document.Body);
+        updated.Body.Should().Contain("- **Født:** 13 MAR 1900 i Aarhus");
+        updated.Body.Should().Contain("Min tekst.");
         updated.Metadata!.Facts.BirthDate.Should().Be("13 MAR 1900");
         updated.Metadata.Facts.BirthPlace.Should().Be("Aarhus");
     }

@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using System;
+using System.ComponentModel;
 using SlaegtsAssistent.App.ViewModels;
 
 namespace SlaegtsAssistent.App.Views;
@@ -6,10 +8,19 @@ namespace SlaegtsAssistent.App.Views;
 public partial class MainWindow : Window
 {
     private bool _canCloseWithoutPrompt;
+    private EditorViewModel? _subscribedEditor;
+    private bool _previewAdapterReady;
 
     public MainWindow()
     {
         InitializeComponent();
+        DataContextChanged += HandleDataContextChanged;
+        PreviewWebView.AdapterCreated += (_, _) =>
+        {
+            _previewAdapterReady = true;
+            RefreshPreview();
+        };
+        PreviewWebView.AdapterDestroyed += (_, _) => _previewAdapterReady = false;
     }
 
     public MainWindow(MainWindowViewModel viewModel)
@@ -17,6 +28,63 @@ public partial class MainWindow : Window
     {
         DataContext = viewModel;
         Closing += HandleClosing;
+    }
+
+    private void HandleDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.PropertyChanged += HandleViewModelPropertyChanged;
+        AttachEditor(viewModel.Editor);
+    }
+
+    private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.Editor) &&
+            sender is MainWindowViewModel viewModel)
+        {
+            AttachEditor(viewModel.Editor);
+        }
+    }
+
+    private void AttachEditor(EditorViewModel? editor)
+    {
+        if (_subscribedEditor is not null)
+        {
+            _subscribedEditor.PropertyChanged -= HandleEditorPropertyChanged;
+        }
+
+        _subscribedEditor = editor;
+        if (_subscribedEditor is not null)
+        {
+            _subscribedEditor.PropertyChanged += HandleEditorPropertyChanged;
+        }
+
+        RefreshPreview();
+    }
+
+    private void HandleEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(EditorViewModel.PreviewHtml)
+            or nameof(EditorViewModel.PreviewHtmlDocument)
+            or nameof(EditorViewModel.IsWebPreviewSelected))
+        {
+            RefreshPreview();
+        }
+    }
+
+    private void RefreshPreview()
+    {
+        if (!_previewAdapterReady ||
+            DataContext is not MainWindowViewModel { Editor: { } editor })
+        {
+            return;
+        }
+
+        PreviewWebView.NavigateToString(editor.PreviewHtmlDocument);
     }
 
     private async void HandleClosing(object? sender, WindowClosingEventArgs e)

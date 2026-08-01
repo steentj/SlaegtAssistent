@@ -144,7 +144,7 @@
                                                  IsChecked="{Binding Editor.IsHtmlPreviewSelected, Mode=TwoWay}" />
                                 </StackPanel>
                                 <Grid Grid.Row="1">
-                                    <wv:NativeWebView Source="{Binding Editor.PreviewWebUri}"
+                                    <wv:NativeWebView x:Name="PreviewWebView"
                                                       IsVisible="{Binding Editor.IsWebPreviewSelected}" />
                                     <TextBox IsVisible="{Binding Editor.IsHtmlPreviewSelected}"
                                              IsReadOnly="True"

@@ -38,7 +38,13 @@ public partial class EditorViewModel : ViewModelBase
         : new Uri(
             "data:text/html;charset=utf-8," +
             Uri.EscapeDataString(
-                $"<!doctype html><html><head><meta charset=\"utf-8\"></head><body>{PreviewHtml}</body></html>"));
+                PreviewHtmlDocument));
+
+    public string PreviewHtmlDocument =>
+        $"<!doctype html><html><head><meta charset=\"utf-8\"><style>" +
+        "body{font-family:system-ui,sans-serif;line-height:1.55;margin:24px;}" +
+        "h1,h2,h3{line-height:1.2;}" +
+        $"</style></head><body>{PreviewHtml}</body></html>";
 
     public bool IsWebPreviewSelected
     {
@@ -80,12 +86,41 @@ public partial class EditorViewModel : ViewModelBase
         }
     }
 
+    public BiographyDocument CreateDocument()
+    {
+        if (_metadata is null)
+        {
+            return new BiographyDocument(null, MarkdownText ?? string.Empty, false);
+        }
+
+        var serialized = BiographyDocumentSerializer.Serialize(_metadata, MarkdownText ?? string.Empty);
+        return BiographyDocumentParser.Parse(serialized);
+    }
+
+    public void ApplySerializedDocument(string content)
+    {
+        var document = BiographyDocumentParser.Parse(content);
+        _suppressDirtyTracking = true;
+        try
+        {
+            _metadata = document.Metadata;
+            MarkdownText = document.Body;
+            IsDirty = true;
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+    }
+
     [RelayCommand]
     private void Save()
     {
-        var content = _metadata is null
-            ? MarkdownText ?? string.Empty
-            : BiographyDocumentSerializer.Serialize(_metadata, MarkdownText ?? string.Empty);
+        var document = CreateDocument();
+        var content = document.Metadata is null
+            ? document.Body
+            : BiographyDocumentSerializer.Serialize(document.Metadata, document.Body);
+        _metadata = document.Metadata;
         _markdownFileStore.Write(_filePath, content);
         IsDirty = false;
     }
@@ -94,6 +129,7 @@ public partial class EditorViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(PreviewHtml));
         OnPropertyChanged(nameof(PreviewWebUri));
+        OnPropertyChanged(nameof(PreviewHtmlDocument));
 
         if (!_suppressDirtyTracking)
         {

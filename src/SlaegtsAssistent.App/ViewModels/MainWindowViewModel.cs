@@ -283,52 +283,105 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ReviewGedcomDifferencesAsync(FamilyTree familyTree)
     {
+        var reviewItems = new List<GedcomDifferenceReviewItem>();
+
         foreach (var person in familyTree.People)
         {
-            var documentInfo = _documentPeople.FirstOrDefault(
-                document => document.RecordId == person.RecordId);
-            if (documentInfo is null || documentInfo.RecordId.StartsWith("error:", StringComparison.Ordinal))
+            var expectedPath = Path.Combine(
+                StandardMarkdownOutputFolder!,
+                BiographyFileNameGenerator.Generate(person));
+            var matchedPerson = _documentPeople.FirstOrDefault(
+                document => document.RecordId == person.RecordId)
+                ?? _documentPeople.FirstOrDefault(
+                    document => string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
+            MarkdownDocumentInfo? documentInfo = matchedPerson is null
+                ? null
+                : new MarkdownDocumentInfo(
+                    matchedPerson.RecordId,
+                    matchedPerson.DisplayName,
+                    matchedPerson.MarkdownFilePath,
+                    matchedPerson.RawGedcom);
+            if (documentInfo is null && File.Exists(expectedPath))
+            {
+                documentInfo = new MarkdownDocumentInfo(
+                    $"legacy:{Path.GetFileName(expectedPath)}",
+                    person.FullName ?? person.RecordId,
+                    expectedPath);
+            }
+
+            if (documentInfo is null ||
+                documentInfo.RecordId.StartsWith("error:", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (_editors.TryGetValue(documentInfo.MarkdownFilePath, out var openEditor) &&
-                openEditor.IsDirty)
-            {
-                ErrorMessage = $"Dokumentet for {person.FullName ?? person.RecordId} har ugemte ændringer og blev ikke synkroniseret.";
-                continue;
-            }
+            var hasOpenEditor = _editors.TryGetValue(documentInfo.FilePath, out var openEditor);
+            var document = hasOpenEditor
+                ? openEditor!.CreateDocument()
+                : BiographyDocumentParser.Parse(_markdownFileStore.Read(documentInfo.FilePath));
 
-            var document = BiographyDocumentParser.Parse(_markdownFileStore.Read(documentInfo.MarkdownFilePath));
-            if (document.Metadata is not { } metadata)
-            {
-                continue;
-            }
-
+            var documentFacts = document.Metadata?.Facts
+                ?? BiographyDocumentParser.ExtractVisibleFacts(
+                    document.Body,
+                        new BiographyFactsSnapshot(null, null, null, null, null, null, [])
+                        {
+                            RepresentedFields = new HashSet<string>(StringComparer.Ordinal),
+                        });
+            var reviewDocument = document.Metadata is not null
+                ? document
+                : document with
+                {
+                    Metadata = new BiographyDocumentMetadata(
+                        1,
+                        person.RecordId,
+                        person.FullName,
+                        documentFacts),
+                };
+            var gedcomFacts = BiographyFactsSnapshot.FromPerson(person);
             var differences = new BiographyDifferenceService().Compare(
-                metadata.Facts,
-                BiographyFactsSnapshot.FromPerson(person));
-            if (differences.Count == 0)
+                documentFacts,
+                gedcomFacts);
+            foreach (var difference in differences)
             {
-                continue;
+                reviewItems.Add(new GedcomDifferenceReviewItem(
+                    $"{documentInfo.FilePath}|{difference.FieldName}",
+                    person.FullName ?? person.RecordId,
+                    documentInfo.FilePath,
+                    reviewDocument,
+                    gedcomFacts,
+                    difference));
             }
+        }
 
-            var choices = await _gedcomDifferenceDialogService.ShowAsync(
-                person.FullName ?? person.RecordId,
-                differences);
-            if (choices is null)
+        var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems);
+        if (choices is null)
+        {
+            return;
+        }
+
+        foreach (var documentGroup in reviewItems.GroupBy(item => item.FilePath, StringComparer.Ordinal))
+        {
+            var first = documentGroup.First();
+            var selectedFields = documentGroup.ToDictionary(
+                item => item.Difference.FieldName,
+                item => choices.TryGetValue(item.Key, out var useGedcom) && useGedcom,
+                StringComparer.Ordinal);
+            if (!selectedFields.Values.Any(value => value))
             {
                 continue;
             }
 
             var updatedContent = BiographyDocumentUpdater.ApplyGedcomChoices(
-                document,
-                BiographyFactsSnapshot.FromPerson(person),
-                choices);
-            _markdownFileStore.Write(documentInfo.MarkdownFilePath, updatedContent);
-            if (_editors.TryGetValue(documentInfo.MarkdownFilePath, out openEditor))
+                first.Document,
+                first.GedcomFacts,
+                selectedFields);
+            if (_editors.TryGetValue(first.FilePath, out var openEditor))
             {
-                openEditor.Load();
+                openEditor.ApplySerializedDocument(updatedContent);
+            }
+            else
+            {
+                _markdownFileStore.Write(first.FilePath, updatedContent);
             }
         }
     }
@@ -593,8 +646,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private sealed class NullGedcomDifferenceDialogService : IGedcomDifferenceDialogService
     {
         public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
-            string personName,
-            IReadOnlyList<BiographyDifference> differences)
+            IReadOnlyList<GedcomDifferenceReviewItem> differences)
         {
             return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
         }

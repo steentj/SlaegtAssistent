@@ -9,6 +9,10 @@ public sealed record BiographyFactsSnapshot(
     string? DeathPlace,
     IReadOnlyList<string> ParentRecordIds)
 {
+    public string? ParentDisplayText { get; init; }
+
+    public IReadOnlySet<string>? RepresentedFields { get; init; }
+
     public static BiographyFactsSnapshot FromPerson(Domain.Person person)
     {
         ArgumentNullException.ThrowIfNull(person);
@@ -20,6 +24,13 @@ public sealed record BiographyFactsSnapshot(
             person.BirthPlace,
             person.DeathDate,
             person.DeathPlace,
-            person.Parents.Select(parent => parent.RecordId).ToArray());
+            person.Parents.Select(parent => parent.RecordId).ToArray())
+        {
+            ParentDisplayText = string.Join(
+                ", ",
+                person.Parents
+                    .Select(parent => parent.FullName)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))),
+        };
     }
 }

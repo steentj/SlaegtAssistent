@@ -58,3 +58,5 @@
 - [4dbde75] Add GEDCOM event and census handling: implement Census and GedcomEvent classes, update Person class to include events and census lists, enhance GedcomLoader for parsing events and census records, and add tests for event and census mapping.
 - [af6553d] Add UI modernization plan and validation criteria: establish measurable standards for spacing, typography, hover/focus states, and contrast adjustments; include verification steps for visual consistency.
 - [cd12035] feat: Enhance biography document handling and UI settings
+- [bc55399] feat: Enhance biography document handling and UI settings
+- [b3dbf47] feat: Refactor GEDCOM difference handling and enhance document parsing

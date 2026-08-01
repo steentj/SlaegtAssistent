@@ -10,17 +10,35 @@ public sealed class BiographyDifferenceService
         ArgumentNullException.ThrowIfNull(gedcomFacts);
 
         var differences = new List<BiographyDifference>();
-        AddIfDifferent(differences, "Navn", documentFacts.FullName, gedcomFacts.FullName);
-        AddIfDifferent(differences, "Køn", documentFacts.Sex, gedcomFacts.Sex);
-        AddIfDifferent(differences, "Fødselsdato", documentFacts.BirthDate, gedcomFacts.BirthDate);
-        AddIfDifferent(differences, "Fødested", documentFacts.BirthPlace, gedcomFacts.BirthPlace);
-        AddIfDifferent(differences, "Dødsdato", documentFacts.DeathDate, gedcomFacts.DeathDate);
-        AddIfDifferent(differences, "Dødssted", documentFacts.DeathPlace, gedcomFacts.DeathPlace);
+        AddIfRepresented(differences, documentFacts, "Navn", documentFacts.FullName, gedcomFacts.FullName);
+        AddIfRepresented(differences, documentFacts, "Køn", documentFacts.Sex, gedcomFacts.Sex);
+        AddIfRepresented(differences, documentFacts, "Fødselsdato", documentFacts.BirthDate, gedcomFacts.BirthDate);
+        AddIfRepresented(differences, documentFacts, "Fødested", documentFacts.BirthPlace, gedcomFacts.BirthPlace);
+        AddIfRepresented(differences, documentFacts, "Dødsdato", documentFacts.DeathDate, gedcomFacts.DeathDate);
+        AddIfRepresented(differences, documentFacts, "Dødssted", documentFacts.DeathPlace, gedcomFacts.DeathPlace);
 
-        var documentParents = string.Join(", ", documentFacts.ParentRecordIds);
-        var gedcomParents = string.Join(", ", gedcomFacts.ParentRecordIds);
-        AddIfDifferent(differences, "Forældre", documentParents, gedcomParents);
+        var documentParents = documentFacts.ParentDisplayText
+            ?? string.Join(", ", documentFacts.ParentRecordIds);
+        var gedcomParents = gedcomFacts.ParentDisplayText
+            ?? string.Join(", ", gedcomFacts.ParentRecordIds);
+        AddIfRepresented(differences, documentFacts, "Forældre", documentParents, gedcomParents);
         return differences;
+    }
+
+    private static void AddIfRepresented(
+        ICollection<BiographyDifference> differences,
+        BiographyFactsSnapshot documentFacts,
+        string fieldName,
+        string? documentValue,
+        string? gedcomValue)
+    {
+        if (documentFacts.RepresentedFields is not null &&
+            !documentFacts.RepresentedFields.Contains(fieldName))
+        {
+            return;
+        }
+
+        AddIfDifferent(differences, fieldName, documentValue, gedcomValue);
     }
 
     private static void AddIfDifferent(

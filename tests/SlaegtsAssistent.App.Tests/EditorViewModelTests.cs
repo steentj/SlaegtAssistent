@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Tests;
 
@@ -79,6 +80,31 @@ public class EditorViewModelTests
     }
 
     [Fact]
+    public void Save_ShouldPersistVisibleFactChangesToFrontMatter()
+    {
+        const string path = "/tmp/person.md";
+        var metadata = new BiographyDocumentMetadata(
+            1,
+            "@I1@",
+            "Anna Jensen",
+            new BiographyFactsSnapshot("Anna Jensen", "F", "12 MAR 1900", "Aarhus", null, null, []));
+        var fileStore = new RecordingMarkdownFileStore
+        {
+            ReadResult = BiographyDocumentSerializer.Serialize(
+                metadata,
+                "# Anna Jensen\n\n## Fakta\n- **Født:** 12 MAR 1900 i Aarhus\n\n## Biografi\nTekst.\n"),
+        };
+        var viewModel = new EditorViewModel(path, fileStore);
+
+        viewModel.Load();
+        viewModel.MarkdownText = viewModel.MarkdownText.Replace("12 MAR 1900", "13 MAR 1900");
+        viewModel.SaveCommand.Execute(null);
+
+        var savedDocument = BiographyDocumentParser.Parse(fileStore.LastWriteContent!);
+        savedDocument.Metadata!.Facts.BirthDate.Should().Be("13 MAR 1900");
+    }
+
+    [Fact]
     public void PreviewHtml_ShouldBeEmpty_ForEmptyMarkdown()
     {
         var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore())
@@ -123,6 +149,17 @@ public class EditorViewModelTests
         viewModel.PreviewWebUri.Scheme.Should().Be("data");
         viewModel.PreviewWebUri.ToString().Should().Contain("data:text/html");
         viewModel.PreviewWebUri.ToString().Should().Contain("Hej");
+    }
+
+    [Fact]
+    public void PreviewHtmlDocument_ShouldContainRenderedHtml()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore())
+        {
+            MarkdownText = "# Hej",
+        };
+
+        viewModel.PreviewHtmlDocument.Should().Contain("<h1>Hej</h1>");
     }
 
     private sealed class RecordingMarkdownFileStore : IMarkdownFileStore

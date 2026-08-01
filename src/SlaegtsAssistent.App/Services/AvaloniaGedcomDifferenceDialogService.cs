@@ -4,11 +4,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using SlaegtsAssistent.Core.Biography;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Services;
 
@@ -22,150 +22,151 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         _applicationLifetime = applicationLifetime;
     }
 
-    public async Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
-        string personName,
-        IReadOnlyList<BiographyDifference> differences)
+    public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+        IReadOnlyList<GedcomDifferenceReviewItem> differences)
     {
         var owner = _applicationLifetime.MainWindow;
-        if (owner is null)
+        if (owner is null || differences.Count == 0)
         {
-            return null;
+            return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
         }
 
-        var choices = new Dictionary<string, ComboBox>(StringComparer.Ordinal);
-        var rows = new StackPanel { Spacing = 8 };
+        var gedcomChoices = new Dictionary<string, RadioButton>(StringComparer.Ordinal);
+        var rows = new StackPanel { Spacing = 6 };
 
         foreach (var difference in differences)
         {
-            var choice = new ComboBox
+            var markdownChoice = new RadioButton
             {
-                ItemsSource = new[] { "Behold tekst", "Brug GEDCOM" },
-                SelectedIndex = 0,
-                MinWidth = 130,
+                Content = "Markdown",
+                GroupName = difference.Key,
+                IsChecked = true,
             };
-            choices[difference.FieldName] = choice;
-
-            rows.Children.Add(new Grid
+            var gedcomChoice = new RadioButton
             {
-                ColumnDefinitions = new ColumnDefinitions("150,*,*,Auto"),
+                Content = "GEDCOM",
+                GroupName = difference.Key,
+            };
+            gedcomChoices[difference.Key] = gedcomChoice;
+            var choicePanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                Children = { markdownChoice, gedcomChoice },
+            };
+
+            var row = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("170,130,*,*,210"),
                 ColumnSpacing = 8,
-                Children =
-                {
-                    new TextBlock
-                    {
-                        Text = difference.FieldName,
-                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
-                        VerticalAlignment = VerticalAlignment.Center,
-                    },
-                    CreateValueBlock(difference.DocumentValue, 1),
-                    CreateValueBlock(difference.GedcomValue, 2),
-                    choice,
-                },
-            });
+            };
+            row.Children.Add(CreateValueBlock(difference.PersonName, 0, FontWeight.SemiBold));
+            row.Children.Add(CreateValueBlock(difference.Difference.FieldName, 1, FontWeight.SemiBold));
+            row.Children.Add(CreateValueBlock(difference.Difference.DocumentValue, 2));
+            row.Children.Add(CreateValueBlock(difference.Difference.GedcomValue, 3));
+            Grid.SetColumn(choicePanel, 4);
+            row.Children.Add(choicePanel);
+            rows.Children.Add(row);
         }
 
+        var completion = new TaskCompletionSource<IReadOnlyDictionary<string, bool>?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        IReadOnlyDictionary<string, bool>? selectedResult = null;
         var dialog = new Window
         {
-            Title = $"GEDCOM-forskelle: {personName}",
-            Width = 820,
-            Height = Math.Min(620, 180 + differences.Count * 58),
-            MinWidth = 700,
+            Title = "Forskelle mellem GEDCOM og Markdown",
+            Width = 1120,
+            Height = Math.Min(760, 230 + differences.Count * 48),
+            MinWidth = 900,
+            MinHeight = 320,
             CanResize = true,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = new DockPanel
+        };
+
+        var applyButton = new Button { Content = "Anvend valgte", MinWidth = 130 };
+        applyButton.Click += (_, _) =>
+        {
+            selectedResult = gedcomChoices.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.IsChecked == true,
+                StringComparer.Ordinal);
+            dialog.Close();
+        };
+        var closeButton = new Button { Content = "Luk uden ændringer", MinWidth = 150 };
+        closeButton.Click += (_, _) => dialog.Close();
+
+        var buttonBar = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8,
+            Children = { closeButton, applyButton },
+        };
+        DockPanel.SetDock(buttonBar, Dock.Bottom);
+
+        dialog.Content = new DockPanel
+        {
+            Margin = new Thickness(18),
+            Children =
             {
-                Margin = new Thickness(18),
-                Children =
+                buttonBar,
+                new ScrollViewer
                 {
-                    CreateButtons(out var applyButton, out var cancelButton),
-                    new ScrollViewer
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Content = new StackPanel
                     {
-                        Content = new StackPanel
+                        Spacing = 12,
+                        Children =
                         {
-                            Spacing = 14,
-                            Children =
+                            new TextBlock
                             {
-                                new TextBlock
-                                {
-                                    Text = "GEDCOM indeholder andre værdier. Vælg for hvert felt, om dokumentets metadata skal beholdes eller opdateres.",
-                                    TextWrapping = TextWrapping.Wrap,
-                                },
-                                new Grid
-                                {
-                                    ColumnDefinitions = new ColumnDefinitions("150,*,*,Auto"),
-                                    ColumnSpacing = 8,
-                                    Children =
-                                    {
-                                        CreateHeaderBlock("Felt", 0),
-                                        CreateHeaderBlock("Dokument", 1),
-                                        CreateHeaderBlock("GEDCOM", 2),
-                                        CreateHeaderBlock("Valg", 3),
-                                    },
-                                },
-                                rows,
+                                Text = "GEDCOM-filen indeholder værdier, der afviger fra den fortolkede faktasektion i Markdown. Vælg kilde for hvert felt.",
+                                TextWrapping = TextWrapping.Wrap,
                             },
+                            CreateHeaderRow(),
+                            rows,
                         },
-                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     },
                 },
             },
         };
 
-        applyButton.Click += (_, _) => dialog.Close(
-            choices.ToDictionary(
-                pair => pair.Key,
-                pair => pair.Value.SelectedIndex == 1,
-                StringComparer.Ordinal));
-        cancelButton.Click += (_, _) => dialog.Close();
-
-        return await dialog.ShowDialog<IReadOnlyDictionary<string, bool>?>(owner);
+        dialog.Closed += (_, _) => completion.TrySetResult(selectedResult);
+        dialog.Show(owner);
+        return completion.Task;
     }
 
-    private static TextBlock CreateValueBlock(string? value, int column)
+    private static Grid CreateHeaderRow()
+    {
+        var row = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("170,130,*,*,210"),
+            ColumnSpacing = 8,
+        };
+        row.Children.Add(CreateValueBlock("Person", 0, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Felt", 1, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Markdown", 2, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("GEDCOM", 3, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Kilde", 4, FontWeight.Bold));
+        return row;
+    }
+
+    private static TextBlock CreateValueBlock(
+        string? value,
+        int column,
+        FontWeight? fontWeight = null)
     {
         var block = new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(value) ? "—" : value,
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        Grid.SetColumn(block, column);
-        return block;
-    }
+        if (fontWeight is { } weight)
+        {
+            block.FontWeight = weight;
+        }
 
-    private static StackPanel CreateButtons(
-        out Button applyButton,
-        out Button cancelButton)
-    {
-        applyButton = new Button
-        {
-            Content = "Anvend valgte",
-            MinWidth = 130,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        cancelButton = new Button
-        {
-            Content = "Annuller",
-            MinWidth = 100,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-
-        return new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8,
-            Children = { cancelButton, applyButton },
-        };
-    }
-
-    private static TextBlock CreateHeaderBlock(string text, int column)
-    {
-        var block = new TextBlock
-        {
-            Text = text,
-            FontWeight = Avalonia.Media.FontWeight.Bold,
-        };
         Grid.SetColumn(block, column);
         return block;
     }
