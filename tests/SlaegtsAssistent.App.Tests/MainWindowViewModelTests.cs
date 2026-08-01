@@ -16,6 +16,9 @@ public class MainWindowViewModelTests
 
         viewModel.People.Should().BeEmpty();
         viewModel.SelectedPerson.Should().BeNull();
+        viewModel.ActivePersonText.Should().Be("Ingen person valgt");
+        viewModel.ActiveFilePathText.Should().Be("Ingen GEDCOM-fil indlæst");
+        viewModel.SaveStatusText.Should().Be("Gemt");
     }
 
     [Fact]
@@ -194,6 +197,42 @@ public class MainWindowViewModelTests
         viewModel.SelectedGedcomFilePath.Should().Be(file.Path);
         exporter.Calls.Should().Be(1);
         exporter.LastOutputFolder.Should().Be(outputFolder);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldExposeRawGedcomAndStatusData()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 SEX F",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        viewModel.People.Should().ContainSingle();
+        viewModel.People[0].RawGedcom.Should().Contain("0 @I1@ INDI");
+        viewModel.People[0].RawGedcom.Should().Contain("1 NAME Anna /Jensen/");
+        viewModel.ActivePersonText.Should().Be("Anna Jensen (@I1@)");
+        viewModel.ActiveFilePathText.Should().Contain(Path.GetFileName(file.Path));
+        viewModel.SaveStatusText.Should().Be("Gemt");
+
+        viewModel.Editor!.MarkdownText = "# Ændret";
+
+        viewModel.SaveStatusText.Should().Be("Ugemte ændringer");
     }
 
     [Fact]

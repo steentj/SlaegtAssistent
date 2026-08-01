@@ -14,6 +14,8 @@ public sealed class Person
 
     public string RecordId { get; }
 
+    public string RawGedcom { get; set; } = string.Empty;
+
     public string? FullName { get; set; }
 
     public string? Sex { get; set; }

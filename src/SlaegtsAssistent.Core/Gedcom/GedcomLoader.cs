@@ -41,6 +41,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
     private static ParsedGedcom ParseGedcom(string filePath)
     {
+        var rawGedcomByRecordId = ReadRawPersonSegments(filePath);
         using var stream = CreateNormalizedLineEndingStream(filePath);
         using var parser = new Parser(stream);
 
@@ -82,6 +83,8 @@ public sealed class GedcomLoader : IGedcomLoader
                             currentPerson = new ParsedPerson(value);
                             people.Add(value, currentPerson);
                         }
+
+                        currentPerson.RawGedcom = rawGedcomByRecordId.GetValueOrDefault(value, string.Empty);
                         break;
 
                     case "FAM":
@@ -205,6 +208,7 @@ public sealed class GedcomLoader : IGedcomLoader
             importedRecordIds.Add(parsedPerson.RecordId);
 
             var person = tree.GetOrAddPerson(parsedPerson.RecordId);
+            person.RawGedcom = parsedPerson.RawGedcom;
             person.FullName = parsedPerson.FullName;
             person.Sex = parsedPerson.Sex;
             person.BirthDate = parsedPerson.BirthDate;
@@ -289,6 +293,66 @@ public sealed class GedcomLoader : IGedcomLoader
         return new MemoryStream(Encoding.UTF8.GetBytes(normalizedLineEndings));
     }
 
+    private static IReadOnlyDictionary<string, string> ReadRawPersonSegments(string filePath)
+    {
+        var segments = new Dictionary<string, string>(StringComparer.Ordinal);
+        var lines = File.ReadAllLines(filePath);
+        var currentRecordId = string.Empty;
+        var currentLines = new List<string>();
+
+        void StoreCurrentSegment()
+        {
+            if (currentRecordId.Length == 0)
+            {
+                return;
+            }
+
+            segments[currentRecordId] = string.Join(Environment.NewLine, currentLines);
+            currentRecordId = string.Empty;
+            currentLines.Clear();
+        }
+
+        foreach (var line in lines)
+        {
+            if (TryReadIndividualHeader(line, out var recordId))
+            {
+                StoreCurrentSegment();
+                currentRecordId = recordId;
+                currentLines.Add(line);
+                continue;
+            }
+
+            if (currentRecordId.Length > 0 && line.StartsWith("0 ", StringComparison.Ordinal))
+            {
+                StoreCurrentSegment();
+                continue;
+            }
+
+            if (currentRecordId.Length > 0)
+            {
+                currentLines.Add(line);
+            }
+        }
+
+        StoreCurrentSegment();
+        return segments;
+    }
+
+    private static bool TryReadIndividualHeader(string line, out string recordId)
+    {
+        recordId = string.Empty;
+        var fields = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+        if (fields.Length != 3
+            || fields[0] != "0"
+            || !string.Equals(fields[2], "INDI", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        recordId = fields[1];
+        return true;
+    }
+
     private static string NormalizeLineEndings(string text)
     {
         var normalized = text
@@ -334,6 +398,8 @@ public sealed class GedcomLoader : IGedcomLoader
         }
 
         public string RecordId { get; }
+
+        public string RawGedcom { get; set; } = string.Empty;
 
         public string? FullName { get; set; }
 

@@ -98,6 +98,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
+    public string ActivePersonText => SelectedPerson is null
+        ? "Ingen person valgt"
+        : $"{SelectedPerson.DisplayName} ({SelectedPerson.RecordId})";
+
+    public string ActiveFilePathText => AbbreviatePath(SelectedGedcomFilePath)
+        ?? "Ingen GEDCOM-fil indlæst";
+
+    public string ActiveMarkdownFilePathText => SelectedPerson is null
+        ? "Ingen redigeringsfil"
+        : AbbreviatePath(SelectedPerson.MarkdownFilePath) ?? "Ingen redigeringsfil";
+
+    public string SaveStatusText => HasDirtyEditors ? "Ugemte ændringer" : "Gemt";
+
     [RelayCommand]
     private async Task SelectGedcomFileAsync()
     {
@@ -262,6 +275,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedPersonChanged(PersonListItemViewModel? value)
     {
+        NotifyStatusProperties();
+
         if (value is null)
         {
             Editor = null;
@@ -307,7 +322,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var markdownFileName = BiographyFileNameGenerator.Generate(person);
         var markdownFilePath = Path.Combine(outputFolder, markdownFileName);
 
-        return new PersonListItemViewModel(person.RecordId, displayName, markdownFilePath);
+        return new PersonListItemViewModel(person.RecordId, displayName, markdownFilePath, person.RawGedcom);
     }
 
     partial void OnPersonFilterTextChanged(string value)
@@ -364,6 +379,32 @@ public partial class MainWindowViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(folder) ? null : folder.Trim();
     }
 
+    private static string? AbbreviatePath(string? path, int maximumLength = 72)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        var normalizedPath = path.Trim();
+        if (normalizedPath.Length <= maximumLength)
+        {
+            return normalizedPath;
+        }
+
+        var fileName = Path.GetFileName(normalizedPath);
+        var prefixLength = maximumLength - fileName.Length - 3;
+        return prefixLength > 0
+            ? $"{normalizedPath[..prefixLength]}...{fileName}"
+            : $"...{fileName}";
+    }
+
+    private void NotifyStatusProperties()
+    {
+        OnPropertyChanged(nameof(ActivePersonText));
+        OnPropertyChanged(nameof(ActiveMarkdownFilePathText));
+    }
+
     private bool CanSaveAll()
     {
         return HasDirtyEditors;
@@ -381,6 +422,16 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         HasDirtyEditors = _editors.Values.Any(editor => editor.IsDirty);
         SaveAllCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedGedcomFilePathChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ActiveFilePathText));
+    }
+
+    partial void OnHasDirtyEditorsChanged(bool value)
+    {
+        OnPropertyChanged(nameof(SaveStatusText));
     }
 
     private sealed class NullGedcomFilePickerService : IGedcomFilePickerService

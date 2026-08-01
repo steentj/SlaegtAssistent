@@ -36,6 +36,30 @@
             </MenuItem>
         </Menu>
 
+        <Border DockPanel.Dock="Bottom"
+                BorderThickness="0,1,0,0"
+                Padding="8,6"
+                Margin="12,0">
+            <StackPanel Orientation="Horizontal" Spacing="18">
+                <TextBlock>
+                    <Run Text="Aktiv person: " FontWeight="SemiBold" />
+                    <Run Text="{Binding ActivePersonText}" />
+                </TextBlock>
+                <TextBlock ToolTip.Tip="{Binding SelectedGedcomFilePath}">
+                    <Run Text="GEDCOM-fil: " FontWeight="SemiBold" />
+                    <Run Text="{Binding ActiveFilePathText}" />
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Redigeringsfil: " FontWeight="SemiBold" />
+                    <Run Text="{Binding ActiveMarkdownFilePathText}" />
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Status: " FontWeight="SemiBold" />
+                    <Run Text="{Binding SaveStatusText}" />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
         <Grid ColumnDefinitions="320,*" Margin="12" ColumnSpacing="12">
             <Border Grid.Column="0" BorderThickness="1" Padding="8">
                 <DockPanel>
@@ -55,7 +79,10 @@
                     <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PersonListItemViewModel">
-                                <TextBlock Text="{Binding DisplayName}" />
+                                <Border Padding="4"
+                                        ToolTip.Tip="{Binding RawGedcom}">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

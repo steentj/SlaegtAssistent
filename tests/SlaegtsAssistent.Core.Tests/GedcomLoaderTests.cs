@@ -23,6 +23,18 @@ public class GedcomLoaderTests
     }
 
     [Fact]
+    public void Load_SinglePersonFixture_PreservesRawGedcomSegment()
+    {
+        var tree = _loader.Load(FixturePath("single-person.ged"));
+
+        var rawGedcom = tree.FindPerson("@I1@")!.RawGedcom;
+
+        rawGedcom.Should().Contain("0 @I1@ INDI");
+        rawGedcom.Should().Contain("1 NAME Anna /Jensen/");
+        rawGedcom.Should().NotContain("0 TRLR");
+    }
+
+    [Fact]
     public void Load_TwoGenerationsFixture_ResolvesParentChildRelationships()
     {
         var tree = _loader.Load(FixturePath("two-generations.ged"));
