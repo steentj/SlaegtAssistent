@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,6 +16,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
         _folderPickerService = folderPickerService;
         DefaultGedcomInputFolder = currentSettings.DefaultGedcomInputFolder;
         DefaultMarkdownOutputFolder = currentSettings.DefaultMarkdownOutputFolder;
+        Theme = currentSettings.Theme;
     }
 
     [ObservableProperty]
@@ -22,6 +24,32 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? defaultMarkdownOutputFolder;
+
+    [ObservableProperty]
+    private ThemePreference theme;
+
+    public IReadOnlyList<string> ThemeOptions { get; } =
+        ["Systemstandard", "Lyst", "Mørkt"];
+
+    public string SelectedTheme
+    {
+        get => Theme switch
+        {
+            ThemePreference.Light => "Lyst",
+            ThemePreference.Dark => "Mørkt",
+            _ => "Systemstandard",
+        };
+        set
+        {
+            Theme = value switch
+            {
+                "Lyst" => ThemePreference.Light,
+                "Mørkt" => ThemePreference.Dark,
+                _ => ThemePreference.System,
+            };
+            OnPropertyChanged();
+        }
+    }
 
     public event EventHandler<AppSettings?>? CloseRequested;
 
@@ -58,6 +86,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
         {
             DefaultGedcomInputFolder = NormalizeFolder(DefaultGedcomInputFolder),
             DefaultMarkdownOutputFolder = NormalizeFolder(DefaultMarkdownOutputFolder),
+            Theme = Theme,
         });
     }
 

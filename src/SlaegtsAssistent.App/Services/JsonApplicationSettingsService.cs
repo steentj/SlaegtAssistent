@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SlaegtsAssistent.App.Services;
 
@@ -9,6 +10,7 @@ public sealed class JsonApplicationSettingsService : IApplicationSettingsService
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
     };
 
     private readonly string _settingsFilePath;

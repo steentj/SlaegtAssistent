@@ -1,7 +1,7 @@
-# Plan: UI-modernisering med målbare kriterier
+# Plan: Designsystem og temagrundlag
 
-1. Fastlæg konkret spacing-skala for relevante views.
-2. Justér typografi og visuel hierarki i hovedskærmen.
-3. Implementér hover/focus-states for liste, knapper og toggles.
-4. Justér kontrast hvor nødvendig.
-5. Kør App-tests og manuel UI-gennemgang mod kriterierne.
+1. Afklar kompatibilitet mellem projektets Avalonia-version og FluentAvalonia.
+2. Definér semantiske farver, typografi, spacing, kanter og fokus som delte ressourcer.
+3. Tilføj lyst, mørkt og systemstyret tema med lokal persistens.
+4. Tilføj temavælger i indstillingerne uden Avalonia-afhængighed i ViewModels.
+5. Verificér at eksisterende kommandoer og editorflow fortsat fungerer.

@@ -16,7 +16,7 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
             ? person.RecordId
             : person.FullName;
 
-        var markdown = new StringBuilder()
+        var body = new StringBuilder()
             .Append("# ")
             .Append(headingName)
             .Append('\n')
@@ -26,17 +26,23 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
 
         foreach (var fact in facts)
         {
-            markdown.Append("- ").Append(fact).Append('\n');
+            body.Append("- ").Append(fact).Append('\n');
         }
 
-        markdown
+        body
             .Append('\n')
             .Append("## Biografi")
             .Append('\n')
             .Append(BiographyPlaceholder)
             .Append('\n');
 
-        return markdown.ToString();
+        return BiographyDocumentSerializer.Serialize(
+            new BiographyDocumentMetadata(
+                1,
+                person.RecordId,
+                person.FullName,
+                BiographyFactsSnapshot.FromPerson(person)),
+            body.ToString());
     }
 
     private static IEnumerable<string> BuildFacts(Person person)

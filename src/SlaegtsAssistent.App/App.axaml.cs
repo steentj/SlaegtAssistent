@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
@@ -24,6 +25,13 @@ public partial class App : Application
         {
             var services = ConfigureServices(desktop);
             _services = services;
+            var settings = services.GetRequiredService<IApplicationSettingsService>().Load();
+            RequestedThemeVariant = settings.Theme switch
+            {
+                ThemePreference.Light => ThemeVariant.Light,
+                ThemePreference.Dark => ThemeVariant.Dark,
+                _ => ThemeVariant.Default,
+            };
             desktop.MainWindow = services.GetRequiredService<MainWindow>();
             desktop.Exit += (_, _) => services.Dispose();
         }
@@ -46,6 +54,8 @@ public partial class App : Application
         services.AddSingleton<IApplicationControlService, AvaloniaApplicationControlService>();
         services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();
         services.AddSingleton<IMarkdownFileStore, FileSystemMarkdownFileStore>();
+        services.AddSingleton<IMarkdownDocumentCatalog, FileSystemMarkdownDocumentCatalog>();
+        services.AddSingleton<IGedcomDifferenceDialogService, AvaloniaGedcomDifferenceDialogService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>(provider => new MainWindow(
             provider.GetRequiredService<MainWindowViewModel>()));

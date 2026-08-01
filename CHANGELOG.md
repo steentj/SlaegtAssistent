@@ -35,3 +35,26 @@
 - [1e1a11c] Add .gitignore for .NET, xunit, and Avalonia
 - [b5b3ccc] Translate README to Danish and require Danish documentation
 - [57c9b07] Untrack App build artifacts
+
+## 2026-07-19
+- [28e42ef] Add project guidelines and conventions to AGENTS.md
+
+## 2026-07-23
+- [eb05d4c] Inserted  spec fot new feature 3 in sprint 1: Add ui functionality for reading a gedcom file
+- [227110c] Implement GEDCOM file selection and loading functionality in MainWindowViewModel
+- [eb1f4d5] Update CHANGELOG.md with recent feature additions and specifications
+- [b1e7a4a] Implement JSON-based application settings service and biography export functionality
+- [7ee2352] Implement Markdown file handling and editor functionality with GEDCOM integration
+
+## 2026-07-24
+- [1f1cb44] Implement features for Sprint 02 PoC refinement, including person filtering, preview mode switching, global save functionality, close warning for unsaved changes, hover GEDCOM popup, and UI modernization with measurable criteria.
+- [6603281] Implement person filtering functionality in MainWindowViewModel and update UI with filter input in MainWindow.axaml; add unit tests for filtering by name and record ID.
+- [872ca25] Add preview mode functionality to EditorViewModel and MainWindow
+- [abde060] Enhance file handling and editor functionality: support additional GEDCOM file extensions, implement dirty tracking in EditorViewModel, and add SaveAll command in MainWindowViewModel with corresponding UI updates.
+
+## 2026-08-01
+- [4c33aaf] Implement raw GEDCOM handling and status display in MainWindowViewModel; update UI to show active person, file paths, and save status; enhance tests for new functionality.
+- [299cb9a] Add source and media handling: implement Media and Source classes, update Person class to include sources and media lists, enhance GedcomLoader for parsing and mapping sources and media records, and add tests for source and media loading.
+- [4dbde75] Add GEDCOM event and census handling: implement Census and GedcomEvent classes, update Person class to include events and census lists, enhance GedcomLoader for parsing events and census records, and add tests for event and census mapping.
+- [af6553d] Add UI modernization plan and validation criteria: establish measurable standards for spacing, typography, hover/focus states, and contrast adjustments; include verification steps for visual consistency.
+- [cd12035] feat: Enhance biography document handling and UI settings

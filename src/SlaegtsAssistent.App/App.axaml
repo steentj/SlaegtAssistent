@@ -3,13 +3,54 @@
              x:Class="SlaegtsAssistent.App.App"
              xmlns:local="using:SlaegtsAssistent.App"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F4F6F8" />
+                    <SolidColorBrush x:Key="AppPanelBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppPanelMutedBrush" Color="#EEF1F4" />
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#D8DEE6" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#176B87" />
+                    <SolidColorBrush x:Key="AppAccentMutedBrush" Color="#D8EEF4" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#17212B" />
+                    <SolidColorBrush x:Key="AppMutedTextBrush" Color="#5E6B78" />
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#B42318" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#151A20" />
+                    <SolidColorBrush x:Key="AppPanelBackgroundBrush" Color="#1D242C" />
+                    <SolidColorBrush x:Key="AppPanelMutedBrush" Color="#252E38" />
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#35404C" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#70C4D6" />
+                    <SolidColorBrush x:Key="AppAccentMutedBrush" Color="#203E47" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#EDF2F7" />
+                    <SolidColorBrush x:Key="AppMutedTextBrush" Color="#AAB7C4" />
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#F28B82" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource AppWindowBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="MinHeight" Value="34" />
+        </Style>
     </Application.Styles>
 </Application>

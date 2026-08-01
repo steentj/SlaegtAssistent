@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Markdig;
 using SlaegtsAssistent.App.Services;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.ViewModels;
 
@@ -11,6 +12,7 @@ public partial class EditorViewModel : ViewModelBase
     private readonly string _filePath;
     private readonly IMarkdownFileStore _markdownFileStore;
     private bool _suppressDirtyTracking;
+    private BiographyDocumentMetadata? _metadata;
 
     public EditorViewModel(string filePath, IMarkdownFileStore markdownFileStore)
     {
@@ -67,7 +69,9 @@ public partial class EditorViewModel : ViewModelBase
         _suppressDirtyTracking = true;
         try
         {
-            MarkdownText = _markdownFileStore.Read(_filePath);
+            var document = BiographyDocumentParser.Parse(_markdownFileStore.Read(_filePath));
+            _metadata = document.Metadata;
+            MarkdownText = document.Body;
             IsDirty = false;
         }
         finally
@@ -79,7 +83,10 @@ public partial class EditorViewModel : ViewModelBase
     [RelayCommand]
     private void Save()
     {
-        _markdownFileStore.Write(_filePath, MarkdownText ?? string.Empty);
+        var content = _metadata is null
+            ? MarkdownText ?? string.Empty
+            : BiographyDocumentSerializer.Serialize(_metadata, MarkdownText ?? string.Empty);
+        _markdownFileStore.Write(_filePath, content);
         IsDirty = false;
     }
 

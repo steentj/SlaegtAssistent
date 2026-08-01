@@ -26,6 +26,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IApplicationControlService _applicationControlService;
     private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
     private readonly IMarkdownFileStore _markdownFileStore;
+    private readonly IMarkdownDocumentCatalog _markdownDocumentCatalog;
+    private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
+    private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
 
@@ -54,7 +57,9 @@ public partial class MainWindowViewModel : ViewModelBase
         IUnsavedChangesDialogService unsavedChangesDialogService,
         IApplicationControlService applicationControlService,
         IMarkdownBiographyExportService markdownBiographyExportService,
-        IMarkdownFileStore markdownFileStore)
+        IMarkdownFileStore markdownFileStore,
+        IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
+        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -66,10 +71,20 @@ public partial class MainWindowViewModel : ViewModelBase
         _applicationControlService = applicationControlService;
         _markdownBiographyExportService = markdownBiographyExportService;
         _markdownFileStore = markdownFileStore;
+        _markdownDocumentCatalog = markdownDocumentCatalog ?? new FileSystemMarkdownDocumentCatalog();
+        _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
+        Theme = settings.Theme;
+        _documentPeople.AddRange(_markdownDocumentCatalog.Load(StandardMarkdownOutputFolder)
+            .Select(document => new PersonListItemViewModel(
+                document.RecordId,
+                document.DisplayName,
+                document.FilePath,
+                document.ErrorMessage ?? string.Empty)));
+        ReplaceAllPeople(_documentPeople);
     }
 
     [ObservableProperty]
@@ -86,6 +101,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? standardMarkdownOutputFolder;
+
+    [ObservableProperty]
+    private ThemePreference theme = ThemePreference.System;
 
     [ObservableProperty]
     private EditorViewModel? editor;
@@ -132,12 +150,17 @@ public partial class MainWindowViewModel : ViewModelBase
             var familyTree = _gedcomLoader.Load(filePath);
             _markdownBiographyExportService.WriteBiographies(familyTree, StandardMarkdownOutputFolder!);
             var outputFolder = StandardMarkdownOutputFolder!;
+            await ReviewGedcomDifferencesAsync(familyTree);
 
             var people = familyTree.People
                 .Select(person => CreatePersonListItem(person, outputFolder))
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
                 .ToList();
+
+            var gedcomRecordIds = people.Select(person => person.RecordId).ToHashSet(StringComparer.Ordinal);
+            people.AddRange(_documentPeople.Where(person =>
+                !gedcomRecordIds.Contains(person.RecordId)));
 
             ReplaceAllPeople(people);
             SelectedPerson = People.FirstOrDefault();
@@ -164,6 +187,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+            Theme = Theme,
         });
 
         if (updatedSettings is null)
@@ -173,6 +197,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StandardGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder);
+        Theme = updatedSettings.Theme;
         SaveSettings();
     }
 
@@ -254,6 +279,58 @@ public partial class MainWindowViewModel : ViewModelBase
         StandardMarkdownOutputFolder = selectedOutputFolder;
         SaveSettings();
         return true;
+    }
+
+    private async Task ReviewGedcomDifferencesAsync(FamilyTree familyTree)
+    {
+        foreach (var person in familyTree.People)
+        {
+            var documentInfo = _documentPeople.FirstOrDefault(
+                document => document.RecordId == person.RecordId);
+            if (documentInfo is null || documentInfo.RecordId.StartsWith("error:", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (_editors.TryGetValue(documentInfo.MarkdownFilePath, out var openEditor) &&
+                openEditor.IsDirty)
+            {
+                ErrorMessage = $"Dokumentet for {person.FullName ?? person.RecordId} har ugemte ændringer og blev ikke synkroniseret.";
+                continue;
+            }
+
+            var document = BiographyDocumentParser.Parse(_markdownFileStore.Read(documentInfo.MarkdownFilePath));
+            if (document.Metadata is not { } metadata)
+            {
+                continue;
+            }
+
+            var differences = new BiographyDifferenceService().Compare(
+                metadata.Facts,
+                BiographyFactsSnapshot.FromPerson(person));
+            if (differences.Count == 0)
+            {
+                continue;
+            }
+
+            var choices = await _gedcomDifferenceDialogService.ShowAsync(
+                person.FullName ?? person.RecordId,
+                differences);
+            if (choices is null)
+            {
+                continue;
+            }
+
+            var updatedContent = BiographyDocumentUpdater.ApplyGedcomChoices(
+                document,
+                BiographyFactsSnapshot.FromPerson(person),
+                choices);
+            _markdownFileStore.Write(documentInfo.MarkdownFilePath, updatedContent);
+            if (_editors.TryGetValue(documentInfo.MarkdownFilePath, out openEditor))
+            {
+                openEditor.Load();
+            }
+        }
     }
 
     private void SetDefaultInputFolderFromSelectedGedcom(string gedcomFilePath)
@@ -371,6 +448,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+            Theme = Theme,
         });
     }
 
@@ -509,6 +587,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
         public void Write(string path, string content)
         {
+        }
+    }
+
+    private sealed class NullGedcomDifferenceDialogService : IGedcomDifferenceDialogService
+    {
+        public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+            string personName,
+            IReadOnlyList<BiographyDifference> differences)
+        {
+            return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
         }
     }
 }

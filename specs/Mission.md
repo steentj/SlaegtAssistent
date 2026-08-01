@@ -11,12 +11,13 @@ SlægtsAssistenten er en privatlivsfokuseret desktop-applikation, der skal hjæl
 
 ### Kernefunktionalitet
 1.  **Struktur til Prosa:** Læse GEDCOM-filer og oprette én redigerbar Markdown-biografi pr. person.
-2. **Universel Dokumenteksport:** Konvertering af de færdige, redigerede biografier til trykklare PDF'er og redigerbare kontorformater (OOXML/ODF) til nem deling.
-3. **Visuelt Slægtstræ:** Interaktiv grafisk visning af slægtstræet med mulighed for navigation, direkte udskrift
+2. **Dokumentførst arbejdsgang:** Indlæse eksisterende persondokumenter lokalt ved opstart, før en GEDCOM-fil læses, og lade brugeren kontrollere alle efterfølgende faktuelle forskelle.
+3. **Universel Dokumenteksport:** Konvertering af de færdige, redigerede biografier til trykklare PDF'er og redigerbare kontorformater (OOXML/ODF) til nem deling.
+4. **Visuelt Slægtstræ:** Interaktiv grafisk visning af slægtstræet med mulighed for navigation, direkte udskrift
 og eksport i højopløselige billedformater.
-4.  **Lokal AI-Berigelse:** Bruge lokale sprogmodeller (LLM) til at sætte kød på biografierne samt integrere historisk kontekst.
-5.  **Lokal RAG (Søgning i kilder):** Automatisk gennemsøgning af egne, downloadede lokalhistoriske PDF-bøger (f.eks. fra Danskernes Historie Online) for at berige biografier med historisk præcision baseret på geografi og erhverv.
-6.  **Lokal Transkribering (HTR):** Hjælpe med at tyde og transkribere indscannede, håndskrevne kilder direkte i appen.
+5. **Lokal AI-Berigelse:** Bruge lokale sprogmodeller (LLM) til at sætte kød på biografierne samt integrere historisk kontekst.
+6. **Lokal RAG (Søgning i kilder):** Automatisk gennemsøgning af egne, downloadede lokalhistoriske PDF-bøger (f.eks. fra Danskernes Historie Online) for at berige biografier med historisk præcision baseret på geografi og erhverv.
+7. **Lokal Transkribering (HTR):** Hjælpe med at tyde og transkribere indscannede, håndskrevne kilder direkte i appen.
 
 ### Dokumentation og tekst
 **Alle dokumenter, brugerinterface-tekster, kommentarer i koden og anden tekstuel dokumentation skal være på dansk.** Dette sikrer ensartet kommunikation og adgang for målgruppen.
@@ -46,3 +47,6 @@ Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (b
 ### Designprincipper
 - Ingen data forlader maskinen – ingen cloud-kald i UI'et, kun lokale processer.
 - Forslag og AI-output er altid tydeligt adskilt fra brugerens egen tekst, og kræver et aktivt klik for at blive en del af biografien.
+- Personens frie biografitekst er brugerens autoritative tekst og må aldrig overskrives automatisk af GEDCOM.
+- Strukturerede fakta fra GEDCOM og dokumenter vises som en kontrolleret sammenligning, hvor brugeren vælger felt for felt.
+- Appen skal have et roligt, informationsrigt desktopudtryk med både lyst og mørkt tema samt synlig tastaturfokus.

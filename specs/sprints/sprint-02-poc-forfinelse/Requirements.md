@@ -13,12 +13,12 @@ Forfine PoC'en fra sprint 1 med små, testdrevne features, som kan valideres ind
 - Lukning med ugemte ændringer viser Gem / Kassér / Annullér.
 - Preview starter i renderet webvisning, med mulighed for rå HTML.
 - Nye GEDCOM-felter bruges i denne sprint til parser + UI-visning (ikke auto-indsættelse i biografi).
-- UI-modernisering er en let opfriskning (ikke fuldt redesign).
+- UI-design og temaskift er ikke en del af Sprint 2; det leveres i Sprint 3.
 
 ## Ekstra forslag (skal implementeres)
 1. Statusfelt med aktiv person/fil og gemmestatus.
 2. Eksplicit mapping-tabel for GEDCOM-tags/sub-tags.
-3. Målbare UI-kriterier for modernisering.
+3. Målbare UI-kriterier for den efterfølgende UI-sprint.
 
 ## GEDCOM mapping-tabel (obligatorisk reference)
 | Område | Primære tags | Underfelter i scope (første iteration) |
@@ -29,5 +29,6 @@ Forfine PoC'en fra sprint 1 med små, testdrevne features, som kan valideres ind
 | Census | `CENS` | `DATE`, `PLAC`, `NOTE`, `SOUR` |
 
 ## Afgrænsning
-- Grafisk slægtstræ og eksport ligger fortsat i næste sprint.
+- Sprinten afsluttes efter feature 7. Moderne desktop-layout, lyst/mørkt tema og ny informationsarkitektur ligger i Sprint 3.
+- Grafisk slægtstræ og eksport ligger efter Sprint 4.
 - Ingen cloud-afhængigheder; alt lokalt som i øvrige sprintkrav.

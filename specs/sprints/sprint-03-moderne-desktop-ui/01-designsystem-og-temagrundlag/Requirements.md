@@ -1,17 +1,17 @@
-# Feature 08: UI-modernisering med målbare kriterier
+# Feature 01: Designsystem og temagrundlag
 
 ## Scope
-Levere en let visuel opfriskning med konkrete og målbare kriterier.
+Etablere det fælles visuelle fundament for et tæt, informationsrigt desktop-interface inspireret af LINQPad og JetBrains dotTrace.
 
 ## In scope
-- Konsistent spacing-skala i centrale layouts.
-- Forbedret typografi/hierarki for læsbarhed.
-- Tydelige hover- og focus-states for interaktive elementer.
-- Mindre farvejusteringer for bedre kontrast.
+- Semantiske designressourcer for farver, typografi, spacing, kanter og fokus.
+- `Lyst`, `Mørkt` og `Systemstandard` som gemt temaindstilling.
+- Tilgængeligt temaskift i indstillingerne.
+- FluentAvalonia kun hvis kompatibilitet med Avalonia 12 er dokumenteret; ellers Avalonia Fluent plus egne ressourcer.
 
 ## Out of scope
-- Fuld redesign af informationsarkitektur.
-- Temaskift-system eller brugerdefinerede temaer.
+- Nye domænefunktioner eller ændringer af GEDCOM-parseren.
+- Brugerdefinerede farvepaletter.
 
 ## Afhængigheder
 - Kan udføres efter de funktionelle features er på plads.

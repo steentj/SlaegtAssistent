@@ -1,4 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia;
+using Avalonia.Styling;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.App.Views;
 using System.Threading.Tasks;
@@ -28,6 +30,17 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
 
         var viewModel = new SettingsWindowViewModel(currentSettings, _folderPickerService);
         var dialog = new SettingsWindow(viewModel);
-        return await dialog.ShowDialog<AppSettings?>(owner);
+        var result = await dialog.ShowDialog<AppSettings?>(owner);
+        if (result is not null && Application.Current is { } application)
+        {
+            application.RequestedThemeVariant = result.Theme switch
+            {
+                ThemePreference.Light => ThemeVariant.Light,
+                ThemePreference.Dark => ThemeVariant.Dark,
+                _ => ThemeVariant.Default,
+            };
+        }
+
+        return result;
     }
 }

@@ -19,7 +19,12 @@ public class BiographyMarkdownGenerationTests
 
         var markdown = _generator.Generate(person);
 
-        markdown.Should().Be(
+        var document = BiographyDocumentParser.Parse(markdown);
+
+        document.Metadata.Should().NotBeNull();
+        document.Metadata!.RecordId.Should().Be("@I1@");
+        document.Metadata.DisplayName.Should().Be("Anna Jensen");
+        document.Body.Should().Be(
             "# Anna Jensen\n\n" +
             "## Fakta\n\n" +
             "## Biografi\n" +

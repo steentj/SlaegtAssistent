@@ -19,7 +19,8 @@ Sprinten udføres som små features i samme stil som sprint 1:
 5. `05-hover-gedcom-popup-og-statusfelt`
 6. `06-gedcom-kilder-og-medier`
 7. `07-gedcom-haendelser-og-census`
-8. `08-ui-modernisering-med-maalbare-kriterier`
+
+Feature 8 er flyttet til Sprint 3, fordi den oprindelige lette opfriskning er afløst af et komplet redesign med temaer.
 
 ## Leveranceformat
 Hver feature har egne filer:
