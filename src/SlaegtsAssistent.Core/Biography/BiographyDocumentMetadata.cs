@@ -7,4 +7,6 @@ public sealed record BiographyDocumentMetadata(
     BiographyFactsSnapshot Facts)
 {
     public string? GedcomBaselineHash { get; init; }
+
+    public string? TemplateHash { get; init; }
 }

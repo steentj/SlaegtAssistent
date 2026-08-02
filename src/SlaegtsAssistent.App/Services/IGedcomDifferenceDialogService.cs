@@ -11,7 +11,12 @@ public sealed record GedcomDifferenceReviewItem(
     BiographyDocument Document,
     BiographyFactsSnapshot GedcomFacts,
     BiographyDifference Difference,
-    bool UseGedcomByDefault);
+    bool UseGedcomByDefault)
+{
+    public string? CandidateContent { get; init; }
+
+    public bool RequiresMigration { get; init; }
+}
 
 public interface IGedcomDifferenceDialogService
 {

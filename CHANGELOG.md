@@ -74,3 +74,5 @@
 - [7e25e26] feat: Implement GEDCOM snapshot storage and loading functionality
 - [e9242c7] feat: Implement GEDCOM snapshot storage and loading functionality
 - [d154392] feat: Update theme colors and enhance preview functionality in EditorViewModel and MainWindow
+- [5fb5e89] feat: Update theme colors and enhance preview functionality in EditorViewModel and MainWindow
+- [0cb4b51] feat: Enhance GEDCOM handling with template hash support and improved biography generation

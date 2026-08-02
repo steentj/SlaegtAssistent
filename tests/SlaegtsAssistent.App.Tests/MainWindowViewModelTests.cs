@@ -402,10 +402,108 @@ public class MainWindowViewModelTests
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
         differenceDialog.LastDifferences.Should().ContainSingle(difference =>
-            difference.Difference.FieldName == "Fødselsdato" &&
-            difference.UseGedcomByDefault);
+            difference.Difference.FieldName == "Genereret sektion" &&
+            difference.UseGedcomByDefault &&
+            difference.CandidateContent!.Contains("12 MAR 1900", StringComparison.Ordinal));
         viewModel.People.Should().ContainSingle(person =>
             person.SyncStatus == BiographySyncStatus.Ændret);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldApplyApprovedCandidateAndPreserveFreeText()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 BIRT",
+            "2 DATE 12 MAR 1900",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var differenceDialog = new ChoosingGedcomDifferenceDialogService(true);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: differenceDialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = viewModel.Editor.MarkdownText
+            .Replace("_Skriv den fulde livshistorie her._", "Min egen tekst.", StringComparison.Ordinal);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        viewModel.Editor.MarkdownText.Should().Contain("Min egen tekst.");
+        viewModel.Editor.MarkdownText.Should().Contain("12 MAR 1900");
+        viewModel.Editor.IsDirty.Should().BeTrue();
+        differenceDialog.LastDifferences.Should().ContainSingle();
+        differenceDialog.LastDifferences[0].CandidateContent.Should().NotBeNull();
+        differenceDialog.LastDifferences[0].UseGedcomByDefault.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldLeaveDocumentUnchanged_WhenCandidateIsRejected()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 BIRT",
+            "2 DATE 12 MAR 1900",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var differenceDialog = new ChoosingGedcomDifferenceDialogService(false);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: differenceDialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        var original = viewModel.Editor!.MarkdownText;
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        viewModel.Editor.MarkdownText.Should().Be(original);
+        viewModel.Editor.MarkdownText.Should().NotContain("12 MAR 1900");
+        viewModel.Editor.IsDirty.Should().BeFalse();
     }
 
     [Fact]
@@ -1113,6 +1211,14 @@ public class MainWindowViewModelTests
             Calls++;
             LastOutputFolder = outputDirectory;
         }
+
+        public string GenerateBiography(
+            FamilyTree familyTree,
+            Person person,
+            string outputDirectory)
+        {
+            return string.Empty;
+        }
     }
 
     private sealed class RecordingGedcomDifferenceDialogService : IGedcomDifferenceDialogService
@@ -1128,6 +1234,26 @@ public class MainWindowViewModelTests
             LastDifferences = differences;
             return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
         }
+    }
+
+    private sealed class ChoosingGedcomDifferenceDialogService : IGedcomDifferenceDialogService
+        {
+            private readonly bool _useGedcom;
+
+            public ChoosingGedcomDifferenceDialogService(bool useGedcom)
+            {
+                _useGedcom = useGedcom;
+            }
+
+            public IReadOnlyList<GedcomDifferenceReviewItem> LastDifferences { get; private set; } = [];
+
+            public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+                IReadOnlyList<GedcomDifferenceReviewItem> differences)
+            {
+                LastDifferences = differences;
+                return Task.FromResult<IReadOnlyDictionary<string, bool>?>(
+                    differences.ToDictionary(item => item.Key, _ => _useGedcom, StringComparer.Ordinal));
+            }
     }
 
     private sealed class ThrowingGedcomSnapshotStore : IGedcomSnapshotStore

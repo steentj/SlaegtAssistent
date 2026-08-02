@@ -18,13 +18,14 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         "{{#each sources }}- {{ title }}{{#if author }} ({{ author }}){{/if}}{{#if page }}, side {{ page }}{{/if}}\n{{/each}}\n" +
         "## Medier\n" +
         "{{#each media }}{{#if relativeFile }}![{{ title }}]({{ relativeFile }})\n{{/if}}{{/each}}\n" +
-        "## Biografi\n\n_Skriv den fulde livshistorie her._\n\n" +
-        "{{#if submitter}}---\nKilde/afsender: {{ submitter.name }}\n{{/if}}";
+        "{{#if submitter}}---\nKilde/afsender: {{ submitter.name }}\n{{/if}}" +
+        "## Biografi\n\n_Skriv den fulde livshistorie her._\n";
 
     private readonly BiographyTemplate _template;
     private readonly BiographyTemplateRenderer _renderer;
     private readonly Submitter? _submitter;
     private readonly string? _mediaBaseDirectory;
+    private readonly string _templateHash;
 
     public BiographyTemplateMarkdownGenerator(
         string? template = null,
@@ -35,6 +36,7 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         _renderer = new BiographyTemplateRenderer();
         _submitter = submitter;
         _mediaBaseDirectory = mediaBaseDirectory;
+        _templateHash = BiographyTemplateIdentity.ComputeHash(_template.Source);
     }
 
     public string Generate(Person person)
@@ -52,7 +54,21 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
                 facts)
             {
                 GedcomBaselineHash = facts.ComputeFingerprint(),
+                TemplateHash = _templateHash,
             },
-            BiographyGeneratedSectionMerger.Wrap(body));
+            CreateDocumentBody(body));
+    }
+
+    private static string CreateDocumentBody(string body)
+    {
+        var biographyHeading = body.IndexOf("## Biografi", StringComparison.Ordinal);
+        if (biographyHeading < 0)
+        {
+            return BiographyGeneratedSectionMerger.Wrap(body);
+        }
+
+        var generatedPart = body[..biographyHeading].TrimEnd('\r', '\n');
+        var editablePart = body[biographyHeading..].TrimStart('\r', '\n').TrimEnd('\r', '\n');
+        return BiographyGeneratedSectionMerger.Wrap(generatedPart) + editablePart + "\n";
     }
 }

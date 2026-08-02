@@ -22,6 +22,7 @@ public sealed class BiographyDocumentTests
                 ["@I2@", "@I3@"]))
         {
             GedcomBaselineHash = "ABC123",
+            TemplateHash = "TEMPLATE123",
         };
 
         var body = "# Anna Jensen\n\nFri biografitekst.\n";

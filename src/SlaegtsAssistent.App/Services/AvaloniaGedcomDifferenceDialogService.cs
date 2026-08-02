@@ -121,7 +121,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                         {
                             new TextBlock
                             {
-                                Text = "GEDCOM-filen indeholder værdier, der afviger fra den fortolkede faktasektion i Markdown. Vælg kilde for hvert felt.",
+                                Text = "Der er en ny dokumentkandidat. Gennemgå indholdet og vælg, om kandidaten skal anvendes.",
                                 TextWrapping = TextWrapping.Wrap,
                             },
                             CreateHeaderRow(),

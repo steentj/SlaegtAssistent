@@ -169,6 +169,7 @@ public static class BiographyDocumentParser
             facts)
         {
             GedcomBaselineHash = ParseString(values, "gedcomBaselineHash"),
+        TemplateHash = ParseString(values, "templateHash"),
         };
     }
 

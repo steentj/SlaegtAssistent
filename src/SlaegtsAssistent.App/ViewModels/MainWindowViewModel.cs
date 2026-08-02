@@ -384,51 +384,61 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? openEditor!.CreateDocument()
                 : BiographyDocumentParser.Parse(_markdownFileStore.Read(documentInfo.FilePath));
 
-            var documentFacts = document.Metadata?.Facts
-                ?? BiographyDocumentParser.ExtractVisibleFacts(
-                    document.Body,
-                        new BiographyFactsSnapshot(null, null, null, null, null, null, [])
-                        {
-                            RepresentedFields = new HashSet<string>(StringComparer.Ordinal),
-                        });
-            var reviewDocument = document.Metadata is not null
-                ? document
-                : document with
-                {
-                    Metadata = new BiographyDocumentMetadata(
-                        1,
-                        person.RecordId,
-                        person.FullName,
-                        documentFacts),
-                };
-            var gedcomFacts = BiographyFactsSnapshot.FromPerson(person);
-            var gedcomBaselineHash = gedcomFacts.ComputeFingerprint();
-            if (document.Metadata?.GedcomBaselineHash is { } storedBaselineHash &&
-                string.Equals(storedBaselineHash, gedcomBaselineHash, StringComparison.Ordinal))
+            var generatedContent = _markdownBiographyExportService.GenerateBiography(
+                familyTree,
+                person,
+                StandardMarkdownOutputFolder!);
+            var generatedDocument = BiographyDocumentParser.Parse(generatedContent);
+            if (generatedDocument.Metadata is null)
+            {
+                throw new FormatException(
+                    "Den genererede kandidat mangler dokumentmetadata.");
+            }
+
+            var generatedSectionCandidate = BiographyGeneratedSectionMerger.CreateCandidate(
+                document.Body,
+                generatedDocument.Body);
+            var candidateMetadata = generatedDocument.Metadata;
+            var candidateContent = BiographyDocumentSerializer.Serialize(
+                candidateMetadata,
+                generatedSectionCandidate.Content);
+            var metadataMatches = document.Metadata is not null &&
+                                  string.Equals(
+                                      document.Metadata.GedcomBaselineHash,
+                                      candidateMetadata.GedcomBaselineHash,
+                                      StringComparison.Ordinal) &&
+                                  string.Equals(
+                                      document.Metadata.TemplateHash,
+                                      candidateMetadata.TemplateHash,
+                                      StringComparison.Ordinal);
+            if (metadataMatches && !generatedSectionCandidate.ChangesExistingDocument)
             {
                 syncStatuses[person.RecordId] = BiographySyncStatus.Uændret;
                 continue;
             }
 
-            var differences = new BiographyDifferenceService().Compare(
-                documentFacts,
-                gedcomFacts,
-                includeUnrepresentedFields: true);
-            syncStatuses[person.RecordId] = differences.Count == 0
-                ? BiographySyncStatus.Uændret
-                : BiographySyncStatus.Ændret;
-            foreach (var difference in differences)
+            syncStatuses[person.RecordId] = BiographySyncStatus.Ændret;
+            var reviewDocument = document.Metadata is not null
+                ? document
+                : generatedDocument;
+            var candidateDocument = BiographyDocumentParser.Parse(candidateContent);
+            var difference = new BiographyDifference(
+                "Genereret sektion",
+                document.Body,
+                candidateDocument.Body);
+            var reviewItem = new GedcomDifferenceReviewItem(
+                $"{documentInfo.FilePath}|generated",
+                person.FullName ?? person.RecordId,
+                documentInfo.FilePath,
+                reviewDocument,
+                BiographyFactsSnapshot.FromPerson(person),
+                difference,
+                true)
             {
-                reviewItems.Add(new GedcomDifferenceReviewItem(
-                    $"{documentInfo.FilePath}|{difference.FieldName}",
-                    person.FullName ?? person.RecordId,
-                    documentInfo.FilePath,
-                    reviewDocument,
-                    gedcomFacts,
-                    difference,
-                    string.IsNullOrWhiteSpace(difference.DocumentValue) &&
-                    !string.IsNullOrWhiteSpace(difference.GedcomValue)));
-            }
+                CandidateContent = candidateContent,
+                RequiresMigration = generatedSectionCandidate.RequiresMigration,
+            };
+            reviewItems.Add(reviewItem);
         }
 
         var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems);
@@ -440,6 +450,25 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var documentGroup in reviewItems.GroupBy(item => item.FilePath, StringComparer.Ordinal))
         {
             var first = documentGroup.First();
+            if (first.CandidateContent is { } candidateContent)
+            {
+                if (!choices.TryGetValue(first.Key, out var useCandidate) || !useCandidate)
+                {
+                    continue;
+                }
+
+                if (_editors.TryGetValue(first.FilePath, out var candidateEditor))
+                {
+                    candidateEditor.ApplySerializedDocument(candidateContent);
+                }
+                else
+                {
+                    _markdownFileStore.Write(first.FilePath, candidateContent);
+                }
+
+                continue;
+            }
+
             var selectedFields = documentGroup.ToDictionary(
                 item => item.Difference.FieldName,
                 item => choices.TryGetValue(item.Key, out var useGedcom) && useGedcom,
@@ -722,6 +751,14 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
         {
+        }
+
+        public string GenerateBiography(
+            FamilyTree familyTree,
+            Person person,
+            string outputDirectory)
+        {
+            return string.Empty;
         }
     }
 
