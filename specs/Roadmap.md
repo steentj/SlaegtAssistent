@@ -41,8 +41,29 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     *   Vis forskelle i strukturerede felter og lad brugeren vælge per felt, om GEDCOM-værdien skal anvendes.
     *   Bevar fri biografitekst og AI-tekst uændret ved synkronisering.
 
+### Trin 4.5: Skabelonbaserede persondokumenter og komplet GEDCOM-rendering SPRINT 4B
+*   **Mål:** Færdiggøre forbindelsen fra GEDCOM-elementer til Markdown og gøre persondokumenternes struktur og formattering brugerdefineret, før eksport og grafisk slægtstræ påbegyndes.
+*   **Forudsætning:** Trin 4 er færdigt.
+*   **Feature-rækkefølge:**
+    1. Udvidet GEDCOM-domæne med familiebegivenheder, `SUBM` og hændelsesklassifikation.
+    2. Skabelonkontrakt, loader og validering for en sikker Markdown-baseret DSL.
+    3. Normaliseret personkontekst og rendering af hændelser, census, kilder, medier og afsender.
+    4. Markerede genererede sektioner og diff-baseret genrendering uden overskrivning af fri tekst.
+    5. Indstillinger og brugerflow for valg, nulstilling og forhåndsvisning af global skabelon.
+*   **Arbejdsform:** Hver feature udvikles testdrevet med Core- og/eller App-tests. Efter hver feature stoppes udviklingen, og featureens manuelle validering gennemføres, før næste feature må starte.
+
+### Trin 4.6: Hjælp og cheat sheets SPRINT 4C
+*   **Mål:** Gøre Markdown-editoren og skabelonformatet selvforklarende uden at blokere brugerens arbejdsflade.
+*   **Forudsætning:** Trin 4.5 er færdigt, så cheat sheets kan beskrive det faktiske skabelonformat.
+*   **Feature-rækkefølge:**
+    1. Ikke-modalt Markdown-cheat sheet med søgbar og læsbar reference.
+    2. Ikke-modalt skabelon-cheat sheet med felter, betingelser, løkker og eksempler.
+    3. Hjælp-menuintegration, vindueslivscyklus og samtidig brug af begge vinduer.
+*   **Arbejdsform:** Hver feature udvikles testdrevet med stop for manuel afprøvning efter featureens validering.
+
 ### Trin 5: Grafisk Slægtstræ & Eksport SPRINT 5
 *   **Mål:** Opsætte output fra applikationen
+*   **Forudsætning:** Trin 4.5 og 4.6 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter.
 *   **Opgaver:**
     *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
     *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.

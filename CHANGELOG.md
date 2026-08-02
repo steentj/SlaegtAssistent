@@ -60,3 +60,7 @@
 - [cd12035] feat: Enhance biography document handling and UI settings
 - [bc55399] feat: Enhance biography document handling and UI settings
 - [b3dbf47] feat: Refactor GEDCOM difference handling and enhance document parsing
+- [801ccae] feat: Refactor GEDCOM difference handling and enhance document parsing
+
+## 2026-08-02
+- [4ebf9bf] Implementer skabelonbaserede persondokumenter og hjælpemenuer

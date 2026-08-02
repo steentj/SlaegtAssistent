@@ -10,7 +10,7 @@ SlægtsAssistenten er en privatlivsfokuseret desktop-applikation, der skal hjæl
 *   **Dataprivatliv:** Alle data, slægtshistorier og AI-modeller forbliver lokalt på brugerens egen computer. Ingen personfølsomme oplysninger sendes til tredjepart.
 
 ### Kernefunktionalitet
-1.  **Struktur til Prosa:** Læse GEDCOM-filer og oprette én redigerbar Markdown-biografi pr. person.
+1.  **Struktur til Prosa:** Læse GEDCOM-filer og oprette én redigerbar Markdown-biografi pr. person ud fra en bruger valgt skabelon.
 2. **Dokumentførst arbejdsgang:** Indlæse eksisterende persondokumenter lokalt ved opstart, før en GEDCOM-fil læses, og lade brugeren kontrollere alle efterfølgende faktuelle forskelle.
 3. **Universel Dokumenteksport:** Konvertering af de færdige, redigerede biografier til trykklare PDF'er og redigerbare kontorformater (OOXML/ODF) til nem deling.
 4. **Visuelt Slægtstræ:** Interaktiv grafisk visning af slægtstræet med mulighed for navigation, direkte udskrift
@@ -19,8 +19,21 @@ og eksport i højopløselige billedformater.
 6. **Lokal RAG (Søgning i kilder):** Automatisk gennemsøgning af egne, downloadede lokalhistoriske PDF-bøger (f.eks. fra Danskernes Historie Online) for at berige biografier med historisk præcision baseret på geografi og erhverv.
 7. **Lokal Transkribering (HTR):** Hjælpe med at tyde og transkribere indscannede, håndskrevne kilder direkte i appen.
 
+### Persondokumenter og skabeloner
+Persondokumenter skal kunne vise de strukturerede GEDCOM-oplysninger, som brugeren vælger:
+
+- begivenheder, herunder fødsel, dåb, vielse, konfirmation, død, begravelse, folketællinger og lægdsruller
+- kilder med både lokale henvisninger og en samlet kildeliste
+- medier som lokale, relative Markdown-billedehenvisninger
+- GEDCOM-filens ejer eller afsender (`SUBM`) som valgfri header eller footer
+
+Strukturen og formatteringen styres af en global Markdown-skabelon med sikre felter, betingelser og løkker. Skabelonen må ikke kunne udføre vilkårlig programkode. Ukendte hændelser bevares og kan vises under en samlet kategori for andre hændelser.
+
 ### Dokumentation og tekst
 **Alle dokumenter, brugerinterface-tekster, kommentarer i koden og anden tekstuel dokumentation skal være på dansk.** Dette sikrer ensartet kommunikation og adgang for målgruppen.
+
+## Data
+Input kommer primært i form a GEDCOM filer. Standarden for GEDCOM er defineret [her](https://gedcom.io/specifications/ged551.pdf). Hvis input ikke følger denne standard, skal programmet advare om dette, men ikke afbryde behandling af de øvrige data.
 
 ## Afsnit 2: UI/UX-design
 
@@ -42,11 +55,14 @@ Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (b
 - **Transskribering (HTR)**: split-view med det indscannede billede til venstre og redigerbar tolket tekst til højre.
 - **Import**: drop-zone til GEDCOM-filer, med oversigt over indlæste personer og status pr. biografi (ikke startet / under berigelse / klar).
 - **Eksport**: valg af biografier og format (PDF, Word/OOXML, ODF).
-- **Indstillinger**: valg af lokal AI-model og sti til den lokale kildemappe.
+- **Indstillinger**: valg af lokal AI-model, sti til den lokale kildemappe og global persondokumentskabelon.
+- **Hjælp**: menuen Hjælp kan åbne et ikke-modalt Markdown-cheat sheet og et ikke-modalt cheat sheet for skabelonformatet. Vinduerne skal kunne stå åbne, mens brugeren arbejder i editoren.
 
 ### Designprincipper
 - Ingen data forlader maskinen – ingen cloud-kald i UI'et, kun lokale processer.
 - Forslag og AI-output er altid tydeligt adskilt fra brugerens egen tekst, og kræver et aktivt klik for at blive en del af biografien.
 - Personens frie biografitekst er brugerens autoritative tekst og må aldrig overskrives automatisk af GEDCOM.
 - Strukturerede fakta fra GEDCOM og dokumenter vises som en kontrolleret sammenligning, hvor brugeren vælger felt for felt.
+- Maskingenereret dokumentindhold holdes i en markeret sektion, så skabelon- og GEDCOM-opdateringer ikke overskriver brugerens frie biografitekst.
+- Hjælpevinduer er ikke-modale, kan flyttes og lukkes uafhængigt af hovedvinduet og må ikke blokere redigering eller forhåndsvisning.
 - Appen skal have et roligt, informationsrigt desktopudtryk med både lyst og mørkt tema samt synlig tastaturfokus.
