@@ -64,3 +64,6 @@
 
 ## 2026-08-02
 - [4ebf9bf] Implementer skabelonbaserede persondokumenter og hjælpemenuer
+- [7c3f19b] Implementer skabelonbaserede persondokumenter og hjælpemenuer
+- [c90171f] feat: Implement biography template parsing and rendering
+- [54b0768] feat: Add template cheat sheet functionality and UI integration

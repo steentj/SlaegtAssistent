@@ -49,6 +49,7 @@ public partial class App : Application
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
         services.AddSingleton<ITemplateFilePickerService, AvaloniaTemplateFilePickerService>();
         services.AddSingleton<IMarkdownCheatSheetService, AvaloniaMarkdownCheatSheetService>();
+        services.AddSingleton<ITemplateCheatSheetService, AvaloniaTemplateCheatSheetService>();
         services.AddSingleton<IApplicationSettingsService, JsonApplicationSettingsService>();
         services.AddSingleton<ISettingsDialogService, AvaloniaSettingsDialogService>();
         services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();

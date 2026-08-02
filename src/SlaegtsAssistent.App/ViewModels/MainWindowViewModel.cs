@@ -29,6 +29,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IMarkdownDocumentCatalog _markdownDocumentCatalog;
     private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
     private readonly IMarkdownCheatSheetService _markdownCheatSheetService;
+    private readonly ITemplateCheatSheetService _templateCheatSheetService;
     private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
@@ -62,7 +63,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IMarkdownFileStore markdownFileStore,
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
         IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
-        IMarkdownCheatSheetService? markdownCheatSheetService = null)
+        IMarkdownCheatSheetService? markdownCheatSheetService = null,
+        ITemplateCheatSheetService? templateCheatSheetService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -77,6 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _markdownDocumentCatalog = markdownDocumentCatalog ?? new FileSystemMarkdownDocumentCatalog();
         _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
         _markdownCheatSheetService = markdownCheatSheetService ?? new NullMarkdownCheatSheetService();
+        _templateCheatSheetService = templateCheatSheetService ?? new NullTemplateCheatSheetService();
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
@@ -237,6 +240,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ShowMarkdownCheatSheet()
     {
         _markdownCheatSheetService.Show();
+    }
+
+    [RelayCommand]
+    private void ShowTemplateCheatSheet()
+    {
+        _templateCheatSheetService.Show();
     }
 
     public async Task<bool> ConfirmCloseAsync()

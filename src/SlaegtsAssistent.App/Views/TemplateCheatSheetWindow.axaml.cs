@@ -6,12 +6,12 @@ using SlaegtsAssistent.App.ViewModels;
 
 namespace SlaegtsAssistent.App.Views;
 
-public partial class MarkdownCheatSheetWindow : Window
+public partial class TemplateCheatSheetWindow : Window
 {
-    private MarkdownCheatSheetViewModel? _viewModel;
+    private TemplateCheatSheetViewModel? _viewModel;
     private bool _previewAdapterReady;
 
-    public MarkdownCheatSheetWindow()
+    public TemplateCheatSheetWindow()
     {
         InitializeComponent();
         DataContextChanged += HandleDataContextChanged;
@@ -33,7 +33,7 @@ public partial class MarkdownCheatSheetWindow : Window
             _viewModel.PropertyChanged -= HandleViewModelPropertyChanged;
         }
 
-        _viewModel = DataContext as MarkdownCheatSheetViewModel;
+        _viewModel = DataContext as TemplateCheatSheetViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
@@ -44,8 +44,8 @@ public partial class MarkdownCheatSheetWindow : Window
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MarkdownCheatSheetViewModel.PreviewHtml)
-            or nameof(MarkdownCheatSheetViewModel.PreviewHtmlDocument))
+        if (e.PropertyName is nameof(TemplateCheatSheetViewModel.PreviewHtml)
+            or nameof(TemplateCheatSheetViewModel.PreviewHtmlDocument))
         {
             RefreshPreview();
         }

@@ -54,6 +54,8 @@
                             <Separator />
                             <MenuItem Header="Markdown-cheat sheet"
                                       Command="{Binding ShowMarkdownCheatSheetCommand}" />
+                            <MenuItem Header="Skabelon-cheat sheet"
+                                      Command="{Binding ShowTemplateCheatSheetCommand}" />
                         </MenuItem>
                     </Menu>
                     <Button Content="Indlæs GEDCOM"

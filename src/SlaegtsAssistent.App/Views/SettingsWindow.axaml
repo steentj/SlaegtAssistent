@@ -5,10 +5,12 @@
         x:DataType="vm:SettingsWindowViewModel"
         Width="700"
         Height="620"
-        CanResize="False"
+        MinWidth="560"
+        MinHeight="480"
+        CanResize="True"
         Title="Indstillinger"
         WindowStartupLocation="CenterOwner">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Standardmappe for GEDCOM-filer (input)" FontWeight="SemiBold" />
         <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding DefaultGedcomInputFolder, Mode=TwoWay}" />
         <Button Grid.Row="1" Grid.Column="1" Content="Vælg…" Command="{Binding SelectGedcomInputFolderCommand}" MinWidth="90" />
@@ -48,7 +50,7 @@
                  IsReadOnly="True"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
-                 MinHeight="120"
+                 VerticalContentAlignment="Top"
                  ScrollViewer.VerticalScrollBarVisibility="Auto" />
     </Grid>
 </Window>

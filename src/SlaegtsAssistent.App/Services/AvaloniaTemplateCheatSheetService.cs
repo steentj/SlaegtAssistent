@@ -4,12 +4,12 @@ using SlaegtsAssistent.App.ViewModels;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed class AvaloniaMarkdownCheatSheetService : IMarkdownCheatSheetService
+public sealed class AvaloniaTemplateCheatSheetService : ITemplateCheatSheetService
 {
     private readonly IClassicDesktopStyleApplicationLifetime _applicationLifetime;
     private Window? _window;
 
-    public AvaloniaMarkdownCheatSheetService(
+    public AvaloniaTemplateCheatSheetService(
         IClassicDesktopStyleApplicationLifetime applicationLifetime)
     {
         _applicationLifetime = applicationLifetime;
@@ -25,13 +25,13 @@ public sealed class AvaloniaMarkdownCheatSheetService : IMarkdownCheatSheetServi
 
         if (_window is not null)
         {
-            ((Views.MarkdownCheatSheetWindow)_window).FocusSearch();
+            ((Views.TemplateCheatSheetWindow)_window).FocusSearch();
             return;
         }
 
-        var window = new Views.MarkdownCheatSheetWindow
+        var window = new Views.TemplateCheatSheetWindow
         {
-            DataContext = new MarkdownCheatSheetViewModel(),
+            DataContext = new TemplateCheatSheetViewModel(),
         };
         _window = window;
         window.Closed += (_, _) => _window = null;
