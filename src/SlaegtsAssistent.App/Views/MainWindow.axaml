@@ -68,7 +68,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="300,*,320" ColumnSpacing="12" Margin="12">
+        <Grid Grid.Row="1" ColumnDefinitions="300,*,8,320" ColumnSpacing="12" Margin="12">
             <Border Grid.Column="0"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
@@ -117,6 +117,7 @@
             </Border>
 
             <Border Grid.Column="1"
+                    MinWidth="420"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
@@ -182,7 +183,14 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="2"
+            <GridSplitter Grid.Column="2"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource AppBorderBrush}"
+                          ResizeDirection="Columns" />
+
+            <Border Grid.Column="3"
+                    MinWidth="260"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
@@ -206,7 +214,9 @@
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      MinHeight="180"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                     HorizontalContentAlignment="Stretch"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                         </Expander>
 
                         <Expander Header="Filer">

@@ -162,6 +162,18 @@ public class EditorViewModelTests
         viewModel.PreviewHtmlDocument.Should().Contain("<h1>Hej</h1>");
     }
 
+    [Fact]
+    public void PreviewHtmlDocument_ShouldDefineThemeableTextAndBackgroundColors()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore())
+        {
+            MarkdownText = "# Hej",
+        };
+
+        viewModel.PreviewHtmlDocument.Should().Contain("color:#23313a");
+        viewModel.PreviewHtmlDocument.Should().Contain("background:#FFFFFF");
+    }
+
     private sealed class RecordingMarkdownFileStore : IMarkdownFileStore
     {
         public string ReadResult { get; set; } = string.Empty;

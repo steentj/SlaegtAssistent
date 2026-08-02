@@ -42,8 +42,10 @@ public partial class EditorViewModel : ViewModelBase
 
     public string PreviewHtmlDocument =>
         $"<!doctype html><html><head><meta charset=\"utf-8\"><style>" +
-        "body{font-family:system-ui,sans-serif;line-height:1.55;margin:24px;}" +
-        "h1,h2,h3{line-height:1.2;}" +
+        "body{font-family:system-ui,sans-serif;line-height:1.55;margin:24px;color:#23313a;background:#FFFFFF;}" +
+        "h1,h2,h3{line-height:1.2;color:#174a5b;}" +
+        "code,pre{background:#edf2f3;padding:2px 4px;}" +
+        "blockquote{border-left:4px solid #6e9eaa;margin-left:0;padding-left:12px;color:#4d626a;}" +
         $"</style></head><body>{PreviewHtml}</body></html>";
 
     public bool IsWebPreviewSelected

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using System;
 using System.ComponentModel;
@@ -21,6 +22,8 @@ public partial class MainWindow : Window
             RefreshPreview();
         };
         PreviewWebView.AdapterDestroyed += (_, _) => _previewAdapterReady = false;
+        Application.Current?.ActualThemeVariantChanged += HandleThemeVariantChanged;
+        Closed += HandleClosed;
     }
 
     public MainWindow(MainWindowViewModel viewModel)
@@ -84,7 +87,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        PreviewWebView.NavigateToString(editor.PreviewHtmlDocument);
+        PreviewWebView.NavigateToString(CheatSheetPreviewTheme.Apply(editor.PreviewHtmlDocument));
+    }
+
+    private void HandleThemeVariantChanged(object? sender, EventArgs e)
+    {
+        RefreshPreview();
+    }
+
+    private void HandleClosed(object? sender, EventArgs e)
+    {
+        Application.Current?.ActualThemeVariantChanged -= HandleThemeVariantChanged;
     }
 
     private async void HandleClosing(object? sender, WindowClosingEventArgs e)
