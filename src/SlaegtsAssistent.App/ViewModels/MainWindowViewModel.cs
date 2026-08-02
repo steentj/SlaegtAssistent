@@ -28,9 +28,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IMarkdownFileStore _markdownFileStore;
     private readonly IMarkdownDocumentCatalog _markdownDocumentCatalog;
     private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
+    private readonly IMarkdownCheatSheetService _markdownCheatSheetService;
     private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
+    private FamilyTree? _familyTree;
 
     public MainWindowViewModel()
         : this(
@@ -59,7 +61,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IMarkdownBiographyExportService markdownBiographyExportService,
         IMarkdownFileStore markdownFileStore,
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
-        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null)
+        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
+        IMarkdownCheatSheetService? markdownCheatSheetService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -73,10 +76,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _markdownFileStore = markdownFileStore;
         _markdownDocumentCatalog = markdownDocumentCatalog ?? new FileSystemMarkdownDocumentCatalog();
         _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
+        _markdownCheatSheetService = markdownCheatSheetService ?? new NullMarkdownCheatSheetService();
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
+        GlobalBiographyTemplatePath = NormalizePath(settings.GlobalBiographyTemplatePath);
         Theme = settings.Theme;
         _documentPeople.AddRange(_markdownDocumentCatalog.Load(StandardMarkdownOutputFolder)
             .Select(document => new PersonListItemViewModel(
@@ -101,6 +106,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? standardMarkdownOutputFolder;
+
+    [ObservableProperty]
+    private string? globalBiographyTemplatePath;
 
     [ObservableProperty]
     private ThemePreference theme = ThemePreference.System;
@@ -148,6 +156,7 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var familyTree = _gedcomLoader.Load(filePath);
+            _familyTree = familyTree;
             _markdownBiographyExportService.WriteBiographies(familyTree, StandardMarkdownOutputFolder!);
             var outputFolder = StandardMarkdownOutputFolder!;
             await ReviewGedcomDifferencesAsync(familyTree);
@@ -183,12 +192,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenSettingsAsync()
     {
+        var previewPerson = SelectedPerson is null
+            ? null
+            : _familyTree?.FindPerson(SelectedPerson.RecordId);
         var updatedSettings = await _settingsDialogService.EditSettingsAsync(new AppSettings
         {
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+            GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
             Theme = Theme,
-        });
+        }, previewPerson);
 
         if (updatedSettings is null)
         {
@@ -197,6 +210,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StandardGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder);
+        GlobalBiographyTemplatePath = NormalizePath(updatedSettings.GlobalBiographyTemplatePath);
         Theme = updatedSettings.Theme;
         SaveSettings();
     }
@@ -217,6 +231,12 @@ public partial class MainWindowViewModel : ViewModelBase
             "Om",
             "Slægtsassistent er et lokalt værktøj til slægtsforskning med fokus på privatliv og " +
             "manuel kvalitetssikring af biografier.");
+    }
+
+    [RelayCommand]
+    private void ShowMarkdownCheatSheet()
+    {
+        _markdownCheatSheetService.Show();
     }
 
     public async Task<bool> ConfirmCloseAsync()
@@ -501,6 +521,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+            GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
             Theme = Theme,
         });
     }
@@ -508,6 +529,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private static string? NormalizeFolder(string? folder)
     {
         return string.IsNullOrWhiteSpace(folder) ? null : folder.Trim();
+    }
+
+    private static string? NormalizePath(string? path)
+    {
+        return string.IsNullOrWhiteSpace(path) ? null : path.Trim();
     }
 
     private static string? AbbreviatePath(string? path, int maximumLength = 72)

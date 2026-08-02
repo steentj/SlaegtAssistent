@@ -5,12 +5,21 @@ public sealed class FamilyTree
     private readonly Dictionary<string, Person> _peopleByRecordId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Source> _sourcesByRecordId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Media> _mediaByRecordId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Family> _familiesByRecordId = new(StringComparer.Ordinal);
 
     public IReadOnlyCollection<Person> People => _peopleByRecordId.Values;
+
+    public IReadOnlyCollection<Family> Families => _familiesByRecordId.Values;
 
     public IReadOnlyCollection<Source> Sources => _sourcesByRecordId.Values;
 
     public IReadOnlyCollection<Media> Media => _mediaByRecordId.Values;
+
+    public Submitter? Submitter { get; internal set; }
+
+    public string? SubmitterRecordId { get; internal set; }
+
+    public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
 
     public Person? FindPerson(string recordId)
     {
@@ -40,6 +49,16 @@ public sealed class FamilyTree
         }
 
         return _mediaByRecordId.GetValueOrDefault(recordId);
+    }
+
+    public Family? FindFamily(string recordId)
+    {
+        if (string.IsNullOrWhiteSpace(recordId))
+        {
+            return null;
+        }
+
+        return _familiesByRecordId.GetValueOrDefault(recordId);
     }
 
     internal Person GetOrAddPerson(string recordId)
@@ -78,5 +97,16 @@ public sealed class FamilyTree
         }
 
         return media;
+    }
+
+    internal Family GetOrAddFamily(string recordId)
+    {
+        if (!_familiesByRecordId.TryGetValue(recordId, out var family))
+        {
+            family = new Family(recordId);
+            _familiesByRecordId.Add(recordId, family);
+        }
+
+        return family;
     }
 }

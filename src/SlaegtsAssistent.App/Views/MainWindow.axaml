@@ -45,6 +45,17 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <Menu>
+                        <MenuItem Header="_Hjælp">
+                            <MenuItem Header="Introduktion"
+                                      Command="{Binding ShowIntroductionCommand}" />
+                            <MenuItem Header="Om"
+                                      Command="{Binding ShowAboutCommand}" />
+                            <Separator />
+                            <MenuItem Header="Markdown-cheat sheet"
+                                      Command="{Binding ShowMarkdownCheatSheetCommand}" />
+                        </MenuItem>
+                    </Menu>
                     <Button Content="Indlæs GEDCOM"
                             Command="{Binding SelectGedcomFileCommand}" />
                     <Button Content="Gem"

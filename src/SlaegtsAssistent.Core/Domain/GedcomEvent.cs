@@ -14,6 +14,8 @@ public sealed class GedcomEvent
 
     public string Tag { get; }
 
+    public GedcomEventCategory Category { get; set; }
+
     public string? Value { get; set; }
 
     public string? Date { get; set; }

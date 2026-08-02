@@ -32,6 +32,10 @@ public sealed class Person
 
     public IList<Person> Children { get; } = new List<Person>();
 
+    public IList<Family> Families { get; } = new List<Family>();
+
+    public IEnumerable<GedcomEvent> FamilyEvents => Families.SelectMany(family => family.Events);
+
     public IList<Source> Sources { get; } = new List<Source>();
 
     public IList<Media> Media { get; } = new List<Media>();

@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Styling;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.App.Views;
+using SlaegtsAssistent.Core.Domain;
 using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Services;
@@ -11,16 +12,26 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
 {
     private readonly IClassicDesktopStyleApplicationLifetime _applicationLifetime;
     private readonly IFolderPickerService _folderPickerService;
+    private readonly ITemplateFilePickerService _templateFilePickerService;
 
     public AvaloniaSettingsDialogService(
         IClassicDesktopStyleApplicationLifetime applicationLifetime,
-        IFolderPickerService folderPickerService)
+        IFolderPickerService folderPickerService,
+        ITemplateFilePickerService templateFilePickerService)
     {
         _applicationLifetime = applicationLifetime;
         _folderPickerService = folderPickerService;
+        _templateFilePickerService = templateFilePickerService;
     }
 
     public async Task<AppSettings?> EditSettingsAsync(AppSettings currentSettings)
+    {
+        return await EditSettingsAsync(currentSettings, null);
+    }
+
+    public async Task<AppSettings?> EditSettingsAsync(
+        AppSettings currentSettings,
+        Person? previewPerson)
     {
         var owner = _applicationLifetime.MainWindow;
         if (owner is null)
@@ -28,7 +39,11 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
             return null;
         }
 
-        var viewModel = new SettingsWindowViewModel(currentSettings, _folderPickerService);
+        var viewModel = new SettingsWindowViewModel(
+            currentSettings,
+            _folderPickerService,
+            _templateFilePickerService,
+            previewPerson);
         var dialog = new SettingsWindow(viewModel);
         var result = await dialog.ShowDialog<AppSettings?>(owner);
         if (result is not null && Application.Current is { } application)

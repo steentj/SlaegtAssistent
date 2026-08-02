@@ -49,16 +49,21 @@ public sealed class GedcomLoader : IGedcomLoader
         var families = new List<ParsedFamily>();
         var sources = new Dictionary<string, ParsedSource>(StringComparer.Ordinal);
         var media = new Dictionary<string, ParsedMedia>(StringComparer.Ordinal);
+        var submitters = new Dictionary<string, ParsedSubmitter>(StringComparer.Ordinal);
 
         ParsedPerson? currentPerson = null;
         ParsedFamily? currentFamily = null;
         ParsedSource? currentSource = null;
         ParsedMedia? currentMedia = null;
+        ParsedSubmitter? currentSubmitter = null;
         ParsedEvent? currentEvent = null;
         ParsedCensus? currentCensus = null;
         ParsedSource? currentPersonSource = null;
         ParsedMedia? currentPersonMedia = null;
         bool currentSourceData = false;
+        bool currentHeader = false;
+        string? headerSubmitterId = null;
+        ParsedEvent? currentFamilyEvent = null;
 
         while (parser.ReadLevel())
         {
@@ -77,14 +82,21 @@ public sealed class GedcomLoader : IGedcomLoader
                 currentFamily = null;
                 currentSource = null;
                 currentMedia = null;
+                currentSubmitter = null;
                 currentEvent = null;
                 currentCensus = null;
                 currentPersonSource = null;
                 currentPersonMedia = null;
                 currentSourceData = false;
+                currentHeader = false;
+                currentFamilyEvent = null;
 
                 switch (tag)
                 {
+                    case "HEAD":
+                        currentHeader = true;
+                        break;
+
                     case "INDI":
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
@@ -133,6 +145,17 @@ public sealed class GedcomLoader : IGedcomLoader
                         currentMedia = new ParsedMedia(value);
                         media[value] = currentMedia;
                         break;
+
+                    case "SUBM":
+                        if (!parser.HasId || string.IsNullOrWhiteSpace(value))
+                        {
+                            throw new GedcomLoadException(
+                                $"Malformed GEDCOM: SUBM record without an id at line {parser.No}.");
+                        }
+
+                        currentSubmitter = new ParsedSubmitter(value);
+                        submitters[value] = currentSubmitter;
+                        break;
                 }
 
                 continue;
@@ -145,6 +168,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     level,
                     tag,
                     value,
+                    parser.No,
                     ref currentEvent,
                     ref currentCensus,
                     ref currentPersonSource,
@@ -155,7 +179,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
             if (currentFamily is not null)
             {
-                ParseFamilyLine(currentFamily, level, tag, value);
+                ParseFamilyLine(currentFamily, level, tag, value, parser.No, ref currentFamilyEvent);
                 continue;
             }
 
@@ -168,10 +192,32 @@ public sealed class GedcomLoader : IGedcomLoader
             if (currentMedia is not null)
             {
                 ParseMediaLine(currentMedia, level, tag, value);
+                continue;
+            }
+
+            if (currentSubmitter is not null)
+            {
+                ParseSubmitterLine(currentSubmitter, level, tag, value);
+                continue;
+            }
+
+            if (currentHeader)
+            {
+                if (level == 1 && tag == "SUBM")
+                {
+                    headerSubmitterId = NormalizeToken(value);
+                }
             }
         }
 
-        return new ParsedGedcom(people.Values.ToList(), families, sources.Values.ToList(), media.Values.ToList());
+        return new ParsedGedcom(
+            people.Values.ToList(),
+            families,
+            sources.Values.ToList(),
+            media.Values.ToList(),
+            submitters.Values.ToList(),
+            headerSubmitterId,
+            []);
     }
 
     private static void ParsePersonLine(
@@ -179,6 +225,7 @@ public sealed class GedcomLoader : IGedcomLoader
         int level,
         string tag,
         string? value,
+        int line,
         ref ParsedEvent? currentEvent,
         ref ParsedCensus? currentCensus,
         ref ParsedSource? currentSource,
@@ -209,6 +256,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 case "CHR":
                 case "BURI":
                 case "EVEN":
+                case "CONF":
                     currentEvent = new ParsedEvent(tag, NormalizeToken(value));
                     person.Events.Add(currentEvent);
                     break;
@@ -216,6 +264,17 @@ public sealed class GedcomLoader : IGedcomLoader
                 case "CENS":
                     currentCensus = new ParsedCensus();
                     person.Census.Add(currentCensus);
+                    break;
+
+                default:
+                    currentEvent = new ParsedEvent(tag, NormalizeToken(value));
+                    person.Events.Add(currentEvent);
+                    person.Diagnostics.Add(new GedcomDiagnostic(
+                        "Warning",
+                        $"Ukendt GEDCOM-hændelsestag '{tag}' er bevaret som en anden hændelse.",
+                        line,
+                        person.RecordId,
+                        tag));
                     break;
 
                 case "SOUR":
@@ -418,9 +477,56 @@ public sealed class GedcomLoader : IGedcomLoader
         }
     }
 
-    private static void ParseFamilyLine(ParsedFamily family, int level, string tag, string? value)
+    private static void ParseFamilyLine(
+        ParsedFamily family,
+        int level,
+        string tag,
+        string? value,
+        int line,
+        ref ParsedEvent? currentEvent)
     {
-        if (level != 1 || string.IsNullOrWhiteSpace(value))
+        if (level == 1)
+        {
+            currentEvent = null;
+        }
+
+        if (level == 1 && tag is "MARR" or "EVEN" or "CONF")
+        {
+            currentEvent = new ParsedEvent(tag, NormalizeToken(value));
+            family.Events.Add(currentEvent);
+            return;
+        }
+
+        if (level == 1 && string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (level == 2 && currentEvent is not null)
+        {
+            switch (tag)
+            {
+                case "DATE":
+                    currentEvent.Date = NormalizeToken(value);
+                    break;
+                case "PLAC":
+                    currentEvent.Place = NormalizeToken(value);
+                    break;
+                case "TYPE":
+                    currentEvent.Type = NormalizeToken(value);
+                    break;
+                case "NOTE":
+                    currentEvent.Note = NormalizeToken(value);
+                    break;
+                case "SOUR":
+                    currentEvent.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                    break;
+            }
+
+            return;
+        }
+
+        if (level != 1)
         {
             return;
         }
@@ -428,21 +534,63 @@ public sealed class GedcomLoader : IGedcomLoader
         switch (tag)
         {
             case "HUSB":
-                family.HusbandId = value;
+                family.HusbandId = value!;
                 break;
 
             case "WIFE":
-                family.WifeId = value;
+                family.WifeId = value!;
                 break;
 
             case "CHIL":
-                family.ChildrenIds.Add(value);
+                family.ChildrenIds.Add(value!);
+                break;
+
+            default:
+                currentEvent = new ParsedEvent(tag, NormalizeToken(value));
+                family.Events.Add(currentEvent);
+                family.Diagnostics.Add(new GedcomDiagnostic(
+                    "Warning",
+                    $"Ukendt GEDCOM-familietag '{tag}' er bevaret som en anden hændelse.",
+                    line,
+                    family.RecordId,
+                    tag));
+                break;
+        }
+    }
+
+    private static void ParseSubmitterLine(ParsedSubmitter submitter, int level, string tag, string? value)
+    {
+        if (level != 1 && level != 2)
+        {
+            return;
+        }
+
+        switch (tag)
+        {
+            case "NAME":
+                submitter.Name = NormalizeToken(value);
+                break;
+            case "ADDR":
+                submitter.Address = NormalizeToken(value);
+                break;
+            case "PHON":
+                submitter.Phone = NormalizeToken(value);
+                break;
+            case "EMAIL":
+                submitter.Email = NormalizeToken(value);
+                break;
+            case "WWW":
+                submitter.Website = NormalizeToken(value);
+                break;
+            case "LANG":
+                submitter.Language = NormalizeToken(value);
                 break;
         }
     }
 
     private static void MergeIntoTree(FamilyTree tree, ParsedGedcom parsedGedcom)
     {
+        tree.Diagnostics.Clear();
         var importedRecordIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var parsedSource in parsedGedcom.Sources)
@@ -503,6 +651,21 @@ public sealed class GedcomLoader : IGedcomLoader
             {
                 person.Census.Add(CreateCensus(tree, parsedCensus, parsedGedcom.Sources));
             }
+
+            foreach (var diagnostic in parsedPerson.Diagnostics)
+            {
+                tree.Diagnostics.Add(diagnostic);
+            }
+        }
+
+        tree.SubmitterRecordId = parsedGedcom.HeaderSubmitterId;
+        tree.Submitter = CreateSubmitter(
+            parsedGedcom.HeaderSubmitterId,
+            parsedGedcom.Submitters);
+
+        foreach (var person in tree.People)
+        {
+            person.Families.Clear();
         }
 
         foreach (var recordId in importedRecordIds)
@@ -517,12 +680,19 @@ public sealed class GedcomLoader : IGedcomLoader
 
         foreach (var family in parsedGedcom.Families)
         {
+            var domainFamily = tree.GetOrAddFamily(family.RecordId);
+            domainFamily.Events.Clear();
+            domainFamily.Children.Clear();
+            domainFamily.Husband = null;
+            domainFamily.Wife = null;
+
             var parents = new List<Person>(2);
 
             if (!string.IsNullOrWhiteSpace(family.HusbandId)
                 && tree.TryGetPerson(family.HusbandId, out var husband))
             {
                 parents.Add(husband);
+                domainFamily.Husband = husband;
             }
 
             if (!string.IsNullOrWhiteSpace(family.WifeId)
@@ -530,6 +700,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 && parents.All(parent => parent.RecordId != wife.RecordId))
             {
                 parents.Add(wife);
+                domainFamily.Wife = wife;
             }
 
             foreach (var childId in family.ChildrenIds)
@@ -541,11 +712,59 @@ public sealed class GedcomLoader : IGedcomLoader
 
                 foreach (var parent in parents)
                 {
-                    AddIfMissing(parent.Children, child);
-                    AddIfMissing(child.Parents, parent);
+                    AddIfMissing(parent.Children, child, person => person.RecordId);
+                    AddIfMissing(child.Parents, parent, person => person.RecordId);
                 }
+
+                foreach (var diagnostic in family.Diagnostics)
+                {
+                    tree.Diagnostics.Add(diagnostic);
+                }
+
+                AddIfMissing(domainFamily.Children, child, person => person.RecordId);
+            }
+
+            foreach (var parsedEvent in family.Events)
+            {
+                domainFamily.Events.Add(CreateEvent(tree, parsedEvent, parsedGedcom.Sources));
+            }
+
+            foreach (var parent in parents)
+            {
+                AddIfMissing(parent.Families, domainFamily, familyRecord => familyRecord.RecordId);
             }
         }
+
+        foreach (var diagnostic in parsedGedcom.Diagnostics)
+        {
+            tree.Diagnostics.Add(diagnostic);
+        }
+    }
+
+    private static Submitter? CreateSubmitter(
+        string? recordId,
+        IReadOnlyCollection<ParsedSubmitter> submitters)
+    {
+        if (string.IsNullOrWhiteSpace(recordId))
+        {
+            return null;
+        }
+
+        var parsed = submitters.FirstOrDefault(submitter => submitter.RecordId == recordId);
+        if (parsed is null)
+        {
+            return null;
+        }
+
+        return new Submitter(parsed.RecordId)
+        {
+            Name = parsed.Name,
+            Address = parsed.Address,
+            Phone = parsed.Phone,
+            Email = parsed.Email,
+            Website = parsed.Website,
+            Language = parsed.Language,
+        };
     }
 
     private static Source CreateSource(
@@ -605,6 +824,7 @@ public sealed class GedcomLoader : IGedcomLoader
     {
         var gedcomEvent = new GedcomEvent(parsedEvent.Tag)
         {
+            Category = GedcomEventClassifier.Classify(parsedEvent.Tag, parsedEvent.Type),
             Value = parsedEvent.Value,
             Date = parsedEvent.Date,
             Place = parsedEvent.Place,
@@ -769,14 +989,17 @@ public sealed class GedcomLoader : IGedcomLoader
         person.Children.Clear();
     }
 
-    private static void AddIfMissing(IList<Person> people, Person personToAdd)
+    private static void AddIfMissing<T>(
+        IList<T> items,
+        T itemToAdd,
+        Func<T, string> identity)
     {
-        if (people.Any(existing => existing.RecordId == personToAdd.RecordId))
+        if (items.Any(existing => string.Equals(identity(existing), identity(itemToAdd), StringComparison.Ordinal)))
         {
             return;
         }
 
-        people.Add(personToAdd);
+        items.Add(itemToAdd);
     }
 
     private static MemoryStream CreateNormalizedLineEndingStream(string filePath)
@@ -885,7 +1108,10 @@ public sealed class GedcomLoader : IGedcomLoader
         IReadOnlyCollection<ParsedPerson> People,
         IReadOnlyCollection<ParsedFamily> Families,
         IReadOnlyCollection<ParsedSource> Sources,
-        IReadOnlyCollection<ParsedMedia> Media);
+        IReadOnlyCollection<ParsedMedia> Media,
+        IReadOnlyCollection<ParsedSubmitter> Submitters,
+        string? HeaderSubmitterId,
+        IReadOnlyCollection<GedcomDiagnostic> Diagnostics);
 
     private sealed class ParsedPerson
     {
@@ -917,6 +1143,8 @@ public sealed class GedcomLoader : IGedcomLoader
         public IList<ParsedEvent> Events { get; } = new List<ParsedEvent>();
 
         public IList<ParsedCensus> Census { get; } = new List<ParsedCensus>();
+
+        public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
     }
 
     private sealed class ParsedEvent
@@ -967,6 +1195,10 @@ public sealed class GedcomLoader : IGedcomLoader
         public string? WifeId { get; set; }
 
         public IList<string> ChildrenIds { get; } = new List<string>();
+
+        public IList<ParsedEvent> Events { get; } = new List<ParsedEvent>();
+
+        public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
     }
 
     private sealed class ParsedSource
@@ -1013,5 +1245,27 @@ public sealed class GedcomLoader : IGedcomLoader
         public string? Type { get; set; }
 
         public string? Note { get; set; }
+    }
+
+    private sealed class ParsedSubmitter
+    {
+        public ParsedSubmitter(string recordId)
+        {
+            RecordId = recordId;
+        }
+
+        public string RecordId { get; }
+
+        public string? Name { get; set; }
+
+        public string? Address { get; set; }
+
+        public string? Phone { get; set; }
+
+        public string? Email { get; set; }
+
+        public string? Website { get; set; }
+
+        public string? Language { get; set; }
     }
 }
