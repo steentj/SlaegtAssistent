@@ -58,6 +58,7 @@ public partial class App : Application
         services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();
         services.AddSingleton<IMarkdownFileStore, FileSystemMarkdownFileStore>();
         services.AddSingleton<IMarkdownDocumentCatalog, FileSystemMarkdownDocumentCatalog>();
+        services.AddSingleton<IGedcomSnapshotStore, FileSystemGedcomSnapshotStore>();
         services.AddSingleton<IGedcomDifferenceDialogService, AvaloniaGedcomDifferenceDialogService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>(provider => new MainWindow(

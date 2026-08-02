@@ -38,6 +38,56 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void Constructor_ShouldLoadRawGedcomFromPersistedSnapshot()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var familyTree = new GedcomLoader().Load(file.Path);
+        var person = familyTree.People.Single();
+        Directory.CreateDirectory(outputFolder);
+        File.WriteAllText(
+            Path.Combine(outputFolder, BiographyFileNameGenerator.Generate(person)),
+            new BiographyTemplateMarkdownGenerator().Generate(person));
+
+        var snapshotStore = new FileSystemGedcomSnapshotStore();
+        snapshotStore.Save(outputFolder, file.Path, familyTree);
+        var viewModel = CreateViewModel(
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomSnapshotStore: snapshotStore);
+
+        viewModel.SelectedGedcomFilePath.Should().Be(Path.GetFullPath(file.Path));
+        viewModel.People.Should().ContainSingle();
+        viewModel.People[0].RawGedcom.Should().Contain("0 @I1@ INDI");
+        viewModel.People[0].RawGedcom.Should().Contain("1 NAME Anna /Jensen/");
+    }
+
+    [Fact]
+    public void Constructor_ShouldExposeSnapshotError_WhenSnapshotIsCorrupt()
+    {
+        var viewModel = CreateViewModel(
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = "/tmp/output",
+            }),
+            gedcomSnapshotStore: new ThrowingGedcomSnapshotStore());
+
+        viewModel.ErrorMessage.Should().Be("Kunne ikke indlæse GEDCOM-snapshot: Snapshot er ugyldigt.");
+    }
+
+    [Fact]
     public void SettingSelectedPerson_ShouldRaisePropertyChanged()
     {
         var viewModel = CreateViewModel();
@@ -227,6 +277,13 @@ public class MainWindowViewModelTests
         viewModel.People.Should().ContainSingle();
         viewModel.People[0].RawGedcom.Should().Contain("0 @I1@ INDI");
         viewModel.People[0].RawGedcom.Should().Contain("1 NAME Anna /Jensen/");
+        File.Exists(Path.Combine(
+                outputFolder,
+                ".slaegtsassistent",
+                "gedcom",
+                "manifest.json"))
+            .Should()
+            .BeTrue();
         viewModel.People[0].SyncStatus.Should().Be(BiographySyncStatus.Ny);
         viewModel.People[0].SyncStatusText.Should().Be("Ny");
         viewModel.ActivePersonText.Should().Be("Anna Jensen (@I1@)");
@@ -910,7 +967,8 @@ public class MainWindowViewModelTests
         IMarkdownBiographyExportService? markdownBiographyExportService = null,
         IMarkdownFileStore? markdownFileStore = null,
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
-        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null)
+        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
+        IGedcomSnapshotStore? gedcomSnapshotStore = null)
     {
         return new MainWindowViewModel(
             gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
@@ -924,7 +982,8 @@ public class MainWindowViewModelTests
             markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService(),
             markdownFileStore ?? new RecordingMarkdownFileStore(),
             markdownDocumentCatalog,
-            gedcomDifferenceDialogService);
+            gedcomDifferenceDialogService,
+            gedcomSnapshotStore: gedcomSnapshotStore);
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
@@ -1057,18 +1116,31 @@ public class MainWindowViewModelTests
     }
 
     private sealed class RecordingGedcomDifferenceDialogService : IGedcomDifferenceDialogService
+    {
+        public int Calls { get; private set; }
+
+        public IReadOnlyList<GedcomDifferenceReviewItem> LastDifferences { get; private set; } = [];
+
+        public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+            IReadOnlyList<GedcomDifferenceReviewItem> differences)
         {
-            public int Calls { get; private set; }
+            Calls++;
+            LastDifferences = differences;
+            return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
+        }
+    }
 
-            public IReadOnlyList<GedcomDifferenceReviewItem> LastDifferences { get; private set; } = [];
+    private sealed class ThrowingGedcomSnapshotStore : IGedcomSnapshotStore
+    {
+        public GedcomSnapshot? Load(string? outputDirectory)
+        {
+            throw new GedcomSnapshotException("Snapshot er ugyldigt.");
+        }
 
-            public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
-                IReadOnlyList<GedcomDifferenceReviewItem> differences)
-            {
-                Calls++;
-                LastDifferences = differences;
-                return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
-            }
+        public void Save(string outputDirectory, string sourcePath, FamilyTree familyTree)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class RecordingUnsavedChangesDialogService : IUnsavedChangesDialogService

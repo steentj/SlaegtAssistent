@@ -27,6 +27,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IMarkdownBiographyExportService _markdownBiographyExportService;
     private readonly IMarkdownFileStore _markdownFileStore;
     private readonly IMarkdownDocumentCatalog _markdownDocumentCatalog;
+    private readonly IGedcomSnapshotStore _gedcomSnapshotStore;
     private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
     private readonly IMarkdownCheatSheetService _markdownCheatSheetService;
     private readonly ITemplateCheatSheetService _templateCheatSheetService;
@@ -64,7 +65,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
         IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
         IMarkdownCheatSheetService? markdownCheatSheetService = null,
-        ITemplateCheatSheetService? templateCheatSheetService = null)
+        ITemplateCheatSheetService? templateCheatSheetService = null,
+        IGedcomSnapshotStore? gedcomSnapshotStore = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -77,6 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _markdownBiographyExportService = markdownBiographyExportService;
         _markdownFileStore = markdownFileStore;
         _markdownDocumentCatalog = markdownDocumentCatalog ?? new FileSystemMarkdownDocumentCatalog();
+        _gedcomSnapshotStore = gedcomSnapshotStore ?? new FileSystemGedcomSnapshotStore();
         _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
         _markdownCheatSheetService = markdownCheatSheetService ?? new NullMarkdownCheatSheetService();
         _templateCheatSheetService = templateCheatSheetService ?? new NullTemplateCheatSheetService();
@@ -86,13 +89,31 @@ public partial class MainWindowViewModel : ViewModelBase
         StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
         GlobalBiographyTemplatePath = NormalizePath(settings.GlobalBiographyTemplatePath);
         Theme = settings.Theme;
+        GedcomSnapshot? snapshot = null;
+        string? snapshotError = null;
+        try
+        {
+            snapshot = _gedcomSnapshotStore.Load(StandardMarkdownOutputFolder);
+            if (snapshot is not null)
+            {
+                SelectedGedcomFilePath = snapshot.SourcePath;
+            }
+        }
+        catch (GedcomSnapshotException exception)
+        {
+            snapshotError = $"Kunne ikke indlæse GEDCOM-snapshot: {exception.Message}";
+        }
+
         _documentPeople.AddRange(_markdownDocumentCatalog.Load(StandardMarkdownOutputFolder)
             .Select(document => new PersonListItemViewModel(
                 document.RecordId,
                 document.DisplayName,
                 document.FilePath,
-                document.ErrorMessage ?? string.Empty)));
+                snapshot?.RawPersonSegments.TryGetValue(document.RecordId, out var rawGedcom) == true
+                    ? rawGedcom
+                    : document.ErrorMessage ?? string.Empty)));
         ReplaceAllPeople(_documentPeople);
+        ErrorMessage = snapshotError;
     }
 
     [ObservableProperty]
@@ -161,6 +182,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var familyTree = _gedcomLoader.Load(filePath);
             _familyTree = familyTree;
             var outputFolder = StandardMarkdownOutputFolder!;
+            _gedcomSnapshotStore.Save(outputFolder, filePath, familyTree);
             var syncStatuses = await ReviewGedcomDifferencesAsync(familyTree);
             _markdownBiographyExportService.WriteBiographies(familyTree, outputFolder);
 
@@ -187,6 +209,10 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (GedcomLoadException exception)
         {
             ErrorMessage = $"Kunne ikke indlæse GEDCOM-fil: {exception.Message}";
+        }
+        catch (GedcomSnapshotException exception)
+        {
+            ErrorMessage = $"Kunne ikke gemme GEDCOM-snapshot: {exception.Message}";
         }
         catch (IOException exception)
         {
