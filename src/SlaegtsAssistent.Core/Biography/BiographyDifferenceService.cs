@@ -4,24 +4,25 @@ public sealed class BiographyDifferenceService
 {
     public IReadOnlyList<BiographyDifference> Compare(
         BiographyFactsSnapshot documentFacts,
-        BiographyFactsSnapshot gedcomFacts)
+        BiographyFactsSnapshot gedcomFacts,
+        bool includeUnrepresentedFields = false)
     {
         ArgumentNullException.ThrowIfNull(documentFacts);
         ArgumentNullException.ThrowIfNull(gedcomFacts);
 
         var differences = new List<BiographyDifference>();
-        AddIfRepresented(differences, documentFacts, "Navn", documentFacts.FullName, gedcomFacts.FullName);
-        AddIfRepresented(differences, documentFacts, "Køn", documentFacts.Sex, gedcomFacts.Sex);
-        AddIfRepresented(differences, documentFacts, "Fødselsdato", documentFacts.BirthDate, gedcomFacts.BirthDate);
-        AddIfRepresented(differences, documentFacts, "Fødested", documentFacts.BirthPlace, gedcomFacts.BirthPlace);
-        AddIfRepresented(differences, documentFacts, "Dødsdato", documentFacts.DeathDate, gedcomFacts.DeathDate);
-        AddIfRepresented(differences, documentFacts, "Dødssted", documentFacts.DeathPlace, gedcomFacts.DeathPlace);
+        AddIfRepresented(differences, documentFacts, "Navn", documentFacts.FullName, gedcomFacts.FullName, includeUnrepresentedFields);
+        AddIfRepresented(differences, documentFacts, "Køn", documentFacts.Sex, gedcomFacts.Sex, includeUnrepresentedFields);
+        AddIfRepresented(differences, documentFacts, "Fødselsdato", documentFacts.BirthDate, gedcomFacts.BirthDate, includeUnrepresentedFields);
+        AddIfRepresented(differences, documentFacts, "Fødested", documentFacts.BirthPlace, gedcomFacts.BirthPlace, includeUnrepresentedFields);
+        AddIfRepresented(differences, documentFacts, "Dødsdato", documentFacts.DeathDate, gedcomFacts.DeathDate, includeUnrepresentedFields);
+        AddIfRepresented(differences, documentFacts, "Dødssted", documentFacts.DeathPlace, gedcomFacts.DeathPlace, includeUnrepresentedFields);
 
         var documentParents = documentFacts.ParentDisplayText
             ?? string.Join(", ", documentFacts.ParentRecordIds);
         var gedcomParents = gedcomFacts.ParentDisplayText
             ?? string.Join(", ", gedcomFacts.ParentRecordIds);
-        AddIfRepresented(differences, documentFacts, "Forældre", documentParents, gedcomParents);
+        AddIfRepresented(differences, documentFacts, "Forældre", documentParents, gedcomParents, includeUnrepresentedFields);
         return differences;
     }
 
@@ -30,9 +31,11 @@ public sealed class BiographyDifferenceService
         BiographyFactsSnapshot documentFacts,
         string fieldName,
         string? documentValue,
-        string? gedcomValue)
+        string? gedcomValue,
+        bool includeUnrepresentedFields)
     {
-        if (documentFacts.RepresentedFields is not null &&
+        if (!includeUnrepresentedFields &&
+            documentFacts.RepresentedFields is not null &&
             !documentFacts.RepresentedFields.Contains(fieldName))
         {
             return;

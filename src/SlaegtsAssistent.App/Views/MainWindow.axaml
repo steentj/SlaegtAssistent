@@ -105,6 +105,9 @@
                                         <TextBlock Text="{Binding RecordId}"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource AppMutedTextBrush}" />
+                                        <TextBlock Text="{Binding SyncStatusText}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource AppAccentBrush}" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

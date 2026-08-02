@@ -10,7 +10,8 @@ public sealed record GedcomDifferenceReviewItem(
     string FilePath,
     BiographyDocument Document,
     BiographyFactsSnapshot GedcomFacts,
-    BiographyDifference Difference);
+    BiographyDifference Difference,
+    bool UseGedcomByDefault);
 
 public interface IGedcomDifferenceDialogService
 {

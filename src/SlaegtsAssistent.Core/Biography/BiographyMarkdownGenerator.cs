@@ -12,6 +12,7 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
         ArgumentNullException.ThrowIfNull(person);
 
         var facts = BuildFacts(person);
+        var factsSnapshot = BiographyFactsSnapshot.FromPerson(person);
         var headingName = string.IsNullOrWhiteSpace(person.FullName)
             ? person.RecordId
             : person.FullName;
@@ -41,7 +42,10 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
                 1,
                 person.RecordId,
                 person.FullName,
-                BiographyFactsSnapshot.FromPerson(person)),
+                factsSnapshot)
+            {
+                GedcomBaselineHash = factsSnapshot.ComputeFingerprint(),
+            },
             body.ToString());
     }
 

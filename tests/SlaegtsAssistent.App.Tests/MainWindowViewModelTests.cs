@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.Core.Biography;
 using SlaegtsAssistent.Core.Domain;
 using SlaegtsAssistent.Core.Gedcom;
 using System.Threading.Tasks;
@@ -226,6 +227,8 @@ public class MainWindowViewModelTests
         viewModel.People.Should().ContainSingle();
         viewModel.People[0].RawGedcom.Should().Contain("0 @I1@ INDI");
         viewModel.People[0].RawGedcom.Should().Contain("1 NAME Anna /Jensen/");
+        viewModel.People[0].SyncStatus.Should().Be(BiographySyncStatus.Ny);
+        viewModel.People[0].SyncStatusText.Should().Be("Ny");
         viewModel.ActivePersonText.Should().Be("Anna Jensen (@I1@)");
         viewModel.ActiveFilePathText.Should().Contain(Path.GetFileName(file.Path));
         viewModel.SaveStatusText.Should().Be("Gemt");
@@ -233,6 +236,119 @@ public class MainWindowViewModelTests
         viewModel.Editor!.MarkdownText = "# Ændret";
 
         viewModel.SaveStatusText.Should().Be("Ugemte ændringer");
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldNotReviewNewlyCreatedDocumentsAsChanges()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+
+        var differenceDialog = new RecordingGedcomDifferenceDialogService();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            gedcomDifferenceDialogService: differenceDialog);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        differenceDialog.Calls.Should().Be(1);
+        differenceDialog.LastDifferences.Should().BeEmpty();
+        viewModel.People.Should().ContainSingle(person =>
+            person.SyncStatus == BiographySyncStatus.Ny);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldTreatSameGedcomAsUnchanged()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 SEX F",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var differenceDialog = new RecordingGedcomDifferenceDialogService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settings,
+            gedcomDifferenceDialogService: differenceDialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        differenceDialog.LastDifferences.Should().BeEmpty();
+        viewModel.People.Should().ContainSingle(person =>
+            person.SyncStatus == BiographySyncStatus.Uændret);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldDefaultNewGedcomInformationToGedcom()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 SOUR SlaegtsAssistentTests",
+            "1 GEDC",
+            "2 VERS 5.5.1",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 BIRT",
+            "2 DATE 12 MAR 1900",
+            "0 TRLR");
+
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var differenceDialog = new RecordingGedcomDifferenceDialogService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: differenceDialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+        differenceDialog.LastDifferences.Should().ContainSingle(difference =>
+            difference.Difference.FieldName == "Fødselsdato" &&
+            difference.UseGedcomByDefault);
+        viewModel.People.Should().ContainSingle(person =>
+            person.SyncStatus == BiographySyncStatus.Ændret);
     }
 
     [Fact]
@@ -792,7 +908,9 @@ public class MainWindowViewModelTests
         IUnsavedChangesDialogService? unsavedChangesDialogService = null,
         IApplicationControlService? applicationControlService = null,
         IMarkdownBiographyExportService? markdownBiographyExportService = null,
-        IMarkdownFileStore? markdownFileStore = null)
+        IMarkdownFileStore? markdownFileStore = null,
+        IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
+        IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null)
     {
         return new MainWindowViewModel(
             gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
@@ -804,7 +922,9 @@ public class MainWindowViewModelTests
             unsavedChangesDialogService ?? new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér),
             applicationControlService ?? new RecordingApplicationControlService(),
             markdownBiographyExportService ?? new RecordingMarkdownBiographyExportService(),
-            markdownFileStore ?? new RecordingMarkdownFileStore());
+            markdownFileStore ?? new RecordingMarkdownFileStore(),
+            markdownDocumentCatalog,
+            gedcomDifferenceDialogService);
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
@@ -934,6 +1054,21 @@ public class MainWindowViewModelTests
             Calls++;
             LastOutputFolder = outputDirectory;
         }
+    }
+
+    private sealed class RecordingGedcomDifferenceDialogService : IGedcomDifferenceDialogService
+        {
+            public int Calls { get; private set; }
+
+            public IReadOnlyList<GedcomDifferenceReviewItem> LastDifferences { get; private set; } = [];
+
+            public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+                IReadOnlyList<GedcomDifferenceReviewItem> differences)
+            {
+                Calls++;
+                LastDifferences = differences;
+                return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
+            }
     }
 
     private sealed class RecordingUnsavedChangesDialogService : IUnsavedChangesDialogService

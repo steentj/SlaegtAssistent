@@ -166,7 +166,10 @@ public static class BiographyDocumentParser
             formatVersion,
             recordId,
             ParseString(values, "displayName"),
-            facts);
+            facts)
+        {
+            GedcomBaselineHash = ParseString(values, "gedcomBaselineHash"),
+        };
     }
 
     private static int ParseInt(IReadOnlyDictionary<string, string> values, string key)

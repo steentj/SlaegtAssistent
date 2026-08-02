@@ -43,12 +43,16 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
 
         var context = BiographyTemplateContext.FromPerson(person, _submitter, _mediaBaseDirectory);
         var body = _renderer.Render(_template, context);
+        var facts = BiographyFactsSnapshot.FromPerson(person);
         return BiographyDocumentSerializer.Serialize(
             new BiographyDocumentMetadata(
                 2,
                 person.RecordId,
                 person.FullName,
-                BiographyFactsSnapshot.FromPerson(person)),
+                facts)
+            {
+                GedcomBaselineHash = facts.ComputeFingerprint(),
+            },
             BiographyGeneratedSectionMerger.Wrap(body));
     }
 }

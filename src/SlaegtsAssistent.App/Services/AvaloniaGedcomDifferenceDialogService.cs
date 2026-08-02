@@ -40,12 +40,13 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
             {
                 Content = "Markdown",
                 GroupName = difference.Key,
-                IsChecked = true,
+                IsChecked = !difference.UseGedcomByDefault,
             };
             var gedcomChoice = new RadioButton
             {
                 Content = "GEDCOM",
                 GroupName = difference.Key,
+                IsChecked = difference.UseGedcomByDefault,
             };
             gedcomChoices[difference.Key] = gedcomChoice;
             var choicePanel = new StackPanel

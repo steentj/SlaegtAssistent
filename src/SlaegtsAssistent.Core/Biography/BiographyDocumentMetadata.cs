@@ -4,4 +4,7 @@ public sealed record BiographyDocumentMetadata(
     int FormatVersion,
     string RecordId,
     string? DisplayName,
-    BiographyFactsSnapshot Facts);
+    BiographyFactsSnapshot Facts)
+{
+    public string? GedcomBaselineHash { get; init; }
+}

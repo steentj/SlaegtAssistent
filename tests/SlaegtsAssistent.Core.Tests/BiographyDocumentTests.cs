@@ -19,7 +19,10 @@ public sealed class BiographyDocumentTests
                 "Aarhus",
                 null,
                 null,
-                ["@I2@", "@I3@"]));
+                ["@I2@", "@I3@"]))
+        {
+            GedcomBaselineHash = "ABC123",
+        };
 
         var body = "# Anna Jensen\n\nFri biografitekst.\n";
         var document = BiographyDocumentParser.Parse(
@@ -96,6 +99,37 @@ public sealed class BiographyDocumentTests
         var differences = new BiographyDifferenceService().Compare(legacyFacts, gedcomFacts);
 
         differences.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FactsFingerprint_IsStable_WhenParentOrderChanges()
+    {
+        var first = new BiographyFactsSnapshot(
+            "Anna Jensen", "F", "12 MAR 1900", "Aarhus", null, null, ["@I3@", "@I2@"]);
+        var second = first with { ParentRecordIds = ["@I2@", "@I3@"] };
+
+        first.ComputeFingerprint().Should().Be(second.ComputeFingerprint());
+    }
+
+    [Fact]
+    public void DifferenceService_CanReportNewUnrepresentedFields()
+    {
+        var documentFacts = new BiographyFactsSnapshot(
+            "Anna Jensen", null, null, null, null, null, [])
+        {
+            RepresentedFields = new HashSet<string>(StringComparer.Ordinal),
+        };
+        var gedcomFacts = documentFacts with { BirthDate = "12 MAR 1900" };
+
+        var differences = new BiographyDifferenceService().Compare(
+            documentFacts,
+            gedcomFacts,
+            includeUnrepresentedFields: true);
+
+        differences.Should().ContainSingle();
+        differences[0].FieldName.Should().Be("Fødselsdato");
+        differences[0].DocumentValue.Should().BeNull();
+        differences[0].GedcomValue.Should().Be("12 MAR 1900");
     }
 
     [Fact]

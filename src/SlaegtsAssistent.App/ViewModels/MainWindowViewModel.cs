@@ -160,12 +160,18 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var familyTree = _gedcomLoader.Load(filePath);
             _familyTree = familyTree;
-            _markdownBiographyExportService.WriteBiographies(familyTree, StandardMarkdownOutputFolder!);
             var outputFolder = StandardMarkdownOutputFolder!;
-            await ReviewGedcomDifferencesAsync(familyTree);
+            var syncStatuses = await ReviewGedcomDifferencesAsync(familyTree);
+            _markdownBiographyExportService.WriteBiographies(familyTree, outputFolder);
 
             var people = familyTree.People
-                .Select(person => CreatePersonListItem(person, outputFolder))
+                .Select(person =>
+                {
+                    var syncStatus = syncStatuses.TryGetValue(person.RecordId, out var status)
+                        ? status
+                        : BiographySyncStatus.Ukendt;
+                    return CreatePersonListItem(person, outputFolder, syncStatus);
+                })
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
                 .ToList();
@@ -310,9 +316,11 @@ public partial class MainWindowViewModel : ViewModelBase
         return true;
     }
 
-    private async Task ReviewGedcomDifferencesAsync(FamilyTree familyTree)
+    private async Task<IReadOnlyDictionary<string, BiographySyncStatus>> ReviewGedcomDifferencesAsync(
+        FamilyTree familyTree)
     {
         var reviewItems = new List<GedcomDifferenceReviewItem>();
+        var syncStatuses = new Dictionary<string, BiographySyncStatus>(StringComparer.Ordinal);
 
         foreach (var person in familyTree.People)
         {
@@ -341,6 +349,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (documentInfo is null ||
                 documentInfo.RecordId.StartsWith("error:", StringComparison.Ordinal))
             {
+                syncStatuses[person.RecordId] = BiographySyncStatus.Ny;
                 continue;
             }
 
@@ -367,9 +376,21 @@ public partial class MainWindowViewModel : ViewModelBase
                         documentFacts),
                 };
             var gedcomFacts = BiographyFactsSnapshot.FromPerson(person);
+            var gedcomBaselineHash = gedcomFacts.ComputeFingerprint();
+            if (document.Metadata?.GedcomBaselineHash is { } storedBaselineHash &&
+                string.Equals(storedBaselineHash, gedcomBaselineHash, StringComparison.Ordinal))
+            {
+                syncStatuses[person.RecordId] = BiographySyncStatus.Uændret;
+                continue;
+            }
+
             var differences = new BiographyDifferenceService().Compare(
                 documentFacts,
-                gedcomFacts);
+                gedcomFacts,
+                includeUnrepresentedFields: true);
+            syncStatuses[person.RecordId] = differences.Count == 0
+                ? BiographySyncStatus.Uændret
+                : BiographySyncStatus.Ændret;
             foreach (var difference in differences)
             {
                 reviewItems.Add(new GedcomDifferenceReviewItem(
@@ -378,14 +399,16 @@ public partial class MainWindowViewModel : ViewModelBase
                     documentInfo.FilePath,
                     reviewDocument,
                     gedcomFacts,
-                    difference));
+                    difference,
+                    string.IsNullOrWhiteSpace(difference.DocumentValue) &&
+                    !string.IsNullOrWhiteSpace(difference.GedcomValue)));
             }
         }
 
         var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems);
         if (choices is null)
         {
-            return;
+            return syncStatuses;
         }
 
         foreach (var documentGroup in reviewItems.GroupBy(item => item.FilePath, StringComparer.Ordinal))
@@ -413,6 +436,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 _markdownFileStore.Write(first.FilePath, updatedContent);
             }
         }
+
+        return syncStatuses;
     }
 
     private void SetDefaultInputFolderFromSelectedGedcom(string gedcomFilePath)
@@ -473,7 +498,10 @@ public partial class MainWindowViewModel : ViewModelBase
         UpdateDirtyState();
     }
 
-    private static PersonListItemViewModel CreatePersonListItem(Person person, string outputFolder)
+    private static PersonListItemViewModel CreatePersonListItem(
+        Person person,
+        string outputFolder,
+        BiographySyncStatus syncStatus = BiographySyncStatus.Ukendt)
     {
         var displayName = string.IsNullOrWhiteSpace(person.FullName)
             ? $"Unavngiven ({person.RecordId})"
@@ -481,7 +509,12 @@ public partial class MainWindowViewModel : ViewModelBase
         var markdownFileName = BiographyFileNameGenerator.Generate(person);
         var markdownFilePath = Path.Combine(outputFolder, markdownFileName);
 
-        return new PersonListItemViewModel(person.RecordId, displayName, markdownFilePath, person.RawGedcom);
+        return new PersonListItemViewModel(
+            person.RecordId,
+            displayName,
+            markdownFilePath,
+            person.RawGedcom,
+            syncStatus);
     }
 
     partial void OnPersonFilterTextChanged(string value)

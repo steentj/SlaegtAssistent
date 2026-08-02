@@ -67,3 +67,6 @@
 - [7c3f19b] Implementer skabelonbaserede persondokumenter og hjælpemenuer
 - [c90171f] feat: Implement biography template parsing and rendering
 - [54b0768] feat: Add template cheat sheet functionality and UI integration
+- [4bfbc07] feat: Add template cheat sheet functionality and UI integration
+- [e044d1f] feat: Implement stable GEDCOM synchronization and resizable workspace panels
+- [8ea9741] feat: Enhance GEDCOM difference handling with sync status and fingerprinting

@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace SlaegtsAssistent.Core.Biography;
 
 public sealed record BiographyFactsSnapshot(
@@ -12,6 +15,26 @@ public sealed record BiographyFactsSnapshot(
     public string? ParentDisplayText { get; init; }
 
     public IReadOnlySet<string>? RepresentedFields { get; init; }
+
+    public string ComputeFingerprint()
+    {
+        var canonical = string.Join(
+            "\n",
+            Encode(FullName),
+            Encode(Sex),
+            Encode(BirthDate),
+            Encode(BirthPlace),
+            Encode(DeathDate),
+            Encode(DeathPlace),
+            string.Join(
+                "\n",
+                ParentRecordIds
+                    .OrderBy(recordId => recordId, StringComparer.Ordinal)
+                    .Select(Encode)));
+
+        return Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
 
     public static BiographyFactsSnapshot FromPerson(Domain.Person person)
     {
@@ -32,5 +55,10 @@ public sealed record BiographyFactsSnapshot(
                     .Select(parent => parent.FullName)
                     .Where(name => !string.IsNullOrWhiteSpace(name))),
         };
+    }
+
+    private static string Encode(string? value)
+    {
+        return value is null ? "<null>" : $"{value.Length}:{value}";
     }
 }
