@@ -12,6 +12,7 @@ SlægtsAssistenten er en privatlivsfokuseret desktop-applikation, der skal hjæl
 ### Kernefunktionalitet
 1.  **Struktur til Prosa:** Læse GEDCOM-filer og oprette én redigerbar Markdown-biografi pr. person ud fra en bruger valgt skabelon.
 2. **Dokumentførst arbejdsgang:** Indlæse eksisterende persondokumenter lokalt ved opstart, før en GEDCOM-fil læses, og lade brugeren kontrollere alle efterfølgende faktuelle forskelle.
+   Nye personer vises som nye med GEDCOM-værdier valgt som standard. En uændret genindlæsning af samme GEDCOM-fil skal ikke skabe ændringsnotifikationer.
 3. **Universel Dokumenteksport:** Konvertering af de færdige, redigerede biografier til trykklare PDF'er og redigerbare kontorformater (OOXML/ODF) til nem deling.
 4. **Visuelt Slægtstræ:** Interaktiv grafisk visning af slægtstræet med mulighed for navigation, direkte udskrift
 og eksport i højopløselige billedformater.
@@ -64,5 +65,8 @@ Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (b
 - Personens frie biografitekst er brugerens autoritative tekst og må aldrig overskrives automatisk af GEDCOM.
 - Strukturerede fakta fra GEDCOM og dokumenter vises som en kontrolleret sammenligning, hvor brugeren vælger felt for felt.
 - Maskingenereret dokumentindhold holdes i en markeret sektion, så skabelon- og GEDCOM-opdateringer ikke overskriver brugerens frie biografitekst.
+- Ændringer i skabelon eller GEDCOM skal skabe en gennemgåelig kandidatopdatering af den maskingenererede sektion. Afviste kandidater må ikke ændre dokumentet.
+- Den senest indlæste GEDCOM-fil og personernes rå GEDCOM-segmenter gemmes lokalt, så rådata kan vises ved næste opstart uden ny import.
 - Hjælpevinduer er ikke-modale, kan flyttes og lukkes uafhængigt af hovedvinduet og må ikke blokere redigering eller forhåndsvisning.
 - Appen skal have et roligt, informationsrigt desktopudtryk med både lyst og mørkt tema samt synlig tastaturfokus.
+- Arbejdsbordets editor-, preview- og kontekstpaneler skal kunne tilpasses med en flytbar skillelinje.

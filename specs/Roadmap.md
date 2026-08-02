@@ -61,9 +61,19 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     3. Hjælp-menuintegration, vindueslivscyklus og samtidig brug af begge vinduer.
 *   **Arbejdsform:** Hver feature udvikles testdrevet med stop for manuel afprøvning efter featureens validering.
 
+### Trin 4.7: Stabil GEDCOM-synkronisering og arbejdsbord SPRINT 4D
+*   **Mål:** Fjerne falske ændringsnotifikationer, bevare rå GEDCOM-data mellem sessioner, gøre arbejdsbordet justerbart og sikre, at skabelon- og GEDCOM-ændringer kan genrenderes uden at overskrive fri tekst.
+*   **Forudsætning:** Trin 4.5 og 4.6 er færdige.
+*   **Feature-rækkefølge:**
+    1. Korrekt importstatus og synkroniseringsbaseline for nye, ændrede og uændrede personer.
+    2. Lokal persistens af GEDCOM-fil, importmanifest og rå personsegmenter.
+    3. Flytbar skillelinje og resizable arbejdsbordspaneler.
+    4. Kandidatbaseret genrendering ved ændret skabelon eller GEDCOM-data.
+*   **Arbejdsform:** Hver feature udvikles testdrevet med Core- og/eller App-tests. Efter hver feature stoppes udviklingen, og featureens manuelle validering gennemføres, før næste feature må starte. Sprintet afsluttes først efter samlet manuel afprøvning af en genåbnet arbejdsmappe.
+
 ### Trin 5: Grafisk Slægtstræ & Eksport SPRINT 5
 *   **Mål:** Opsætte output fra applikationen
-*   **Forudsætning:** Trin 4.5 og 4.6 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter.
+*   **Forudsætning:** Trin 4.5, 4.6 og 4.7 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter med dokumenteret synkronisering.
 *   **Opgaver:**
     *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
     *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.
