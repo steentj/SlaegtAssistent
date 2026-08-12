@@ -8,7 +8,7 @@
 - [x] Importfase, annullering og fejl er tydelige og på dansk.
 - [x] Snapshot, katalog og personliste skifter generation samlet.
 - [x] `dotnet build` og `dotnet test` er grønne.
-- [ ] Manuel annullerings- og fejltest er gennemført.
+- [x] Manuel annullerings- og fejltest er gennemført.
 
 ## Automatiseret verifikation
 
@@ -23,9 +23,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-12
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsmappe, 139 automatiske tests bestået
+- **Bemærkninger:** Manuel annullerings-, responsivitets- og rollbacktest er godkendt.
 
-- [ ] Feature 04 er godkendt, og feature 05 må påbegyndes.
+- [x] Feature 04 er godkendt, og feature 05 må påbegyndes.

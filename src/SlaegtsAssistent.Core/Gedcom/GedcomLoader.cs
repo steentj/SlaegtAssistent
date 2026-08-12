@@ -7,6 +7,34 @@ namespace SlaegtsAssistent.Core.Gedcom;
 
 public sealed class GedcomLoader : IGedcomLoader
 {
+    private const char ContinuedLineBreak = '\uE000';
+
+    private static readonly HashSet<string> PersonEventTags = new(StringComparer.Ordinal)
+    {
+        "ADOP", "BAPL", "BAPM", "BARM", "BASM", "BIRT", "BLES", "BURI", "CAST", "CHR",
+        "CHRA", "CONF", "CONL", "CREM", "DEAT", "DSCR", "EDUC", "EMIG", "ENDL", "EVEN",
+        "FACT", "FCOM", "GRAD", "IDNO", "IMMI", "NATI", "NATU", "NCHI", "NMR", "OCCU",
+        "ORDN", "PROB", "PROP", "RELI", "RESI", "RETI", "SLGC", "SSN", "TITL", "WILL",
+    };
+
+    private static readonly HashSet<string> FamilyEventTags = new(StringComparer.Ordinal)
+    {
+        "ANUL", "CENS", "DIV", "DIVF", "ENGA", "EVEN", "MARB", "MARC", "MARL", "MARR",
+        "MARS", "RESI", "SLGS",
+    };
+
+    private static readonly HashSet<string> PersonStructureTags = new(StringComparer.Ordinal)
+    {
+        "AFN", "ALIA", "ANCI", "ASSO", "CHAN", "DESI", "FAMC", "FAMS", "NAME", "OBJE",
+        "REFN", "RESN", "RFN", "RIN", "SEX", "SOUR", "SUBM", "UID", "_FSFTID", "_UID",
+    };
+
+    private static readonly HashSet<string> FamilyStructureTags = new(StringComparer.Ordinal)
+    {
+        "CHAN", "CHIL", "HUSB", "NCHI", "OBJE", "REFN", "RESN", "RIN", "SOUR",
+        "SUBM", "WIFE",
+    };
+
     public FamilyTree Load(string filePath, FamilyTree? existingTree = null)
     {
         return Load(filePath, existingTree, CancellationToken.None);
@@ -57,9 +85,10 @@ public sealed class GedcomLoader : IGedcomLoader
         string filePath,
         CancellationToken cancellationToken)
     {
-        var rawGedcomByRecordId = ReadRawPersonSegments(filePath);
+        var decoded = ReadGedcomFile(filePath);
+        var rawGedcomByRecordId = ReadRawPersonSegments(decoded.Text);
         cancellationToken.ThrowIfCancellationRequested();
-        using var stream = CreateNormalizedLineEndingStream(filePath);
+        using var stream = CreateParserStream(decoded.Text);
         using var parser = new Parser(stream);
 
         var people = new Dictionary<string, ParsedPerson>(StringComparer.Ordinal);
@@ -76,11 +105,15 @@ public sealed class GedcomLoader : IGedcomLoader
         ParsedEvent? currentEvent = null;
         ParsedCensus? currentCensus = null;
         ParsedSource? currentPersonSource = null;
+        int currentPersonSourceLevel = -1;
         ParsedMedia? currentPersonMedia = null;
         bool currentSourceData = false;
         bool currentHeader = false;
         string? headerSubmitterId = null;
         ParsedEvent? currentFamilyEvent = null;
+        ParsedSource? currentFamilySource = null;
+        int currentFamilySourceLevel = -1;
+        bool currentFamilySourceData = false;
 
         while (parser.ReadLevel())
         {
@@ -92,7 +125,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
             var level = parser.Level;
             var tag = parser.Tag;
-            var value = parser.Value?.Trim();
+            var value = parser.Value;
 
             if (level == 0)
             {
@@ -104,10 +137,14 @@ public sealed class GedcomLoader : IGedcomLoader
                 currentEvent = null;
                 currentCensus = null;
                 currentPersonSource = null;
+                currentPersonSourceLevel = -1;
                 currentPersonMedia = null;
                 currentSourceData = false;
                 currentHeader = false;
                 currentFamilyEvent = null;
+                currentFamilySource = null;
+                currentFamilySourceLevel = -1;
+                currentFamilySourceData = false;
 
                 switch (tag)
                 {
@@ -190,6 +227,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     ref currentEvent,
                     ref currentCensus,
                     ref currentPersonSource,
+                    ref currentPersonSourceLevel,
                     ref currentPersonMedia,
                     ref currentSourceData);
                 continue;
@@ -197,7 +235,16 @@ public sealed class GedcomLoader : IGedcomLoader
 
             if (currentFamily is not null)
             {
-                ParseFamilyLine(currentFamily, level, tag, value, parser.No, ref currentFamilyEvent);
+                ParseFamilyLine(
+                    currentFamily,
+                    level,
+                    tag,
+                    value,
+                    parser.No,
+                    ref currentFamilyEvent,
+                    ref currentFamilySource,
+                    ref currentFamilySourceLevel,
+                    ref currentFamilySourceData);
                 continue;
             }
 
@@ -235,7 +282,7 @@ public sealed class GedcomLoader : IGedcomLoader
             media.Values.ToList(),
             submitters.Values.ToList(),
             headerSubmitterId,
-            []);
+            decoded.Diagnostics);
     }
 
     private static void ParsePersonLine(
@@ -247,14 +294,29 @@ public sealed class GedcomLoader : IGedcomLoader
         ref ParsedEvent? currentEvent,
         ref ParsedCensus? currentCensus,
         ref ParsedSource? currentSource,
+        ref int currentSourceLevel,
         ref ParsedMedia? currentMedia,
         ref bool currentSourceData)
     {
+        if (currentSource is not null && level > currentSourceLevel)
+        {
+            ParseSourceLine(currentSource, level, tag, value, ref currentSourceData);
+            return;
+        }
+
+        if (currentSource is not null && level <= currentSourceLevel)
+        {
+            currentSource = null;
+            currentSourceLevel = -1;
+            currentSourceData = false;
+        }
+
         if (level == 1)
         {
             currentEvent = null;
             currentCensus = null;
             currentSource = null;
+            currentSourceLevel = -1;
             currentMedia = null;
             currentSourceData = false;
 
@@ -268,13 +330,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     person.Sex = NormalizeToken(value);
                     break;
 
-                case "BIRT":
-                case "DEAT":
-                case "BAPM":
-                case "CHR":
-                case "BURI":
-                case "EVEN":
-                case "CONF":
+                case var eventTag when PersonEventTags.Contains(eventTag):
                     currentEvent = new ParsedEvent(tag, NormalizeToken(value));
                     person.Events.Add(currentEvent);
                     break;
@@ -282,6 +338,28 @@ public sealed class GedcomLoader : IGedcomLoader
                 case "CENS":
                     currentCensus = new ParsedCensus();
                     person.Census.Add(currentCensus);
+                    break;
+
+                case "NOTE":
+                    if (NormalizeToken(value) is { } note)
+                    {
+                        person.Notes.Add(note);
+                    }
+
+                    break;
+
+                case "SOUR":
+                    currentSource = CreateCitation(value);
+                    currentSourceLevel = level;
+                    person.Sources.Add(currentSource);
+                    break;
+
+                case "OBJE":
+                    currentMedia = new ParsedMedia(NormalizeToken(value));
+                    person.Media.Add(currentMedia);
+                    break;
+
+                case var structureTag when PersonStructureTags.Contains(structureTag):
                     break;
 
                 default:
@@ -295,23 +373,8 @@ public sealed class GedcomLoader : IGedcomLoader
                         tag));
                     break;
 
-                case "SOUR":
-                    currentSource = new ParsedSource(NormalizeToken(value));
-                    person.Sources.Add(currentSource);
-                    break;
-
-                case "OBJE":
-                    currentMedia = new ParsedMedia(NormalizeToken(value));
-                    person.Media.Add(currentMedia);
-                    break;
             }
 
-            return;
-        }
-
-        if (currentSource is not null)
-        {
-            ParseSourceLine(currentSource, level, tag, value, ref currentSourceData);
             return;
         }
 
@@ -365,7 +428,9 @@ public sealed class GedcomLoader : IGedcomLoader
                     break;
 
                 case "SOUR":
-                    currentEvent.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                    currentSource = CreateCitation(value);
+                    currentSourceLevel = level;
+                    currentEvent.Sources.Add(currentSource);
                     break;
             }
 
@@ -392,7 +457,9 @@ public sealed class GedcomLoader : IGedcomLoader
                 break;
 
             case "SOUR":
-                currentCensus.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                currentSource = CreateCitation(value);
+                currentSourceLevel = level;
+                currentCensus.Sources.Add(currentSource);
                 break;
         }
     }
@@ -404,63 +471,39 @@ public sealed class GedcomLoader : IGedcomLoader
         string? value,
         ref bool currentSourceData)
     {
-        if (level == 1 || level == 2)
+        if (tag == "DATA")
         {
-            currentSourceData = tag == "DATA";
-        }
-
-        if (level == 1 || level == 2)
-        {
-            switch (tag)
-            {
-                case "TITL":
-                    source.Title = NormalizeToken(value);
-                    break;
-
-                case "AUTH":
-                    source.Author = NormalizeToken(value);
-                    break;
-
-                case "PUBL":
-                    source.Publication = NormalizeToken(value);
-                    break;
-
-                case "TEXT":
-                    source.Text = NormalizeToken(value);
-                    break;
-
-                case "REPO":
-                    source.Repository = NormalizeToken(value);
-                    break;
-
-                case "PAGE":
-                    source.Page = NormalizeToken(value);
-                    break;
-
-                case "DATA":
-                    source.Data = NormalizeToken(value);
-                    break;
-
-                case "DATE":
-                    source.Date = NormalizeToken(value);
-                    break;
-            }
-
+            currentSourceData = true;
+            source.Data = NormalizeToken(value);
             return;
         }
 
-        if (level > 2 && currentSourceData)
+        switch (tag)
         {
-            switch (tag)
-            {
-                case "DATE":
-                    source.Date = NormalizeToken(value);
-                    break;
-
-                case "TEXT":
-                    source.Text = NormalizeToken(value);
-                    break;
-            }
+            case "TITL":
+                source.Title = NormalizeToken(value);
+                break;
+            case "AUTH":
+                source.Author = NormalizeToken(value);
+                break;
+            case "PUBL":
+                source.Publication = NormalizeToken(value);
+                break;
+            case "TEXT":
+                source.Text = NormalizeToken(value);
+                break;
+            case "REPO":
+                source.Repository = NormalizeToken(value);
+                break;
+            case "PAGE":
+                source.Page = NormalizeToken(value);
+                break;
+            case "DATE":
+                source.Date = NormalizeToken(value);
+                break;
+            case "NOTE":
+                source.Note = NormalizeToken(value);
+                break;
         }
     }
 
@@ -501,14 +544,30 @@ public sealed class GedcomLoader : IGedcomLoader
         string tag,
         string? value,
         int line,
-        ref ParsedEvent? currentEvent)
+        ref ParsedEvent? currentEvent,
+        ref ParsedSource? currentSource,
+        ref int currentSourceLevel,
+        ref bool currentSourceData)
     {
+        if (currentSource is not null && level > currentSourceLevel)
+        {
+            ParseSourceLine(currentSource, level, tag, value, ref currentSourceData);
+            return;
+        }
+
+        if (currentSource is not null && level <= currentSourceLevel)
+        {
+            currentSource = null;
+            currentSourceLevel = -1;
+            currentSourceData = false;
+        }
+
         if (level == 1)
         {
             currentEvent = null;
         }
 
-        if (level == 1 && tag is "MARR" or "EVEN" or "CONF")
+        if (level == 1 && FamilyEventTags.Contains(tag))
         {
             currentEvent = new ParsedEvent(tag, NormalizeToken(value));
             family.Events.Add(currentEvent);
@@ -537,7 +596,9 @@ public sealed class GedcomLoader : IGedcomLoader
                     currentEvent.Note = NormalizeToken(value);
                     break;
                 case "SOUR":
-                    currentEvent.Sources.Add(new ParsedSource(NormalizeToken(value)));
+                    currentSource = CreateCitation(value);
+                    currentSourceLevel = level;
+                    currentEvent.Sources.Add(currentSource);
                     break;
             }
 
@@ -560,7 +621,24 @@ public sealed class GedcomLoader : IGedcomLoader
                 break;
 
             case "CHIL":
-                family.ChildrenIds.Add(value!);
+                family.ChildrenIds.Add(NormalizeToken(value)!);
+                break;
+
+            case "NOTE":
+                if (NormalizeToken(value) is { } note)
+                {
+                    family.Notes.Add(note);
+                }
+
+                break;
+
+            case "SOUR":
+                currentSource = CreateCitation(value);
+                currentSourceLevel = level;
+                family.Sources.Add(currentSource);
+                break;
+
+            case var structureTag when FamilyStructureTags.Contains(structureTag):
                 break;
 
             default:
@@ -652,6 +730,7 @@ public sealed class GedcomLoader : IGedcomLoader
             person.DeathDate = parsedPerson.DeathDate;
             person.DeathPlace = parsedPerson.DeathPlace;
             person.Sources.Clear();
+            person.Notes.Clear();
             person.Media.Clear();
             person.Events.Clear();
             person.Census.Clear();
@@ -659,6 +738,11 @@ public sealed class GedcomLoader : IGedcomLoader
             foreach (var parsedSource in parsedPerson.Sources)
             {
                 person.Sources.Add(CreateSource(tree, parsedSource, parsedGedcom.Sources));
+            }
+
+            foreach (var note in parsedPerson.Notes)
+            {
+                person.Notes.Add(note);
             }
 
             foreach (var parsedMedia in parsedPerson.Media)
@@ -707,6 +791,8 @@ public sealed class GedcomLoader : IGedcomLoader
             cancellationToken.ThrowIfCancellationRequested();
             var domainFamily = tree.GetOrAddFamily(family.RecordId);
             domainFamily.Events.Clear();
+            domainFamily.Sources.Clear();
+            domainFamily.Notes.Clear();
             domainFamily.Children.Clear();
             domainFamily.Husband = null;
             domainFamily.Wife = null;
@@ -741,12 +827,17 @@ public sealed class GedcomLoader : IGedcomLoader
                     AddIfMissing(child.Parents, parent, person => person.RecordId);
                 }
 
-                foreach (var diagnostic in family.Diagnostics)
-                {
-                    tree.Diagnostics.Add(diagnostic);
-                }
-
                 AddIfMissing(domainFamily.Children, child, person => person.RecordId);
+            }
+
+            foreach (var parsedSource in family.Sources)
+            {
+                domainFamily.Sources.Add(CreateSource(tree, parsedSource, parsedGedcom.Sources));
+            }
+
+            foreach (var note in family.Notes)
+            {
+                domainFamily.Notes.Add(note);
             }
 
             foreach (var parsedEvent in family.Events)
@@ -757,6 +848,11 @@ public sealed class GedcomLoader : IGedcomLoader
             foreach (var parent in parents)
             {
                 AddIfMissing(parent.Families, domainFamily, familyRecord => familyRecord.RecordId);
+            }
+
+            foreach (var diagnostic in family.Diagnostics)
+            {
+                tree.Diagnostics.Add(diagnostic);
             }
         }
 
@@ -895,6 +991,7 @@ public sealed class GedcomLoader : IGedcomLoader
         target.Page = source.Page;
         target.Data = source.Data;
         target.Date = source.Date;
+        target.Note = source.Note;
     }
 
     private static void CopySource(Source source, Source target)
@@ -907,6 +1004,7 @@ public sealed class GedcomLoader : IGedcomLoader
         target.Page = source.Page;
         target.Data = source.Data;
         target.Date = source.Date;
+        target.Note = source.Note;
     }
 
     private static void CopySource(ParsedSource source, Source target, bool overwriteWithNull)
@@ -949,6 +1047,11 @@ public sealed class GedcomLoader : IGedcomLoader
         if (overwriteWithNull || source.Date is not null)
         {
             target.Date = source.Date;
+        }
+
+        if (overwriteWithNull || source.Note is not null)
+        {
+            target.Note = source.Note;
         }
     }
 
@@ -1027,56 +1130,341 @@ public sealed class GedcomLoader : IGedcomLoader
         items.Add(itemToAdd);
     }
 
-    private static MemoryStream CreateNormalizedLineEndingStream(string filePath)
+    private static MemoryStream CreateParserStream(string text)
     {
-        var fileContent = File.ReadAllText(filePath);
-        var normalizedLineEndings = NormalizeLineEndings(fileContent);
+        var continuedText = CollapseContinuationLines(text);
+        var normalizedLineEndings = NormalizeLineEndings(continuedText);
         return new MemoryStream(Encoding.UTF8.GetBytes(normalizedLineEndings));
     }
 
-    private static IReadOnlyDictionary<string, string> ReadRawPersonSegments(string filePath)
+    private static DecodedGedcom ReadGedcomFile(string filePath)
+    {
+        var bytes = File.ReadAllBytes(filePath);
+        if (bytes.Length == 0)
+        {
+            throw new GedcomLoadException("GEDCOM-filen er tom.");
+        }
+
+        var encodingKind = DetectPhysicalEncoding(bytes);
+        var preliminaryText = DecodeForHeader(bytes, encodingKind);
+        var characterSet = FindHeaderCharacterSet(preliminaryText);
+        var diagnostics = new List<GedcomDiagnostic>();
+
+        if (characterSet is null)
+        {
+            diagnostics.Add(new GedcomDiagnostic(
+                "Warning",
+                "GEDCOM-headeren mangler det obligatoriske CHAR-felt; filen er fortolket som UTF-8."));
+            characterSet = "UTF-8";
+        }
+
+        ValidateEncodingAgreement(encodingKind, characterSet);
+
+        string text;
+        try
+        {
+            text = characterSet switch
+            {
+                "UTF-8" or "UTF8" => new UTF8Encoding(false, true).GetString(bytes, encodingKind.PreambleLength, bytes.Length - encodingKind.PreambleLength),
+                "UNICODE" => DecodeUnicode(bytes, encodingKind),
+                "ASCII" => DecodeAscii(bytes, encodingKind.PreambleLength),
+                "ANSEL" => DecodeAnsel(bytes, encodingKind.PreambleLength),
+                _ => throw new GedcomLoadException($"GEDCOM-tegnsættet '{characterSet}' understøttes ikke."),
+            };
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new GedcomLoadException(
+                $"GEDCOM-filen indeholder ugyldige byteværdier for tegnsættet '{characterSet}'; importen er afbrudt uden tegnkorruption.",
+                exception);
+        }
+
+        return new DecodedGedcom(text.TrimStart('\uFEFF'), diagnostics);
+    }
+
+    private static PhysicalEncoding DetectPhysicalEncoding(byte[] bytes)
+    {
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            return new PhysicalEncoding("UTF-8", 3);
+        }
+
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            return new PhysicalEncoding("UTF-16LE", 2);
+        }
+
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            return new PhysicalEncoding("UTF-16BE", 2);
+        }
+
+        if (bytes.Length >= 4 && bytes[1] == 0 && bytes[3] == 0)
+        {
+            return new PhysicalEncoding("UTF-16LE", 0);
+        }
+
+        if (bytes.Length >= 4 && bytes[0] == 0 && bytes[2] == 0)
+        {
+            return new PhysicalEncoding("UTF-16BE", 0);
+        }
+
+        return new PhysicalEncoding("8-BIT", 0);
+    }
+
+    private static string DecodeForHeader(byte[] bytes, PhysicalEncoding encodingKind)
+    {
+        if (encodingKind.Name == "UTF-16LE")
+        {
+            return new UnicodeEncoding(false, false, true)
+                .GetString(bytes, encodingKind.PreambleLength, bytes.Length - encodingKind.PreambleLength);
+        }
+
+        if (encodingKind.Name == "UTF-16BE")
+        {
+            return new UnicodeEncoding(true, false, true)
+                .GetString(bytes, encodingKind.PreambleLength, bytes.Length - encodingKind.PreambleLength);
+        }
+
+        var chars = bytes
+            .Skip(encodingKind.PreambleLength)
+            .Select(value => value <= 0x7F ? (char)value : '?')
+            .ToArray();
+        return new string(chars);
+    }
+
+    private static string? FindHeaderCharacterSet(string text)
+    {
+        foreach (var line in text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n'))
+        {
+            if (line.StartsWith("1 CHAR ", StringComparison.Ordinal))
+            {
+                return line[7..].Trim().ToUpperInvariant();
+            }
+        }
+
+        return null;
+    }
+
+    private static void ValidateEncodingAgreement(PhysicalEncoding encodingKind, string characterSet)
+    {
+        var declaresUnicode = characterSet == "UNICODE";
+        var isPhysicalUnicode = encodingKind.Name is "UTF-16LE" or "UTF-16BE";
+        if (declaresUnicode != isPhysicalUnicode)
+        {
+            throw new GedcomLoadException(
+                $"GEDCOM-headerens CHAR '{characterSet}' er modstridende med filens fysiske encoding '{encodingKind.Name}'.");
+        }
+
+        if (encodingKind.Name == "UTF-8" && characterSet is not ("UTF-8" or "UTF8"))
+        {
+            throw new GedcomLoadException(
+                $"GEDCOM-headerens CHAR '{characterSet}' er modstridende med filens UTF-8-BOM.");
+        }
+    }
+
+    private static string DecodeUnicode(byte[] bytes, PhysicalEncoding encodingKind)
+    {
+        var bigEndian = encodingKind.Name == "UTF-16BE";
+        return new UnicodeEncoding(bigEndian, false, true)
+            .GetString(bytes, encodingKind.PreambleLength, bytes.Length - encodingKind.PreambleLength);
+    }
+
+    private static string DecodeAscii(byte[] bytes, int offset)
+    {
+        if (bytes.Skip(offset).Any(value => value > 0x7F))
+        {
+            throw new GedcomLoadException(
+                "GEDCOM-filen erklærer ASCII, men indeholder byteværdier uden for ASCII; importen er afbrudt uden tegnkorruption.");
+        }
+
+        return Encoding.ASCII.GetString(bytes, offset, bytes.Length - offset);
+    }
+
+    private static string DecodeAnsel(byte[] bytes, int offset)
+    {
+        var builder = new StringBuilder(bytes.Length - offset);
+        var combiningMarks = new List<char>();
+
+        for (var index = offset; index < bytes.Length; index++)
+        {
+            var value = bytes[index];
+            if (TryMapAnselCombining(value, out var combiningMark))
+            {
+                combiningMarks.Add(combiningMark);
+                continue;
+            }
+
+            var character = value <= 0x7F
+                ? (char)value
+                : MapAnselSpacing(value);
+            builder.Append(character);
+            foreach (var mark in combiningMarks)
+            {
+                builder.Append(mark);
+            }
+
+            combiningMarks.Clear();
+        }
+
+        if (combiningMarks.Count > 0)
+        {
+            throw new GedcomLoadException("GEDCOM-filen slutter med et ANSEL-diacritikum uden grundtegn.");
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private static bool TryMapAnselCombining(byte value, out char character)
+    {
+        character = value switch
+        {
+            0xE1 => '\u0300',
+            0xE2 => '\u0301',
+            0xE3 => '\u0302',
+            0xE4 => '\u0303',
+            0xE5 => '\u0304',
+            0xE6 => '\u0306',
+            0xE7 => '\u0307',
+            0xE8 => '\u0308',
+            0xE9 => '\u030C',
+            0xEA => '\u030A',
+            0xED => '\u0315',
+            0xEE => '\u030B',
+            0xF0 => '\u0327',
+            0xF1 => '\u0328',
+            0xF6 => '\u0332',
+            0xFE => '\u0313',
+            _ => '\0',
+        };
+        return character != '\0';
+    }
+
+    private static char MapAnselSpacing(byte value)
+    {
+        return value switch
+        {
+            0xA1 => 'Ł', 0xA2 => 'Ø', 0xA3 => 'Đ', 0xA4 => 'Þ', 0xA5 => 'Æ', 0xA6 => 'Œ',
+            0xA8 => '·', 0xA9 => '♭', 0xAA => '®', 0xAB => '±', 0xAE => 'ʻ', 0xB0 => 'ʿ',
+            0xB1 => 'ł', 0xB2 => 'ø', 0xB3 => 'đ', 0xB4 => 'þ', 0xB5 => 'æ', 0xB6 => 'œ',
+            0xB8 => 'ı', 0xB9 => '£', 0xBA => 'ð', 0xC3 => '©', 0xC5 => '¿', 0xC6 => '¡',
+            _ => throw new GedcomLoadException(
+                $"GEDCOM-filen indeholder den uunderstøttede ANSEL-byte 0x{value:X2}; importen er afbrudt uden tegnkorruption."),
+        };
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadRawPersonSegments(string text)
     {
         var segments = new Dictionary<string, string>(StringComparer.Ordinal);
-        var lines = File.ReadAllLines(filePath);
-        var currentRecordId = string.Empty;
-        var currentLines = new List<string>();
+        string? currentRecordId = null;
+        var currentStart = -1;
 
-        void StoreCurrentSegment()
+        for (var lineStart = 0; lineStart < text.Length;)
         {
-            if (currentRecordId.Length == 0)
+            var lineEnd = text.IndexOfAny(['\r', '\n'], lineStart);
+            if (lineEnd < 0)
             {
-                return;
+                lineEnd = text.Length;
             }
 
-            segments[currentRecordId] = string.Join(Environment.NewLine, currentLines);
-            currentRecordId = string.Empty;
-            currentLines.Clear();
-        }
-
-        foreach (var line in lines)
-        {
+            var line = text[lineStart..lineEnd];
             if (TryReadIndividualHeader(line, out var recordId))
             {
-                StoreCurrentSegment();
+                if (currentRecordId is not null)
+                {
+                    segments[currentRecordId] = text[currentStart..lineStart];
+                }
+
                 currentRecordId = recordId;
-                currentLines.Add(line);
-                continue;
+                currentStart = lineStart;
+            }
+            else if (currentRecordId is not null && line.StartsWith("0 ", StringComparison.Ordinal))
+            {
+                segments[currentRecordId] = text[currentStart..lineStart];
+                currentRecordId = null;
+                currentStart = -1;
             }
 
-            if (currentRecordId.Length > 0 && line.StartsWith("0 ", StringComparison.Ordinal))
+            if (lineEnd == text.Length)
             {
-                StoreCurrentSegment();
-                continue;
+                lineStart = text.Length;
             }
-
-            if (currentRecordId.Length > 0)
+            else if (text[lineEnd] == '\r' && lineEnd + 1 < text.Length && text[lineEnd + 1] == '\n')
             {
-                currentLines.Add(line);
+                lineStart = lineEnd + 2;
+            }
+            else
+            {
+                lineStart = lineEnd + 1;
             }
         }
 
-        StoreCurrentSegment();
+        if (currentRecordId is not null)
+        {
+            segments[currentRecordId] = text[currentStart..];
+        }
+
         return segments;
+    }
+
+    private static string CollapseContinuationLines(string text)
+    {
+        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var output = new List<string>();
+        var targetByLevel = new Dictionary<int, int>();
+
+        foreach (var line in normalized.Split('\n'))
+        {
+            if (TryReadContinuation(line, out var level, out var tag, out var value)
+                && targetByLevel.TryGetValue(level - 1, out var target))
+            {
+                output[target] += tag == "CONT" ? ContinuedLineBreak + value : value;
+                targetByLevel[level] = target;
+                continue;
+            }
+
+            output.Add(line);
+            if (TryReadLevel(line, out level))
+            {
+                targetByLevel[level] = output.Count - 1;
+            }
+        }
+
+        return string.Join('\n', output);
+    }
+
+    private static bool TryReadContinuation(
+        string line,
+        out int level,
+        out string tag,
+        out string value)
+    {
+        level = -1;
+        tag = string.Empty;
+        value = string.Empty;
+        var firstSpace = line.IndexOf(' ');
+        if (firstSpace <= 0 || !int.TryParse(line[..firstSpace], out level))
+        {
+            return false;
+        }
+
+        var remainder = line[(firstSpace + 1)..];
+        var tagEnd = remainder.IndexOf(' ');
+        tag = tagEnd < 0 ? remainder : remainder[..tagEnd];
+        if (tag is not ("CONT" or "CONC"))
+        {
+            return false;
+        }
+
+        value = tagEnd < 0 ? string.Empty : remainder[(tagEnd + 1)..];
+        return true;
+    }
+
+    private static bool TryReadLevel(string line, out int level)
+    {
+        level = -1;
+        var firstSpace = line.IndexOf(' ');
+        return firstSpace > 0 && int.TryParse(line[..firstSpace], out level);
     }
 
     private static bool TryReadIndividualHeader(string line, out string recordId)
@@ -1119,6 +1507,22 @@ public sealed class GedcomLoader : IGedcomLoader
         return compact.Length == 0 ? null : compact;
     }
 
+    private static ParsedSource CreateCitation(string? value)
+    {
+        var normalized = NormalizeToken(value);
+        if (normalized is not null
+            && normalized.StartsWith('@')
+            && normalized.EndsWith('@'))
+        {
+            return new ParsedSource(normalized);
+        }
+
+        return new ParsedSource(null)
+        {
+            Title = normalized,
+        };
+    }
+
     private static string? NormalizeToken(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -1126,8 +1530,14 @@ public sealed class GedcomLoader : IGedcomLoader
             return null;
         }
 
-        return value.Trim();
+        return value.Trim().Replace(ContinuedLineBreak.ToString(), "\n", StringComparison.Ordinal);
     }
+
+    private sealed record DecodedGedcom(
+        string Text,
+        IReadOnlyCollection<GedcomDiagnostic> Diagnostics);
+
+    private sealed record PhysicalEncoding(string Name, int PreambleLength);
 
     private sealed record ParsedGedcom(
         IReadOnlyCollection<ParsedPerson> People,
@@ -1162,6 +1572,8 @@ public sealed class GedcomLoader : IGedcomLoader
         public string? DeathPlace { get; set; }
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
+
+        public IList<string> Notes { get; } = new List<string>();
 
         public IList<ParsedMedia> Media { get; } = new List<ParsedMedia>();
 
@@ -1221,6 +1633,10 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public IList<string> ChildrenIds { get; } = new List<string>();
 
+        public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
+
+        public IList<string> Notes { get; } = new List<string>();
+
         public IList<ParsedEvent> Events { get; } = new List<ParsedEvent>();
 
         public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
@@ -1250,6 +1666,8 @@ public sealed class GedcomLoader : IGedcomLoader
         public string? Data { get; set; }
 
         public string? Date { get; set; }
+
+        public string? Note { get; set; }
     }
 
     private sealed class ParsedMedia

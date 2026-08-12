@@ -20,5 +20,9 @@ public sealed class Family
 
     public IList<Person> Children { get; } = new List<Person>();
 
+    public IList<Source> Sources { get; } = new List<Source>();
+
+    public IList<string> Notes { get; } = new List<string>();
+
     public IList<GedcomEvent> Events { get; } = new List<GedcomEvent>();
 }

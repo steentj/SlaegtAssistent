@@ -38,6 +38,8 @@ public sealed class Person
 
     public IList<Source> Sources { get; } = new List<Source>();
 
+    public IList<string> Notes { get; } = new List<string>();
+
     public IList<Media> Media { get; } = new List<Media>();
 
     public IList<GedcomEvent> Events { get; } = new List<GedcomEvent>();

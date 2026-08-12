@@ -132,6 +132,7 @@ public sealed class BiographyTemplateRenderer
                 "page" => source.Page,
                 "data" => source.Data,
                 "date" => source.Date,
+                "note" => source.Note,
                 _ => null,
             },
             MediaTemplateContext media => name switch

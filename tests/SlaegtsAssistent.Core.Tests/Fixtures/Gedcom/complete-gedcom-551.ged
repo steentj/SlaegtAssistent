@@ -1,0 +1,62 @@
+0 HEAD
+1 SOUR SlaegtsAssistentTest
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SUBM @U1@
+0 @U1@ SUBM
+1 NAME Det lokale arkiv
+1 EMAIL arkiv@example.test
+0 @S1@ SOUR
+1 TITL Kirkebog for Aarhus
+2 CONT bind 1
+1 AUTH Aarhus Sogn
+1 TEXT Original registrering
+2 CONC  med bilag
+1 NOTE Kontrolleret kilde
+0 @I1@ INDI
+1 NAME Anna /Jensen/
+1 SEX F
+1 NOTE Brugerens første note
+2 CONT Brugerens anden linje
+1 BIRT
+2 DATE 12 MAR 1900
+2 PLAC Aarhus
+2 SOUR @S1@
+3 PAGE Side 42
+3 DATA Fødselsregister
+4 DATE 13 MAR 1900
+4 TEXT Anna blev født
+5 CONT og indført i kirkebogen.
+3 NOTE Tydelig håndskrift
+1 CENS
+2 DATE 1 FEB 1911
+2 PLAC Aarhus
+2 SOUR @S1@
+3 PAGE Folketælling 1911, opslag 8
+1 FAMC @F1@
+1 CHAN
+2 DATE 1 JAN 2026
+0 @I2@ INDI
+1 NAME Jens /Hansen/
+1 SEX M
+1 OCCU Tømrer
+2 DATE 1895
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I2@
+1 WIFE @I1@
+1 NOTE Familie oprettet fra kirkebogen
+1 SOUR @S1@
+2 PAGE Familieside 7
+1 MARR
+2 DATE 10 JUN 1920
+2 PLAC Aarhus
+2 SOUR @S1@
+3 PAGE Vielse 1920, side 18
+3 NOTE Originalen er kontrolleret
+1 _FLYT Flytning til Odense
+2 DATE 1925
+2 PLAC Odense
+0 TRLR

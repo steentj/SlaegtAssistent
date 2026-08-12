@@ -1,7 +1,8 @@
 # Changelog
 
 ## 2026-08-12
-- [2b0457b] Update validation documentation to reflect manual catalog test completion and approval details
+- [ada97fe] Add GEDCOM fixture and completeness tests for GEDCOM 5.5.
+- [5083b39] feat: Update validation documentation to reflect manual catalog test completion and approval details
 - [b55e0ed] Implement robust document validation and error handling in BiographyDocumentParser
 - [42a16ec] Implement Sprint 04E: Data Integrity and Complete Synchronization
 

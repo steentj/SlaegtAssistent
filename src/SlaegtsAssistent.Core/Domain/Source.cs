@@ -24,4 +24,6 @@ public sealed class Source
     public string? Data { get; set; }
 
     public string? Date { get; set; }
+
+    public string? Note { get; set; }
 }

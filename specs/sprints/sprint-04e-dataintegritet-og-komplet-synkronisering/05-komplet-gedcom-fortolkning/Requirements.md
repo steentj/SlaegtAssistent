@@ -9,3 +9,5 @@
 - Uunderstøttet eller modstridende encoding skal give diagnostik uden lydløs tegnkorruption.
 - Rå personsegmenter skal bevares nøjagtigt nok til brugerens sammenligning og diagnostik.
 - Samme input skal give samme domænemodel og rækkefølge.
+
+Den normative mapping for feature 4.8.5 findes i [Mapping.md](Mapping.md). Tabellen afgrænser udtrykkeligt både bevarede domænefelter og strukturer, som ikke må forveksles med hændelser.

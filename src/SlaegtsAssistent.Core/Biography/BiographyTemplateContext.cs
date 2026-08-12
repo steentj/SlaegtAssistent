@@ -57,6 +57,7 @@ public sealed class BiographyTemplateContext
             .ToArray();
         var sources = person.Sources
             .Concat(person.Events.SelectMany(@event => @event.Sources))
+            .Concat(person.Families.SelectMany(family => family.Sources))
             .Concat(person.FamilyEvents.SelectMany(@event => @event.Sources))
             .Concat(person.Census.SelectMany(item => item.Sources))
             .Select(SourceTemplateContext.FromSource)
@@ -155,12 +156,23 @@ public sealed record SourceTemplateContext(
     string? Repository,
     string? Page,
     string? Data,
-    string? Date)
+    string? Date,
+    string? Note)
 {
     public static SourceTemplateContext FromSource(Source source)
     {
-        var key = source.RecordId
-            ?? string.Join("|", source.Title, source.Author, source.Page, source.Date);
+        var key = string.Join(
+            "|",
+            source.RecordId,
+            source.Title,
+            source.Author,
+            source.Publication,
+            source.Text,
+            source.Repository,
+            source.Page,
+            source.Data,
+            source.Date,
+            source.Note);
         return new SourceTemplateContext(
             key,
             source.RecordId,
@@ -171,7 +183,8 @@ public sealed record SourceTemplateContext(
             source.Repository,
             source.Page,
             source.Data,
-            source.Date);
+            source.Date,
+            source.Note);
     }
 }
 
