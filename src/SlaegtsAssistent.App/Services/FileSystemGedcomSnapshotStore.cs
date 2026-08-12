@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using SlaegtsAssistent.Core.Domain;
 
@@ -19,6 +20,18 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
     {
         WriteIndented = true,
     };
+    private static readonly UTF8Encoding Utf8WithoutBom = new(false);
+    private readonly IAtomicFileWriter _atomicFileWriter;
+
+    public FileSystemGedcomSnapshotStore()
+        : this(new AtomicFileWriter())
+    {
+    }
+
+    public FileSystemGedcomSnapshotStore(IAtomicFileWriter atomicFileWriter)
+    {
+        _atomicFileWriter = atomicFileWriter ?? throw new ArgumentNullException(nameof(atomicFileWriter));
+    }
 
     public GedcomSnapshot? Load(string? outputDirectory)
     {
@@ -115,9 +128,7 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
         var sourceHash = ComputeHash(sourceBytes);
         var sourceCopyFileName = $"source-{sourceHash}.gedcom";
         var sourceCopyPath = Path.Combine(directory, sourceCopyFileName);
-        var temporarySourceCopyPath = $"{sourceCopyPath}.{Guid.NewGuid():N}.tmp";
         var manifestPath = Path.Combine(directory, ManifestFileName);
-        var temporaryManifestPath = $"{manifestPath}.{Guid.NewGuid():N}.tmp";
 
         var manifest = new GedcomSnapshotManifest(
             CurrentFormatVersion,
@@ -136,28 +147,28 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
 
         try
         {
-            File.WriteAllBytes(temporarySourceCopyPath, sourceBytes);
-            File.Move(temporarySourceCopyPath, sourceCopyPath, overwrite: true);
-
-            File.WriteAllText(
-                temporaryManifestPath,
-                JsonSerializer.Serialize(manifest, SerializerOptions));
-            File.Move(temporaryManifestPath, manifestPath, overwrite: true);
+            _atomicFileWriter.WriteBytes(sourceCopyPath, sourceBytes);
+            _atomicFileWriter.WriteText(
+                manifestPath,
+                JsonSerializer.Serialize(manifest, SerializerOptions),
+                Utf8WithoutBom);
 
             DeleteObsoleteSourceCopies(directory, sourceCopyFileName);
         }
+        catch (AtomicFileWriteException exception)
+        {
+            throw new GedcomSnapshotException(
+                $"GEDCOM-snapshotet kunne ikke gemmes sikkert. {exception.Message}",
+                exception);
+        }
         catch (IOException exception)
         {
-            TryDelete(temporarySourceCopyPath);
-            TryDelete(temporaryManifestPath);
             throw new GedcomSnapshotException(
                 "GEDCOM-snapshotet kunne ikke gemmes.",
                 exception);
         }
         catch (UnauthorizedAccessException exception)
         {
-            TryDelete(temporarySourceCopyPath);
-            TryDelete(temporaryManifestPath);
             throw new GedcomSnapshotException(
                 "Der mangler adgang til at gemme GEDCOM-snapshotet.",
                 exception);
@@ -181,23 +192,41 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
         string directory,
         string currentSourceCopyFileName)
     {
-        foreach (var filePath in Directory.EnumerateFiles(directory, "source-*.gedcom"))
+        try
         {
-            if (!string.Equals(
-                    Path.GetFileName(filePath),
-                    currentSourceCopyFileName,
-                    StringComparison.Ordinal))
+            foreach (var filePath in Directory.EnumerateFiles(directory, "source-*.gedcom"))
             {
-                TryDelete(filePath);
+                if (!string.Equals(
+                        Path.GetFileName(filePath),
+                        currentSourceCopyFileName,
+                        StringComparison.Ordinal))
+                {
+                    TryDelete(filePath);
+                }
             }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
     private static void TryDelete(string path)
     {
-        if (File.Exists(path))
+        try
         {
-            File.Delete(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 

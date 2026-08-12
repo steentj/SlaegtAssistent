@@ -216,6 +216,81 @@ public class BiographyMarkdownGenerationTests
         }
     }
 
+    [Fact]
+    public void WriteAll_WhenKnownPersonChangesName_PreservesExistingFileIdentity()
+    {
+        var outputDirectory = TempDirectory();
+        var oldPerson = new Person("@I1@") { FullName = "Anna Jensen" };
+        var oldMetadata = new BiographyDocumentMetadata(
+            1,
+            oldPerson.RecordId,
+            oldPerson.FullName,
+            BiographyFactsSnapshot.FromPerson(oldPerson));
+        var existingPath = Path.Combine(
+            outputDirectory,
+            BiographyFileNameGenerator.Generate(oldPerson));
+        var userContent = BiographyDocumentSerializer.Serialize(
+            oldMetadata,
+            "# Anna Jensen\n\nBrugerens frie tekst.\n");
+        var changedTree = new GedcomLoader().Load(FixturePath("single-person.ged"));
+        changedTree.FindPerson("@I1@")!.FullName = "Anna Andersen";
+
+        try
+        {
+            Directory.CreateDirectory(outputDirectory);
+            File.WriteAllText(existingPath, userContent);
+
+            new BiographyFileWriter(_generator).WriteAll(changedTree, outputDirectory);
+
+            Directory.GetFiles(outputDirectory, "*.md").Should().ContainSingle().Which.Should().Be(existingPath);
+            File.ReadAllText(existingPath).Should().Be(userContent);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteAll_WhenRecordIdExistsInTwoDocuments_DoesNotCreateAThirdDocument()
+    {
+        var outputDirectory = TempDirectory();
+        var tree = new GedcomLoader().Load(FixturePath("single-person.ged"));
+        var person = tree.FindPerson("@I1@")!;
+        var metadata = new BiographyDocumentMetadata(
+            1,
+            person.RecordId,
+            person.FullName,
+            BiographyFactsSnapshot.FromPerson(person));
+
+        try
+        {
+            Directory.CreateDirectory(outputDirectory);
+            File.WriteAllText(
+                Path.Combine(outputDirectory, "anna-a.md"),
+                BiographyDocumentSerializer.Serialize(metadata, "# Første dokument\n"));
+            File.WriteAllText(
+                Path.Combine(outputDirectory, "anna-b.md"),
+                BiographyDocumentSerializer.Serialize(metadata, "# Andet dokument\n"));
+
+            new BiographyFileWriter(_generator).WriteAll(tree, outputDirectory);
+
+            Directory.GetFiles(outputDirectory, "*.md").Should().HaveCount(2);
+            File.Exists(Path.Combine(outputDirectory, BiographyFileNameGenerator.Generate(person)))
+                .Should().BeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, recursive: true);
+            }
+        }
+    }
+
     private static Person CreateEquivalentPerson()
     {
         var child = new Person("@I1@")

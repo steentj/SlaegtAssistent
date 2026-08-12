@@ -80,6 +80,21 @@ public class EditorViewModelTests
     }
 
     [Fact]
+    public void Save_WhenStorageFails_ShouldRemainDirtyAndPropagateTheError()
+    {
+        var viewModel = new EditorViewModel("/tmp/person.md", new FailingMarkdownFileStore())
+        {
+            MarkdownText = "Brugerens ændring",
+        };
+
+        var action = () => viewModel.SaveCommand.Execute(null);
+
+        action.Should().Throw<IOException>().WithMessage("Simuleret skrivefejl.");
+        viewModel.IsDirty.Should().BeTrue();
+        viewModel.MarkdownText.Should().Be("Brugerens ændring");
+    }
+
+    [Fact]
     public void Save_ShouldPersistVisibleFactChangesToFrontMatter()
     {
         const string path = "/tmp/person.md";
@@ -194,6 +209,16 @@ public class EditorViewModelTests
         {
             LastWritePath = path;
             LastWriteContent = content;
+        }
+    }
+
+    private sealed class FailingMarkdownFileStore : IMarkdownFileStore
+    {
+        public string Read(string path) => string.Empty;
+
+        public void Write(string path, string content)
+        {
+            throw new IOException("Simuleret skrivefejl.");
         }
     }
 }

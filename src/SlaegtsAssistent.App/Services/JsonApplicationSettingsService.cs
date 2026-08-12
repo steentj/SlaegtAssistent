@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,15 +15,29 @@ public sealed class JsonApplicationSettingsService : IApplicationSettingsService
     };
 
     private readonly string _settingsFilePath;
+    private readonly IAtomicFileWriter _atomicFileWriter;
 
     public JsonApplicationSettingsService()
-        : this(CreateDefaultSettingsFilePath())
+        : this(CreateDefaultSettingsFilePath(), new AtomicFileWriter())
     {
     }
 
     internal JsonApplicationSettingsService(string settingsFilePath)
+        : this(settingsFilePath, new AtomicFileWriter())
+    {
+    }
+
+    public JsonApplicationSettingsService(IAtomicFileWriter atomicFileWriter)
+        : this(CreateDefaultSettingsFilePath(), atomicFileWriter)
+    {
+    }
+
+    public JsonApplicationSettingsService(
+        string settingsFilePath,
+        IAtomicFileWriter atomicFileWriter)
     {
         _settingsFilePath = settingsFilePath ?? throw new ArgumentNullException(nameof(settingsFilePath));
+        _atomicFileWriter = atomicFileWriter ?? throw new ArgumentNullException(nameof(atomicFileWriter));
     }
 
     public AppSettings Load()
@@ -46,10 +61,8 @@ public sealed class JsonApplicationSettingsService : IApplicationSettingsService
             throw new InvalidOperationException("Kunne ikke bestemme mappe til indstillingsfil.");
         }
 
-        Directory.CreateDirectory(directory);
-
         var json = JsonSerializer.Serialize(settings, SerializerOptions);
-        File.WriteAllText(_settingsFilePath, json);
+        _atomicFileWriter.WriteText(_settingsFilePath, json, new UTF8Encoding(false));
     }
 
     private static string CreateDefaultSettingsFilePath()

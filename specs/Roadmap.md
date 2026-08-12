@@ -71,6 +71,23 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     4. Kandidatbaseret genrendering ved ændret skabelon eller GEDCOM-data.
 *   **Arbejdsform:** Hver feature udvikles testdrevet med Core- og/eller App-tests. Efter hver feature stoppes udviklingen, og featureens manuelle validering gennemføres, før næste feature må starte. Sprintet afsluttes først efter samlet manuel afprøvning af en genåbnet arbejdsmappe.
 
+### Trin 4.8: Dataintegritet og komplet synkronisering SPRINT 4E
+*   **Mål:** Lukke de dokumenterede integritets-, fortolknings-, synkroniserings- og privatlivsproblemer fra helhedsreviewet af 11. august 2026, så brugerens dokumenter ikke beskadiges, skjules eller ændres uden et tydeligt og kontrolleret valg.
+*   **Forudsætning:** Trin 4.7 er implementeret. Trin 5 må ikke begynde, før trin 4.8 er godkendt samlet.
+*   **Feature-rækkefølge:**
+    1. Atomisk dokumentlagring og gendannelse.
+    2. Stabil dokumentidentitet og levende arbejdsområdekatalog.
+    3. Robust frontmatter, migrering og katalogdiagnostik.
+    4. Transaktionel, responsiv importkoordinering.
+    5. Komplet GEDCOM 5.5.1-fortolkning inden for produktets datakontrakt.
+    6. Fejltolerant import og synlige GEDCOM-diagnostikker.
+    7. Komplet kanonisk synkroniseringsbaseline.
+    8. Feltstyret konfliktløsning og kandidatgodkendelse.
+    9. Valideret skabelonkontrakt, korrekt standardrendering og medier.
+    10. Privat og kontrolleret Markdown-preview.
+    11. Samlet regressions-, platform- og distributionskvalitet.
+*   **Arbejdsform:** Hver feature gennemføres med en eksplicit rød-grøn-refaktorér-cyklus. Fejlende tests skrives før produktionskode. Hver feature leverer et komplet, manuelt testbart brugerflow og afsluttes med dokumenteret manuel godkendelse. Arbejdet stopper efter hver feature, og næste feature må ikke påbegyndes, før brugeren skriftligt har godkendt den foregående.
+
 ### Trin 5: Grafisk Slægtstræ & Eksport SPRINT 5
 *   **Mål:** Opsætte output fra applikationen
 *   **Forudsætning:** Trin 4.5, 4.6 og 4.7 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter med dokumenteret synkronisering.

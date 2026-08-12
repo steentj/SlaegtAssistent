@@ -749,6 +749,36 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SaveAllCommand_WhenStorageFails_ShouldKeepChangesAndExposeDanishError()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: new FailingMarkdownFileStore());
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Brugerens ændring";
+
+        var action = () => viewModel.SaveAllCommand.Execute(null);
+
+        action.Should().NotThrow();
+        viewModel.Editor.IsDirty.Should().BeTrue();
+        viewModel.Editor.MarkdownText.Should().Be("# Brugerens ændring");
+        viewModel.HasDirtyEditors.Should().BeTrue();
+        viewModel.ErrorMessage.Should().Contain("Kunne ikke gemme Markdown-fil");
+        viewModel.ErrorMessage.Should().Contain("Simuleret skrivefejl");
+    }
+
+    [Fact]
     public async Task ConfirmCloseAsync_ShouldAllowClose_WithoutPrompt_WhenNothingIsDirty()
     {
         var unsavedChangesDialogService = new RecordingUnsavedChangesDialogService(UnsavedChangesDecision.Annullér);
@@ -795,6 +825,35 @@ public class MainWindowViewModelTests
         unsavedChangesDialogService.Calls.Should().Be(1);
         markdownFileStore.LastWriteContent.Should().Be("# Ændret");
         viewModel.HasDirtyEditors.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmCloseAsync_WhenSavingFails_ShouldCancelCloseAndKeepChanges()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownFileStore: new FailingMarkdownFileStore(),
+            unsavedChangesDialogService: new RecordingUnsavedChangesDialogService(
+                UnsavedChangesDecision.Gem));
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.Editor!.MarkdownText = "# Brugerens ændring";
+
+        var canClose = await viewModel.ConfirmCloseAsync();
+
+        canClose.Should().BeFalse();
+        viewModel.HasDirtyEditors.Should().BeTrue();
+        viewModel.ErrorMessage.Should().Contain("Simuleret skrivefejl");
     }
 
     [Fact]
@@ -950,6 +1009,148 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_WhenKnownPersonChangesName_ShouldReuseExistingDocument()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Andersen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settingsService,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomSnapshotStore: new FileSystemGedcomSnapshotStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            viewModel.People.Should().ContainSingle();
+            var originalPath = viewModel.People[0].MarkdownFilePath;
+            viewModel.Editor!.MarkdownText += "\nBrugerens frie tekst.\n";
+            viewModel.SaveAllCommand.Execute(null);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            Directory.GetFiles(outputFolder, "*.md").Should().ContainSingle().Which.Should().Be(originalPath);
+            viewModel.People.Should().ContainSingle();
+            viewModel.People[0].RecordId.Should().Be("@I1@");
+            viewModel.People[0].DisplayName.Should().Be("Anna Andersen");
+            viewModel.People[0].MarkdownFilePath.Should().Be(originalPath);
+            viewModel.Editor.Should().NotBeNull();
+            viewModel.Editor!.MarkdownText.Should().Contain("Brugerens frie tekst.");
+        }
+        finally
+        {
+            if (Directory.Exists(outputFolder))
+            {
+                Directory.Delete(outputFolder, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenRecordIdHasDuplicateDocuments_ShouldMarkAmbiguousAndOpenNeither()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var metadata = new BiographyDocumentMetadata(
+            1,
+            "@I1@",
+            "Anna Jensen",
+            new BiographyFactsSnapshot("Anna Jensen", null, null, null, null, null, []));
+        File.WriteAllText(
+            Path.Combine(outputFolder, "anna-a.md"),
+            BiographyDocumentSerializer.Serialize(metadata, "# Første dokument\n"));
+        File.WriteAllText(
+            Path.Combine(outputFolder, "anna-b.md"),
+            BiographyDocumentSerializer.Serialize(metadata, "# Andet dokument\n"));
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.People.Should().ContainSingle();
+            viewModel.People[0].SyncStatus.Should().Be(BiographySyncStatus.Tvetydig);
+            viewModel.People[0].SyncStatusText.Should().Be("Tvetydig");
+            viewModel.Editor.Should().BeNull();
+            viewModel.ErrorMessage.Should().Contain("flere Markdown-dokumenter");
+            Directory.GetFiles(outputFolder, "*.md").Should().HaveCount(2);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_AfterSecondImport_ShouldKeepDocumentsMissingFromLatestGedcomVisible()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settingsService,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.People.Select(person => person.RecordId)
+                .Should().BeEquivalentTo("@I1@", "@I2@");
+            Directory.GetFiles(outputFolder, "*.md").Should().HaveCount(2);
+        }
+        finally
+        {
+            if (Directory.Exists(outputFolder))
+            {
+                Directory.Delete(outputFolder, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_ShouldSetErrorMessage_WhenLoaderFails()
     {
         var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -1006,6 +1207,192 @@ public class MainWindowViewModelTests
         viewModel.StandardGedcomInputFolder.Should().Be("/tmp/old-input");
         viewModel.StandardMarkdownOutputFolder.Should().Be("/tmp/old-output");
         settingsService.SavedSettings.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_WhenStorageFails_ShouldExposeDanishErrorWithoutThrowing()
+    {
+        var settingsDialog = new RecordingSettingsDialogService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = "/tmp/ny-outputmappe",
+        });
+        var viewModel = CreateViewModel(
+            settingsDialogService: settingsDialog,
+            settingsService: new FailingApplicationSettingsService());
+
+        var action = () => viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+        await action.Should().NotThrowAsync();
+        viewModel.ErrorMessage.Should().Contain("Kunne ikke gemme indstillinger");
+        viewModel.ErrorMessage.Should().Contain("/tmp/settings.json");
+        viewModel.ErrorMessage.Should().Contain("prøv igen");
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_WhenDirtyWorkspaceSwitchIsCancelled_ShouldKeepOldWorkspace()
+    {
+        var oldFolder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var newFolder = CreateBiographyWorkspace("@I2@", "Bo Jensen", "bo.md");
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = oldFolder,
+        });
+        var viewModel = CreateViewModel(
+            settingsService: settingsService,
+            settingsDialogService: new RecordingSettingsDialogService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = newFolder,
+            }),
+            unsavedChangesDialogService: new RecordingUnsavedChangesDialogService(
+                UnsavedChangesDecision.Annullér),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            viewModel.SelectedPerson = viewModel.People.Single();
+            viewModel.Editor!.MarkdownText += "\nUgemt tekst.";
+
+            await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+            viewModel.StandardMarkdownOutputFolder.Should().Be(oldFolder);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I1@");
+            viewModel.Editor.Should().NotBeNull();
+            viewModel.Editor!.IsDirty.Should().BeTrue();
+            settingsService.SavedSettings.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(oldFolder, recursive: true);
+            Directory.Delete(newFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_WhenDirtyWorkspaceIsDiscarded_ShouldActivateNewWorkspace()
+    {
+        var oldFolder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var newFolder = CreateBiographyWorkspace("@I2@", "Bo Jensen", "bo.md");
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = oldFolder,
+        });
+        var viewModel = CreateViewModel(
+            settingsService: settingsService,
+            settingsDialogService: new RecordingSettingsDialogService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = newFolder,
+            }),
+            unsavedChangesDialogService: new RecordingUnsavedChangesDialogService(
+                UnsavedChangesDecision.Kassér),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            viewModel.SelectedPerson = viewModel.People.Single();
+            viewModel.Editor!.MarkdownText += "\nDenne tekst skal kasseres.";
+
+            await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+            viewModel.StandardMarkdownOutputFolder.Should().Be(newFolder);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I2@");
+            viewModel.People.Should().NotContain(person => person.RecordId == "@I1@");
+            viewModel.Editor.Should().NotBeNull();
+            viewModel.Editor!.IsDirty.Should().BeFalse();
+            viewModel.HasDirtyEditors.Should().BeFalse();
+            File.ReadAllText(Path.Combine(oldFolder, "anna.md"))
+                .Should().NotContain("Denne tekst skal kasseres.");
+        }
+        finally
+        {
+            Directory.Delete(oldFolder, recursive: true);
+            Directory.Delete(newFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task OpenSettingsCommand_WhenDirtyWorkspaceIsSaved_ShouldPersistBeforeActivatingNewWorkspace()
+    {
+        var oldFolder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var newFolder = CreateBiographyWorkspace("@I2@", "Bo Jensen", "bo.md");
+        var viewModel = CreateViewModel(
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = oldFolder,
+            }),
+            settingsDialogService: new RecordingSettingsDialogService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = newFolder,
+            }),
+            unsavedChangesDialogService: new RecordingUnsavedChangesDialogService(
+                UnsavedChangesDecision.Gem),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            viewModel.SelectedPerson = viewModel.People.Single();
+            viewModel.Editor!.MarkdownText += "\nTekst gemt før skift.";
+
+            await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+
+            File.ReadAllText(Path.Combine(oldFolder, "anna.md"))
+                .Should().Contain("Tekst gemt før skift.");
+            viewModel.StandardMarkdownOutputFolder.Should().Be(newFolder);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I2@");
+            viewModel.HasDirtyEditors.Should().BeFalse();
+        }
+        finally
+        {
+            Directory.Delete(oldFolder, recursive: true);
+            Directory.Delete(newFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_AfterWorkspaceSwitch_ShouldUseOnlyNewWorkspace()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 TRLR");
+        var oldFolder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var newFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(newFolder);
+        var oldContent = File.ReadAllText(Path.Combine(oldFolder, "anna.md"));
+        var exporter = new RecordingMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = oldFolder,
+            }),
+            settingsDialogService: new RecordingSettingsDialogService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = newFolder,
+            }),
+            markdownBiographyExportService: exporter,
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+
+        try
+        {
+            await viewModel.OpenSettingsCommand.ExecuteAsync(null);
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            exporter.LastOutputFolder.Should().Be(newFolder);
+            viewModel.People.Should().ContainSingle();
+            viewModel.People[0].MarkdownFilePath.Should().StartWith(newFolder);
+            File.ReadAllText(Path.Combine(oldFolder, "anna.md")).Should().Be(oldContent);
+            Directory.Exists(Path.Combine(newFolder, ".slaegtsassistent", "gedcom"))
+                .Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(oldFolder, recursive: true);
+            Directory.Delete(newFolder, recursive: true);
+        }
     }
 
     [Fact]
@@ -1089,6 +1476,21 @@ public class MainWindowViewModelTests
         var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ged");
         File.WriteAllLines(filePath, lines);
         return new TemporaryGedcomFile(filePath);
+    }
+
+    private static string CreateBiographyWorkspace(string recordId, string displayName, string fileName)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        var metadata = new BiographyDocumentMetadata(
+            1,
+            recordId,
+            displayName,
+            new BiographyFactsSnapshot(displayName, null, null, null, null, null, []));
+        File.WriteAllText(
+            Path.Combine(folder, fileName),
+            BiographyDocumentSerializer.Serialize(metadata, $"# {displayName}\n"));
+        return folder;
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFileWithoutExtension(params string[] lines)
@@ -1179,6 +1581,18 @@ public class MainWindowViewModelTests
                 DefaultGedcomInputFolder = settings.DefaultGedcomInputFolder,
                 DefaultMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder,
             };
+        }
+    }
+
+    private sealed class FailingApplicationSettingsService : IApplicationSettingsService
+    {
+        public AppSettings Load() => new();
+
+        public void Save(AppSettings settings)
+        {
+            throw new AtomicFileWriteException(
+                "/tmp/settings.json",
+                new IOException("Simuleret skrivefejl."));
         }
     }
 
@@ -1322,6 +1736,16 @@ public class MainWindowViewModelTests
             LastWritePath = path;
             LastWriteContent = content;
             Writes.Add((path, content));
+        }
+    }
+
+    private sealed class FailingMarkdownFileStore : IMarkdownFileStore
+    {
+        public string Read(string path) => "# Oprindelig tekst";
+
+        public void Write(string path, string content)
+        {
+            throw new IOException("Simuleret skrivefejl.");
         }
     }
 

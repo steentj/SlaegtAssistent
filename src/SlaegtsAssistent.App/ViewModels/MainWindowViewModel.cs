@@ -104,14 +104,7 @@ public partial class MainWindowViewModel : ViewModelBase
             snapshotError = $"Kunne ikke indlæse GEDCOM-snapshot: {exception.Message}";
         }
 
-        _documentPeople.AddRange(_markdownDocumentCatalog.Load(StandardMarkdownOutputFolder)
-            .Select(document => new PersonListItemViewModel(
-                document.RecordId,
-                document.DisplayName,
-                document.FilePath,
-                snapshot?.RawPersonSegments.TryGetValue(document.RecordId, out var rawGedcom) == true
-                    ? rawGedcom
-                    : document.ErrorMessage ?? string.Empty)));
+        ReloadDocumentCatalog(snapshot: snapshot);
         ReplaceAllPeople(_documentPeople);
         ErrorMessage = snapshotError;
     }
@@ -182,9 +175,11 @@ public partial class MainWindowViewModel : ViewModelBase
             var familyTree = _gedcomLoader.Load(filePath);
             _familyTree = familyTree;
             var outputFolder = StandardMarkdownOutputFolder!;
+            ReloadDocumentCatalog(familyTree);
             _gedcomSnapshotStore.Save(outputFolder, filePath, familyTree);
             var syncStatuses = await ReviewGedcomDifferencesAsync(familyTree);
             _markdownBiographyExportService.WriteBiographies(familyTree, outputFolder);
+            ReloadDocumentCatalog(familyTree);
 
             var people = familyTree.People
                 .Select(person =>
@@ -192,15 +187,37 @@ public partial class MainWindowViewModel : ViewModelBase
                     var syncStatus = syncStatuses.TryGetValue(person.RecordId, out var status)
                         ? status
                         : BiographySyncStatus.Ukendt;
-                    return CreatePersonListItem(person, outputFolder, syncStatus);
+                    var documentMatches = _documentPeople
+                        .Where(document => document.RecordId == person.RecordId)
+                        .ToList();
+                    var expectedPath = Path.Combine(
+                        outputFolder,
+                        BiographyFileNameGenerator.Generate(person));
+                    var stableFilePath = documentMatches.Count switch
+                    {
+                        1 => documentMatches[0].MarkdownFilePath,
+                        > 1 => string.Empty,
+                        _ => _documentPeople
+                            .FirstOrDefault(document => string.Equals(
+                                document.MarkdownFilePath,
+                                expectedPath,
+                                StringComparison.Ordinal))
+                            ?.MarkdownFilePath,
+                    };
+                    return CreatePersonListItem(person, outputFolder, syncStatus, stableFilePath);
                 })
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
                 .ToList();
 
             var gedcomRecordIds = people.Select(person => person.RecordId).ToHashSet(StringComparer.Ordinal);
+            var representedPaths = people
+                .Select(person => person.MarkdownFilePath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToHashSet(StringComparer.Ordinal);
             people.AddRange(_documentPeople.Where(person =>
-                !gedcomRecordIds.Contains(person.RecordId)));
+                !gedcomRecordIds.Contains(person.RecordId) &&
+                !representedPaths.Contains(person.MarkdownFilePath)));
 
             ReplaceAllPeople(people);
             SelectedPerson = People.FirstOrDefault();
@@ -243,11 +260,33 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        StandardGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder);
-        StandardMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder);
-        GlobalBiographyTemplatePath = NormalizePath(updatedSettings.GlobalBiographyTemplatePath);
-        Theme = updatedSettings.Theme;
-        SaveSettings();
+        var previousSettings = CreateCurrentSettings();
+        var proposedSettings = new AppSettings
+        {
+            DefaultGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder),
+            DefaultMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder),
+            GlobalBiographyTemplatePath = NormalizePath(updatedSettings.GlobalBiographyTemplatePath),
+            Theme = updatedSettings.Theme,
+        };
+        var changesWorkspace = !AreSameWorkspace(
+            previousSettings.DefaultMarkdownOutputFolder,
+            proposedSettings.DefaultMarkdownOutputFolder);
+        if (changesWorkspace && !await ConfirmWorkspaceSwitchAsync())
+        {
+            return;
+        }
+
+        ApplySettings(proposedSettings);
+        if (!SaveSettings())
+        {
+            ApplySettings(previousSettings);
+            return;
+        }
+
+        if (changesWorkspace)
+        {
+            ActivateWorkspace();
+        }
     }
 
     [RelayCommand]
@@ -290,8 +329,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var decision = await _unsavedChangesDialogService.AskAsync();
         if (decision == UnsavedChangesDecision.Gem)
         {
-            SaveAll();
-            return true;
+            return TrySaveAll();
         }
 
         return decision == UnsavedChangesDecision.Kassér;
@@ -300,12 +338,34 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveAll))]
     private void SaveAll()
     {
-        foreach (var editor in _editors.Values.Where(editor => editor.IsDirty).ToList())
-        {
-            editor.SaveCommand.Execute(null);
-        }
+        TrySaveAll();
+    }
 
-        UpdateDirtyState();
+    private bool TrySaveAll()
+    {
+        try
+        {
+            foreach (var editor in _editors.Values.Where(editor => editor.IsDirty).ToList())
+            {
+                editor.SaveCommand.Execute(null);
+            }
+
+            UpdateDirtyState();
+            ErrorMessage = null;
+            return true;
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            UpdateDirtyState();
+            ErrorMessage = $"Manglende adgang til at gemme Markdown-fil: {exception.Message}";
+            return false;
+        }
+        catch (IOException exception)
+        {
+            UpdateDirtyState();
+            ErrorMessage = $"Kunne ikke gemme Markdown-fil: {exception.Message}";
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -353,8 +413,16 @@ public partial class MainWindowViewModel : ViewModelBase
             var expectedPath = Path.Combine(
                 StandardMarkdownOutputFolder!,
                 BiographyFileNameGenerator.Generate(person));
-            var matchedPerson = _documentPeople.FirstOrDefault(
-                document => document.RecordId == person.RecordId)
+            var recordIdMatches = _documentPeople
+                .Where(document => document.RecordId == person.RecordId)
+                .ToList();
+            if (recordIdMatches.Count > 1)
+            {
+                syncStatuses[person.RecordId] = BiographySyncStatus.Tvetydig;
+                continue;
+            }
+
+            var matchedPerson = recordIdMatches.SingleOrDefault()
                 ?? _documentPeople.FirstOrDefault(
                     document => string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
             MarkdownDocumentInfo? documentInfo = matchedPerson is null
@@ -522,6 +590,15 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (value.SyncStatus == BiographySyncStatus.Tvetydig)
+        {
+            Editor = null;
+            ErrorMessage =
+                $"Record-id '{value.RecordId}' findes i flere Markdown-dokumenter. " +
+                "Ingen fil er valgt eller ændret automatisk.";
+            return;
+        }
+
         if (!_editors.TryGetValue(value.MarkdownFilePath, out var editor))
         {
             editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
@@ -556,13 +633,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private static PersonListItemViewModel CreatePersonListItem(
         Person person,
         string outputFolder,
-        BiographySyncStatus syncStatus = BiographySyncStatus.Ukendt)
+        BiographySyncStatus syncStatus = BiographySyncStatus.Ukendt,
+        string? stableFilePath = null)
     {
         var displayName = string.IsNullOrWhiteSpace(person.FullName)
             ? $"Unavngiven ({person.RecordId})"
             : person.FullName.Trim();
         var markdownFileName = BiographyFileNameGenerator.Generate(person);
-        var markdownFilePath = Path.Combine(outputFolder, markdownFileName);
+        var markdownFilePath = stableFilePath ?? Path.Combine(outputFolder, markdownFileName);
 
         return new PersonListItemViewModel(
             person.RecordId,
@@ -570,6 +648,22 @@ public partial class MainWindowViewModel : ViewModelBase
             markdownFilePath,
             person.RawGedcom,
             syncStatus);
+    }
+
+    private void ReloadDocumentCatalog(
+        FamilyTree? familyTree = null,
+        GedcomSnapshot? snapshot = null)
+    {
+        _documentPeople.Clear();
+        _documentPeople.AddRange(_markdownDocumentCatalog.Load(StandardMarkdownOutputFolder)
+            .Select(document => new PersonListItemViewModel(
+                document.RecordId,
+                document.DisplayName,
+                document.FilePath,
+                familyTree?.FindPerson(document.RecordId)?.RawGedcom
+                    ?? (snapshot?.RawPersonSegments.TryGetValue(document.RecordId, out var rawGedcom) == true
+                        ? rawGedcom
+                        : document.ErrorMessage ?? string.Empty))));
     }
 
     partial void OnPersonFilterTextChanged(string value)
@@ -612,15 +706,116 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void SaveSettings()
+    private bool SaveSettings()
     {
-        _applicationSettingsService.Save(new AppSettings
+        try
+        {
+            _applicationSettingsService.Save(new AppSettings
+            {
+                DefaultGedcomInputFolder = StandardGedcomInputFolder,
+                DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
+                GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
+                Theme = Theme,
+            });
+            return true;
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            ErrorMessage = $"Kunne ikke gemme indstillinger på grund af manglende adgang: {exception.Message}";
+            return false;
+        }
+        catch (IOException exception)
+        {
+            ErrorMessage = $"Kunne ikke gemme indstillinger: {exception.Message}";
+            return false;
+        }
+    }
+
+    private async Task<bool> ConfirmWorkspaceSwitchAsync()
+    {
+        if (!HasDirtyEditors)
+        {
+            return true;
+        }
+
+        var decision = await _unsavedChangesDialogService.AskAsync();
+        return decision switch
+        {
+            UnsavedChangesDecision.Gem => TrySaveAll(),
+            UnsavedChangesDecision.Kassér => true,
+            _ => false,
+        };
+    }
+
+    private void ActivateWorkspace()
+    {
+        SelectedPerson = null;
+        foreach (var editor in _editors.Values)
+        {
+            editor.PropertyChanged -= EditorOnPropertyChanged;
+        }
+
+        _editors.Clear();
+        Editor = null;
+        _familyTree = null;
+        SelectedGedcomFilePath = null;
+        UpdateDirtyState();
+
+        GedcomSnapshot? snapshot = null;
+        string? snapshotError = null;
+        try
+        {
+            snapshot = _gedcomSnapshotStore.Load(StandardMarkdownOutputFolder);
+            SelectedGedcomFilePath = snapshot?.SourcePath;
+        }
+        catch (GedcomSnapshotException exception)
+        {
+            snapshotError = $"Kunne ikke indlæse GEDCOM-snapshot: {exception.Message}";
+        }
+
+        ReloadDocumentCatalog(snapshot: snapshot);
+        ReplaceAllPeople(_documentPeople);
+        SelectedPerson = People.FirstOrDefault();
+        ErrorMessage = snapshotError;
+    }
+
+    private AppSettings CreateCurrentSettings()
+    {
+        return new AppSettings
         {
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
             Theme = Theme,
-        });
+        };
+    }
+
+    private void ApplySettings(AppSettings settings)
+    {
+        StandardGedcomInputFolder = settings.DefaultGedcomInputFolder;
+        StandardMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder;
+        GlobalBiographyTemplatePath = settings.GlobalBiographyTemplatePath;
+        Theme = settings.Theme;
+    }
+
+    private static bool AreSameWorkspace(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second))
+        {
+            return string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(second);
+        }
+
+        try
+        {
+            var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            return string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), comparison);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
+        {
+            return string.Equals(first, second, StringComparison.Ordinal);
+        }
     }
 
     private static string? NormalizeFolder(string? folder)

@@ -50,6 +50,7 @@ public partial class App : Application
         services.AddSingleton<ITemplateFilePickerService, AvaloniaTemplateFilePickerService>();
         services.AddSingleton<IMarkdownCheatSheetService, AvaloniaMarkdownCheatSheetService>();
         services.AddSingleton<ITemplateCheatSheetService, AvaloniaTemplateCheatSheetService>();
+        services.AddSingleton<IAtomicFileWriter>(_ => new AtomicFileWriter());
         services.AddSingleton<IApplicationSettingsService, JsonApplicationSettingsService>();
         services.AddSingleton<ISettingsDialogService, AvaloniaSettingsDialogService>();
         services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();

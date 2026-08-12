@@ -6,4 +6,5 @@ public enum BiographySyncStatus
     Ny,
     Uændret,
     Ændret,
+    Tvetydig,
 }

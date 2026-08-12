@@ -33,6 +33,7 @@ public sealed class PersonListItemViewModel : ViewModelBase
         BiographySyncStatus.Ny => "Ny",
         BiographySyncStatus.Uændret => "Uændret",
         BiographySyncStatus.Ændret => "Ændret",
+        BiographySyncStatus.Tvetydig => "Tvetydig",
         _ => string.Empty,
     };
 }
