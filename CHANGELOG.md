@@ -1,7 +1,9 @@
 # Changelog
 
 ## 2026-08-12
-- [3917ea0] Implement Sprint 04E: Data integrity and complete synchronization
+- [2b0457b] Update validation documentation to reflect manual catalog test completion and approval details
+- [b55e0ed] Implement robust document validation and error handling in BiographyDocumentParser
+- [42a16ec] Implement Sprint 04E: Data Integrity and Complete Synchronization
 
 ## 2026-08-01
 - [108830d] Add GEDCOM event and census handling: implement Census and GedcomEvent classes, update Person class to include events and census lists, enhance GedcomLoader for parsing events and census records, and add tests for event and census mapping.

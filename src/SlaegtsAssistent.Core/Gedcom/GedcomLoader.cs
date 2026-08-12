@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading;
 using Patagames.GedcomNetSdk;
 using SlaegtsAssistent.Core.Domain;
 
@@ -8,6 +9,15 @@ public sealed class GedcomLoader : IGedcomLoader
 {
     public FamilyTree Load(string filePath, FamilyTree? existingTree = null)
     {
+        return Load(filePath, existingTree, CancellationToken.None);
+    }
+
+    public FamilyTree Load(
+        string filePath,
+        FamilyTree? existingTree,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(filePath))
         {
             throw new GedcomLoadException("A GEDCOM file path is required.");
@@ -20,14 +30,18 @@ public sealed class GedcomLoader : IGedcomLoader
 
         try
         {
-            var parsedGedcom = ParseGedcom(filePath);
+            var parsedGedcom = ParseGedcom(filePath, cancellationToken);
             var tree = existingTree ?? new FamilyTree();
 
-            MergeIntoTree(tree, parsedGedcom);
+            MergeIntoTree(tree, parsedGedcom, cancellationToken);
 
             return tree;
         }
         catch (GedcomLoadException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
         {
             throw;
         }
@@ -39,9 +53,12 @@ public sealed class GedcomLoader : IGedcomLoader
         }
     }
 
-    private static ParsedGedcom ParseGedcom(string filePath)
+    private static ParsedGedcom ParseGedcom(
+        string filePath,
+        CancellationToken cancellationToken)
     {
         var rawGedcomByRecordId = ReadRawPersonSegments(filePath);
+        cancellationToken.ThrowIfCancellationRequested();
         using var stream = CreateNormalizedLineEndingStream(filePath);
         using var parser = new Parser(stream);
 
@@ -67,6 +84,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         while (parser.ReadLevel())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!parser.ReadTag())
             {
                 break;
@@ -588,13 +606,17 @@ public sealed class GedcomLoader : IGedcomLoader
         }
     }
 
-    private static void MergeIntoTree(FamilyTree tree, ParsedGedcom parsedGedcom)
+    private static void MergeIntoTree(
+        FamilyTree tree,
+        ParsedGedcom parsedGedcom,
+        CancellationToken cancellationToken)
     {
         tree.Diagnostics.Clear();
         var importedRecordIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var parsedSource in parsedGedcom.Sources)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(parsedSource.RecordId))
             {
                 throw new GedcomLoadException("Malformed GEDCOM: SOUR record without an id.");
@@ -606,6 +628,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         foreach (var parsedMedia in parsedGedcom.Media)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(parsedMedia.RecordId))
             {
                 throw new GedcomLoadException("Malformed GEDCOM: OBJE record without an id.");
@@ -617,6 +640,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         foreach (var parsedPerson in parsedGedcom.People)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             importedRecordIds.Add(parsedPerson.RecordId);
 
             var person = tree.GetOrAddPerson(parsedPerson.RecordId);
@@ -680,6 +704,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         foreach (var family in parsedGedcom.Families)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var domainFamily = tree.GetOrAddFamily(family.RecordId);
             domainFamily.Events.Clear();
             domainFamily.Children.Clear();

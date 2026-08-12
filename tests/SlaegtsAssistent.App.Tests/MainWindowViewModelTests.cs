@@ -1306,6 +1306,225 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_WhileReviewWaits_ShouldNotWriteAndCanBeCancelled()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = CreateBiographyWorkspace("@I1@", "Gammelt navn", "anna.md");
+        var originalFiles = SnapshotFiles(outputFolder);
+        var snapshotStore = new RecordingGedcomSnapshotStore();
+        var dialog = new BlockingGedcomDifferenceDialogService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: new MarkdownBiographyExportService(
+                new RecordingApplicationSettingsService(new AppSettings())),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomDifferenceDialogService: dialog,
+            gedcomSnapshotStore: snapshotStore);
+        var originalPeople = viewModel.People.Select(person => person.RecordId).ToArray();
+
+        try
+        {
+            var importTask = viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            await dialog.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            viewModel.IsImporting.Should().BeTrue();
+            viewModel.ImportPhaseText.Should().Be("Gennemgang");
+            viewModel.SelectGedcomFileCommand.CanExecute(null).Should().BeFalse();
+            viewModel.CancelImportCommand.CanExecute(null).Should().BeTrue();
+            snapshotStore.SaveCalls.Should().Be(0);
+            SnapshotFiles(outputFolder).Should().BeEquivalentTo(originalFiles);
+
+            viewModel.CancelImportCommand.Execute(null);
+            await importTask;
+
+            viewModel.IsImporting.Should().BeFalse();
+            viewModel.ImportPhaseText.Should().Be("Annulleret");
+            viewModel.ErrorMessage.Should().Contain("annulleret");
+            snapshotStore.SaveCalls.Should().Be(0);
+            SnapshotFiles(outputFolder).Should().BeEquivalentTo(originalFiles);
+            viewModel.People.Select(person => person.RecordId).Should().Equal(originalPeople);
+        }
+        finally
+        {
+            dialog.Complete(null);
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenStartedInParallel_ShouldRunLoaderOnlyOnce()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var loader = new BlockingGedcomLoader(file.Path);
+        var viewModel = CreateViewModel(
+            gedcomLoader: loader,
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }));
+
+        try
+        {
+            var firstImport = viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            await loader.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var secondImport = viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            await secondImport;
+
+            loader.Calls.Should().Be(1);
+            viewModel.IsImporting.Should().BeTrue();
+
+            loader.Release();
+            await firstImport;
+        }
+        finally
+        {
+            loader.Release();
+            if (Directory.Exists(outputFolder))
+            {
+                Directory.Delete(outputFolder, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenCommitFails_ShouldRollbackFilesAndKeepPublishedState()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I2@ INDI",
+            "1 NAME Bo /Jensen/",
+            "0 TRLR");
+        var outputFolder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var originalFiles = SnapshotFiles(outputFolder);
+        var snapshotStore = new RecordingGedcomSnapshotStore();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: new PartiallyFailingMarkdownBiographyExportService(),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomSnapshotStore: snapshotStore);
+        var originalPeople = viewModel.People.Select(person => person.RecordId).ToArray();
+        var originalSelectedGedcom = viewModel.SelectedGedcomFilePath;
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportPhaseText.Should().Be("Fejl");
+            viewModel.ErrorMessage.Should().Contain("rullet tilbage");
+            snapshotStore.SaveCalls.Should().Be(0);
+            SnapshotFiles(outputFolder).Should().BeEquivalentTo(originalFiles);
+            viewModel.People.Select(person => person.RecordId).Should().Equal(originalPeople);
+            viewModel.SelectedGedcomFilePath.Should().Be(originalSelectedGedcom);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenTemplatePreflightFails_ShouldNotCommitAnything()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = CreateBiographyWorkspace("@I2@", "Bo Jensen", "bo.md");
+        var originalFiles = SnapshotFiles(outputFolder);
+        var snapshotStore = new RecordingGedcomSnapshotStore();
+        var exporter = new InvalidCandidateMarkdownBiographyExportService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: exporter,
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomSnapshotStore: snapshotStore);
+        var originalPeople = viewModel.People.Select(person => person.RecordId).ToArray();
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportPhaseText.Should().Be("Fejl");
+            viewModel.HasImportStatus.Should().BeTrue();
+            viewModel.ErrorMessage.Should().Contain("Forhåndskontrollen");
+            snapshotStore.SaveCalls.Should().Be(0);
+            exporter.WriteCalls.Should().Be(0);
+            SnapshotFiles(outputFolder).Should().BeEquivalentTo(originalFiles);
+            viewModel.People.Select(person => person.RecordId).Should().Equal(originalPeople);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenSnapshotCommitFails_ShouldRollbackNewDocuments()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownBiographyExportService: new MarkdownBiographyExportService(
+                new RecordingApplicationSettingsService(new AppSettings())),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            gedcomSnapshotStore: new FailingSaveGedcomSnapshotStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportPhaseText.Should().Be("Fejl");
+            viewModel.ErrorMessage.Should().Contain("rullet tilbage");
+            Directory.GetFiles(outputFolder, "*.md").Should().BeEmpty();
+            SnapshotFiles(outputFolder).Should().BeEmpty();
+            Directory.Exists(Path.Combine(outputFolder, ".slaegtsassistent")).Should().BeFalse();
+            viewModel.People.Should().BeEmpty();
+            viewModel.SelectedGedcomFilePath.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task OpenSettingsCommand_ShouldPersistUpdatedFolders()
     {
         var settingsDialog = new RecordingSettingsDialogService(new AppSettings
@@ -1628,6 +1847,15 @@ public class MainWindowViewModelTests
         return folder;
     }
 
+    private static Dictionary<string, byte[]> SnapshotFiles(string folder)
+    {
+        return Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+            .ToDictionary(
+                path => Path.GetRelativePath(folder, path),
+                File.ReadAllBytes,
+                StringComparer.Ordinal);
+    }
+
     private static TemporaryGedcomFile CreateTemporaryGedcomFileWithoutExtension(params string[] lines)
     {
         var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -1766,7 +1994,36 @@ public class MainWindowViewModelTests
             Person person,
             string outputDirectory)
         {
-            return string.Empty;
+            return new BiographyTemplateMarkdownGenerator().Generate(person);
+        }
+    }
+
+    private sealed class PartiallyFailingMarkdownBiographyExportService : IMarkdownBiographyExportService
+    {
+        public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
+        {
+            File.WriteAllText(Path.Combine(outputDirectory, "delvis-oprettet.md"), "Delvist indhold");
+            throw new IOException("Simuleret fejl under gennemførelsen.");
+        }
+
+        public string GenerateBiography(FamilyTree familyTree, Person person, string outputDirectory)
+        {
+            return new BiographyTemplateMarkdownGenerator().Generate(person);
+        }
+    }
+
+    private sealed class InvalidCandidateMarkdownBiographyExportService : IMarkdownBiographyExportService
+    {
+        public int WriteCalls { get; private set; }
+
+        public void WriteBiographies(FamilyTree familyTree, string outputDirectory)
+        {
+            WriteCalls++;
+        }
+
+        public string GenerateBiography(FamilyTree familyTree, Person person, string outputDirectory)
+        {
+            return "# Kandidat uden metadata\n";
         }
     }
 
@@ -1782,6 +2039,27 @@ public class MainWindowViewModelTests
             Calls++;
             LastDifferences = differences;
             return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
+        }
+    }
+
+    private sealed class BlockingGedcomDifferenceDialogService : IGedcomDifferenceDialogService
+    {
+        private readonly TaskCompletionSource<IReadOnlyDictionary<string, bool>?> _completion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+            IReadOnlyList<GedcomDifferenceReviewItem> differences)
+        {
+            Started.TrySetResult();
+            return _completion.Task;
+        }
+
+        public void Complete(IReadOnlyDictionary<string, bool>? result)
+        {
+            _completion.TrySetResult(result);
         }
     }
 
@@ -1815,6 +2093,31 @@ public class MainWindowViewModelTests
         public void Save(string outputDirectory, string sourcePath, FamilyTree familyTree)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class RecordingGedcomSnapshotStore : IGedcomSnapshotStore
+    {
+        public int SaveCalls { get; private set; }
+
+        public GedcomSnapshot? Load(string? outputDirectory) => null;
+
+        public void Save(string outputDirectory, string sourcePath, FamilyTree familyTree)
+        {
+            SaveCalls++;
+        }
+    }
+
+    private sealed class FailingSaveGedcomSnapshotStore : IGedcomSnapshotStore
+    {
+        public GedcomSnapshot? Load(string? outputDirectory) => null;
+
+        public void Save(string outputDirectory, string sourcePath, FamilyTree familyTree)
+        {
+            var snapshotDirectory = Path.Combine(outputDirectory, ".slaegtsassistent", "gedcom");
+            Directory.CreateDirectory(snapshotDirectory);
+            File.WriteAllText(Path.Combine(snapshotDirectory, "manifest.json"), "delvist snapshot");
+            throw new GedcomSnapshotException("Simuleret snapshotfejl.");
         }
     }
 
@@ -1911,6 +2214,26 @@ public class MainWindowViewModelTests
             LastPath = filePath;
             return _load(filePath);
         }
+    }
+
+    private sealed class BlockingGedcomLoader(string sourcePath) : IGedcomLoader
+    {
+        private readonly ManualResetEventSlim _release = new(false);
+
+        public TaskCompletionSource Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int Calls { get; private set; }
+
+        public FamilyTree Load(string filePath, FamilyTree? existingTree = null)
+        {
+            Calls++;
+            Started.TrySetResult();
+            _release.Wait(TimeSpan.FromSeconds(10));
+            return new GedcomLoader().Load(sourcePath);
+        }
+
+        public void Release() => _release.Set();
     }
 
     private sealed class ThrowingGedcomLoader : IGedcomLoader

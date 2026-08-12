@@ -7,7 +7,7 @@
 - [x] Tvetydige record-id'er kan ikke matches eller overskrives automatisk.
 - [x] Brugeren kan se filsti, fejlkategori og næste sikre handling.
 - [x] `dotnet build` og `dotnet test` er grønne.
-- [ ] Manuel katalogtest med mindst fire forskellige filtilstande er gennemført.
+- [x] Manuel katalogtest med mindst fire forskellige filtilstande er gennemført.
 
 ## Automatiseret verifikation
 
@@ -19,9 +19,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-12
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsmappe, 134 automatiske tests bestået
+- **Bemærkninger:** Manuel katalogtest af gyldige, defekte, ukendte, migrerbare og tvetydige dokumenter er godkendt.
 
-- [ ] Feature 03 er godkendt, og feature 04 må påbegyndes.
+- [x] Feature 03 er godkendt, og feature 04 må påbegyndes.

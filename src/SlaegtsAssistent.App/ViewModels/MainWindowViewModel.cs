@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -35,6 +36,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
     private FamilyTree? _familyTree;
+    private CancellationTokenSource? _importCancellation;
 
     public MainWindowViewModel()
         : this(
@@ -139,6 +141,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool hasDirtyEditors;
 
+    [ObservableProperty]
+    private bool isImporting;
+
+    [ObservableProperty]
+    private string importPhaseText = "Klar";
+
+    [ObservableProperty]
+    private int importProgressPercent;
+
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
 
     public string ActivePersonText => SelectedPerson is null
@@ -154,106 +165,170 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string SaveStatusText => HasDirtyEditors ? "Ugemte ændringer" : "Gemt";
 
-    [RelayCommand]
+    public bool HasImportStatus => ImportPhaseText != "Klar";
+
+    [RelayCommand(CanExecute = nameof(CanStartImport))]
     private async Task SelectGedcomFileAsync()
     {
-        var filePath = await _gedcomFilePickerService.PickGedcomFileAsync(StandardGedcomInputFolder);
-        if (string.IsNullOrWhiteSpace(filePath))
+        if (IsImporting)
         {
             return;
         }
 
-        SetDefaultInputFolderFromSelectedGedcom(filePath);
-
-        if (!await EnsureOutputFolderAsync(filePath))
-        {
-            return;
-        }
+        IsImporting = true;
+        ImportPhaseText = "Vælger GEDCOM-fil";
+        ImportProgressPercent = 0;
+        ErrorMessage = null;
+        _importCancellation = new CancellationTokenSource();
+        var cancellationToken = _importCancellation.Token;
 
         try
         {
-            var familyTree = _gedcomLoader.Load(filePath);
-            _familyTree = familyTree;
-            var outputFolder = StandardMarkdownOutputFolder!;
-            ReloadDocumentCatalog(familyTree);
-            _gedcomSnapshotStore.Save(outputFolder, filePath, familyTree);
-            var syncStatuses = await ReviewGedcomDifferencesAsync(familyTree);
-            _markdownBiographyExportService.WriteBiographies(familyTree, outputFolder);
-            ReloadDocumentCatalog(familyTree);
+            var filePath = await _gedcomFilePickerService.PickGedcomFileAsync(StandardGedcomInputFolder);
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                ImportPhaseText = "Klar";
+                return;
+            }
 
-            var people = familyTree.People
-                .Select(person =>
-                {
-                    var syncStatus = syncStatuses.TryGetValue(person.RecordId, out var status)
-                        ? status
-                        : BiographySyncStatus.Ukendt;
-                    var documentMatches = _documentPeople
-                        .Where(document => document.RecordId == person.RecordId)
-                        .ToList();
-                    var expectedPath = Path.Combine(
-                        outputFolder,
-                        BiographyFileNameGenerator.Generate(person));
-                    var pathMatch = _documentPeople.FirstOrDefault(document => string.Equals(
-                        document.MarkdownFilePath,
-                        expectedPath,
-                        StringComparison.Ordinal));
-                    var stableFilePath = documentMatches.Count switch
+            var outputFolder = await ResolveOutputFolderAsync(filePath);
+            if (string.IsNullOrWhiteSpace(outputFolder))
+            {
+                ImportPhaseText = "Klar";
+                return;
+            }
+
+            SetImportPhase("Forhåndskontrol", 15);
+            var preflight = await Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var tree = _gedcomLoader.Load(filePath, null, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                var documents = _markdownDocumentCatalog.Load(outputFolder);
+                var generatedBiographies = tree.People.ToDictionary(
+                    person => person.RecordId,
+                    person =>
                     {
-                        1 => documentMatches[0].MarkdownFilePath,
-                        > 1 => string.Empty,
-                        _ => pathMatch?.MarkdownFilePath,
-                    };
-                    var duplicatePaths = documentMatches.Count > 1
-                        ? string.Join(", ", documentMatches.Select(document => document.MarkdownFilePath))
-                        : null;
-                    return CreatePersonListItem(
-                        person,
-                        outputFolder,
-                        syncStatus,
-                        stableFilePath,
-                        documentMatches.Count > 1
-                            ? "Tvetydigt record-id"
-                            : pathMatch?.DocumentErrorCategory,
-                        documentMatches.Count > 1
-                            ? $"Record-id '{person.RecordId}' findes i flere dokumenter: {duplicatePaths}."
-                            : pathMatch?.DocumentErrorMessage,
-                        documentMatches.Count > 1
-                            ? "Sammenlign filerne manuelt, og behold eller ret kun den tilsigtede fil."
-                            : pathMatch?.DocumentNextAction);
-                })
-                .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(person => person.RecordId, StringComparer.Ordinal)
-                .ToList();
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var content = _markdownBiographyExportService.GenerateBiography(
+                            tree,
+                            person,
+                            outputFolder);
+                        var generatedDocument = BiographyDocumentParser.Parse(content);
+                        if (generatedDocument.Metadata is null)
+                        {
+                            throw new FormatException(
+                                $"Den genererede kandidat for '{person.RecordId}' mangler dokumentmetadata.");
+                        }
 
-            var gedcomRecordIds = people.Select(person => person.RecordId).ToHashSet(StringComparer.Ordinal);
-            var representedPaths = people
-                .Select(person => person.MarkdownFilePath)
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .ToHashSet(StringComparer.Ordinal);
-            people.AddRange(_documentPeople.Where(person =>
-                !gedcomRecordIds.Contains(person.RecordId) &&
-                !representedPaths.Contains(person.MarkdownFilePath)));
+                        return content;
+                    },
+                    StringComparer.Ordinal);
+                return new ImportPreflight(tree, documents, generatedBiographies);
+            }, cancellationToken);
 
-            ReplaceAllPeople(people);
-            SelectedPerson = People.FirstOrDefault();
-            SelectedGedcomFilePath = filePath;
+            SetImportPhase("Gennemgang", 45);
+            var review = await ReviewGedcomDifferencesAsync(
+                preflight.FamilyTree,
+                preflight.Documents,
+                preflight.GeneratedBiographies,
+                outputFolder,
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            SetImportPhase("Gennemførelse", 70);
+            var workspaceState = await Task.Run(
+                () => CaptureImportState(outputFolder),
+                CancellationToken.None);
+            try
+            {
+                await Task.Run(() =>
+                {
+                    _markdownBiographyExportService.WriteBiographies(preflight.FamilyTree, outputFolder);
+                    foreach (var change in review.Changes.Where(change => change.Editor is null))
+                    {
+                        _markdownFileStore.Write(change.FilePath, change.Content);
+                    }
+
+                    _gedcomSnapshotStore.Save(outputFolder, filePath, preflight.FamilyTree);
+                }, CancellationToken.None);
+            }
+            catch (Exception commitException)
+            {
+                try
+                {
+                    await Task.Run(
+                        () => RestoreImportState(outputFolder, workspaceState),
+                        CancellationToken.None);
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new ImportCommitException(
+                        "Importen fejlede, og automatisk gendannelse kunne ikke fuldføres. " +
+                        "Luk ikke appen, og kontrollér arbejdsområdets filer manuelt.",
+                        new AggregateException(commitException, rollbackException));
+                }
+
+                throw new ImportCommitException(
+                    "Importen fejlede under gennemførelsen, og arbejdsområdet blev rullet tilbage.",
+                    commitException);
+            }
+
+            foreach (var change in review.Changes.Where(change => change.Editor is not null))
+            {
+                change.Editor!.ApplySerializedDocument(change.Content);
+            }
+
+            SetImportPhase("Publicering", 90);
+            StandardMarkdownOutputFolder = outputFolder;
+            _familyTree = preflight.FamilyTree;
+            ReloadDocumentCatalog(preflight.FamilyTree);
+            PublishImport(preflight.FamilyTree, review.SyncStatuses, outputFolder, filePath);
+            SetDefaultInputFolderFromSelectedGedcom(filePath);
+            SetImportPhase("Færdig", 100);
+        }
+        catch (OperationCanceledException)
+        {
+            ImportPhaseText = "Annulleret";
+            ErrorMessage = "GEDCOM-importen blev annulleret. Arbejdsområdet er uændret.";
         }
         catch (GedcomLoadException exception)
         {
+            ImportPhaseText = "Fejl";
             ErrorMessage = $"Kunne ikke indlæse GEDCOM-fil: {exception.Message}";
         }
-        catch (GedcomSnapshotException exception)
+        catch (FormatException exception)
         {
-            ErrorMessage = $"Kunne ikke gemme GEDCOM-snapshot: {exception.Message}";
+            ImportPhaseText = "Fejl";
+            ErrorMessage = $"Forhåndskontrollen af importen fejlede: {exception.Message}";
+        }
+        catch (ImportCommitException exception)
+        {
+            ImportPhaseText = "Fejl";
+            ErrorMessage = exception.Message;
         }
         catch (IOException exception)
         {
-            ErrorMessage = $"Kunne ikke skrive Markdown-filer: {exception.Message}";
+            ImportPhaseText = "Fejl";
+            ErrorMessage = $"Kunne ikke forhåndskontrollere importen: {exception.Message}";
         }
         catch (UnauthorizedAccessException exception)
         {
-            ErrorMessage = $"Manglende adgang til outputmappe: {exception.Message}";
+            ImportPhaseText = "Fejl";
+            ErrorMessage = $"Manglende adgang under importen: {exception.Message}";
         }
+        finally
+        {
+            _importCancellation?.Dispose();
+            _importCancellation = null;
+            IsImporting = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCancelImport))]
+    private void CancelImport()
+    {
+        _importCancellation?.Cancel();
     }
 
     [RelayCommand]
@@ -394,11 +469,11 @@ public partial class MainWindowViewModel : ViewModelBase
         _applicationControlService.Exit();
     }
 
-    private async Task<bool> EnsureOutputFolderAsync(string gedcomFilePath)
+    private async Task<string?> ResolveOutputFolderAsync(string gedcomFilePath)
     {
         if (!string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder))
         {
-            return true;
+            return StandardMarkdownOutputFolder;
         }
 
         var gedcomFolder = NormalizeFolder(Path.GetDirectoryName(gedcomFilePath));
@@ -409,26 +484,29 @@ public partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(selectedOutputFolder))
         {
             ErrorMessage = "Du skal vælge en outputmappe til Markdown-filer, før GEDCOM-filen kan indlæses.";
-            return false;
+            return null;
         }
 
-        StandardMarkdownOutputFolder = selectedOutputFolder;
-        SaveSettings();
-        return true;
+        return NormalizeFolder(selectedOutputFolder);
     }
 
-    private async Task<IReadOnlyDictionary<string, BiographySyncStatus>> ReviewGedcomDifferencesAsync(
-        FamilyTree familyTree)
+    private async Task<ImportReviewResult> ReviewGedcomDifferencesAsync(
+        FamilyTree familyTree,
+        IReadOnlyList<MarkdownDocumentInfo> documents,
+        IReadOnlyDictionary<string, string> generatedBiographies,
+        string outputFolder,
+        CancellationToken cancellationToken)
     {
         var reviewItems = new List<GedcomDifferenceReviewItem>();
         var syncStatuses = new Dictionary<string, BiographySyncStatus>(StringComparer.Ordinal);
+        var changes = new List<PlannedDocumentChange>();
 
         foreach (var person in familyTree.People)
         {
             var expectedPath = Path.Combine(
-                StandardMarkdownOutputFolder!,
+                outputFolder,
                 BiographyFileNameGenerator.Generate(person));
-            var recordIdMatches = _documentPeople
+            var recordIdMatches = documents
                 .Where(document => document.RecordId == person.RecordId)
                 .ToList();
             if (recordIdMatches.Count > 1)
@@ -437,25 +515,19 @@ public partial class MainWindowViewModel : ViewModelBase
                 continue;
             }
 
-            var pathDocument = _documentPeople.FirstOrDefault(
-                document => string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
-            if (pathDocument?.HasDocumentDiagnostic == true)
+            var pathDocument = documents.FirstOrDefault(
+                document => string.Equals(document.FilePath, expectedPath, StringComparison.Ordinal));
+            if (!string.IsNullOrWhiteSpace(pathDocument?.ErrorCategory))
             {
                 syncStatuses[person.RecordId] = BiographySyncStatus.Ukendt;
                 continue;
             }
 
             var matchedPerson = recordIdMatches.SingleOrDefault()
-                ?? _documentPeople.FirstOrDefault(
+                ?? documents.FirstOrDefault(
                     document => !document.RecordId.StartsWith("error:", StringComparison.Ordinal) &&
-                                string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
-            MarkdownDocumentInfo? documentInfo = matchedPerson is null
-                ? null
-                : new MarkdownDocumentInfo(
-                    matchedPerson.RecordId,
-                    matchedPerson.DisplayName,
-                    matchedPerson.MarkdownFilePath,
-                    matchedPerson.RawGedcom);
+                                string.Equals(document.FilePath, expectedPath, StringComparison.Ordinal));
+            MarkdownDocumentInfo? documentInfo = matchedPerson;
             if (documentInfo is null && pathDocument is null && File.Exists(expectedPath))
             {
                 documentInfo = new MarkdownDocumentInfo(
@@ -476,10 +548,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? openEditor!.CreateDocument()
                 : BiographyDocumentParser.Parse(_markdownFileStore.Read(documentInfo.FilePath));
 
-            var generatedContent = _markdownBiographyExportService.GenerateBiography(
-                familyTree,
-                person,
-                StandardMarkdownOutputFolder!);
+            var generatedContent = generatedBiographies[person.RecordId];
             var generatedDocument = BiographyDocumentParser.Parse(generatedContent);
             if (generatedDocument.Metadata is null)
             {
@@ -534,10 +603,11 @@ public partial class MainWindowViewModel : ViewModelBase
             reviewItems.Add(reviewItem);
         }
 
-        var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems);
+        var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems)
+            .WaitAsync(cancellationToken);
         if (choices is null)
         {
-            return syncStatuses;
+            return new ImportReviewResult(syncStatuses, changes);
         }
 
         foreach (var documentGroup in reviewItems.GroupBy(item => item.FilePath, StringComparer.Ordinal))
@@ -550,14 +620,11 @@ public partial class MainWindowViewModel : ViewModelBase
                     continue;
                 }
 
-                if (_editors.TryGetValue(first.FilePath, out var candidateEditor))
-                {
-                    candidateEditor.ApplySerializedDocument(candidateContent);
-                }
-                else
-                {
-                    _markdownFileStore.Write(first.FilePath, candidateContent);
-                }
+                _editors.TryGetValue(first.FilePath, out var candidateEditor);
+                changes.Add(new PlannedDocumentChange(
+                    first.FilePath,
+                    candidateContent,
+                    candidateEditor));
 
                 continue;
             }
@@ -575,17 +642,156 @@ public partial class MainWindowViewModel : ViewModelBase
                 first.Document,
                 first.GedcomFacts,
                 selectedFields);
-            if (_editors.TryGetValue(first.FilePath, out var openEditor))
+            _editors.TryGetValue(first.FilePath, out var openEditor);
+            changes.Add(new PlannedDocumentChange(first.FilePath, updatedContent, openEditor));
+        }
+
+        return new ImportReviewResult(syncStatuses, changes);
+    }
+
+    private void PublishImport(
+        FamilyTree familyTree,
+        IReadOnlyDictionary<string, BiographySyncStatus> syncStatuses,
+        string outputFolder,
+        string filePath)
+    {
+        var people = familyTree.People
+            .Select(person =>
             {
-                openEditor.ApplySerializedDocument(updatedContent);
-            }
-            else
+                var syncStatus = syncStatuses.TryGetValue(person.RecordId, out var status)
+                    ? status
+                    : BiographySyncStatus.Ukendt;
+                var documentMatches = _documentPeople
+                    .Where(document => document.RecordId == person.RecordId)
+                    .ToList();
+                var expectedPath = Path.Combine(
+                    outputFolder,
+                    BiographyFileNameGenerator.Generate(person));
+                var pathMatch = _documentPeople.FirstOrDefault(document => string.Equals(
+                    document.MarkdownFilePath,
+                    expectedPath,
+                    StringComparison.Ordinal));
+                var stableFilePath = documentMatches.Count switch
+                {
+                    1 => documentMatches[0].MarkdownFilePath,
+                    > 1 => string.Empty,
+                    _ => pathMatch?.MarkdownFilePath,
+                };
+                var duplicatePaths = documentMatches.Count > 1
+                    ? string.Join(", ", documentMatches.Select(document => document.MarkdownFilePath))
+                    : null;
+                return CreatePersonListItem(
+                    person,
+                    outputFolder,
+                    syncStatus,
+                    stableFilePath,
+                    documentMatches.Count > 1
+                        ? "Tvetydigt record-id"
+                        : pathMatch?.DocumentErrorCategory,
+                    documentMatches.Count > 1
+                        ? $"Record-id '{person.RecordId}' findes i flere dokumenter: {duplicatePaths}."
+                        : pathMatch?.DocumentErrorMessage,
+                    documentMatches.Count > 1
+                        ? "Sammenlign filerne manuelt, og behold eller ret kun den tilsigtede fil."
+                        : pathMatch?.DocumentNextAction);
+            })
+            .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(person => person.RecordId, StringComparer.Ordinal)
+            .ToList();
+
+        var gedcomRecordIds = people.Select(person => person.RecordId).ToHashSet(StringComparer.Ordinal);
+        var representedPaths = people
+            .Select(person => person.MarkdownFilePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.Ordinal);
+        people.AddRange(_documentPeople.Where(person =>
+            !gedcomRecordIds.Contains(person.RecordId) &&
+            !representedPaths.Contains(person.MarkdownFilePath)));
+
+        ReplaceAllPeople(people);
+        SelectedPerson = People.FirstOrDefault();
+        SelectedGedcomFilePath = filePath;
+    }
+
+    private static IReadOnlyDictionary<string, byte[]> CaptureImportState(string outputFolder)
+    {
+        if (!Directory.Exists(outputFolder))
+        {
+            return new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        }
+
+        var paths = Directory.EnumerateFiles(outputFolder, "*.md", SearchOption.TopDirectoryOnly)
+            .ToList();
+        var internalDirectory = Path.Combine(outputFolder, ".slaegtsassistent");
+        if (Directory.Exists(internalDirectory))
+        {
+            paths.AddRange(Directory.EnumerateFiles(
+                internalDirectory,
+                "*",
+                SearchOption.AllDirectories));
+        }
+
+        return paths
+            .ToDictionary(Path.GetFullPath, File.ReadAllBytes, StringComparer.Ordinal);
+    }
+
+    private static void RestoreImportState(
+        string outputFolder,
+        IReadOnlyDictionary<string, byte[]> originalFiles)
+    {
+        Directory.CreateDirectory(outputFolder);
+        var currentPaths = Directory.EnumerateFiles(
+                outputFolder,
+                "*.md",
+                SearchOption.TopDirectoryOnly)
+            .ToList();
+        var internalDirectory = Path.Combine(outputFolder, ".slaegtsassistent");
+        if (Directory.Exists(internalDirectory))
+        {
+            currentPaths.AddRange(Directory.EnumerateFiles(
+                internalDirectory,
+                "*",
+                SearchOption.AllDirectories));
+        }
+
+        foreach (var currentPath in currentPaths)
+        {
+            if (!originalFiles.ContainsKey(Path.GetFullPath(currentPath)))
             {
-                _markdownFileStore.Write(first.FilePath, updatedContent);
+                File.Delete(currentPath);
             }
         }
 
-        return syncStatuses;
+        var writer = new AtomicFileWriter();
+        foreach (var originalFile in originalFiles)
+        {
+            if (File.Exists(originalFile.Key) &&
+                File.ReadAllBytes(originalFile.Key).AsSpan().SequenceEqual(originalFile.Value))
+            {
+                continue;
+            }
+
+            writer.WriteBytes(originalFile.Key, originalFile.Value);
+        }
+
+        if (Directory.Exists(internalDirectory) &&
+            !Directory.EnumerateFiles(internalDirectory, "*", SearchOption.AllDirectories).Any())
+        {
+            Directory.Delete(internalDirectory, recursive: true);
+        }
+    }
+
+    private void SetImportPhase(string phase, int progressPercent)
+    {
+        ImportPhaseText = phase;
+        ImportProgressPercent = progressPercent;
+    }
+
+    private bool CanStartImport() => !IsImporting;
+
+    private bool CanCancelImport()
+    {
+        return IsImporting && ImportPhaseText is not "Gennemførelse" and not "Publicering";
     }
 
     private void SetDefaultInputFolderFromSelectedGedcom(string gedcomFilePath)
@@ -925,6 +1131,35 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(SaveStatusText));
     }
+
+    partial void OnIsImportingChanged(bool value)
+    {
+        SelectGedcomFileCommand.NotifyCanExecuteChanged();
+        CancelImportCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnImportPhaseTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasImportStatus));
+        CancelImportCommand.NotifyCanExecuteChanged();
+    }
+
+    private sealed record ImportPreflight(
+        FamilyTree FamilyTree,
+        IReadOnlyList<MarkdownDocumentInfo> Documents,
+        IReadOnlyDictionary<string, string> GeneratedBiographies);
+
+    private sealed record PlannedDocumentChange(
+        string FilePath,
+        string Content,
+        EditorViewModel? Editor);
+
+    private sealed record ImportReviewResult(
+        IReadOnlyDictionary<string, BiographySyncStatus> SyncStatuses,
+        IReadOnlyList<PlannedDocumentChange> Changes);
+
+    private sealed class ImportCommitException(string message, Exception innerException)
+        : IOException(message, innerException);
 
     private sealed class NullGedcomFilePickerService : IGedcomFilePickerService
     {
