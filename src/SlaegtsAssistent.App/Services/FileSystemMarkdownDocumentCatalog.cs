@@ -21,13 +21,33 @@ public sealed class FileSystemMarkdownDocumentCatalog : IMarkdownDocumentCatalog
         {
             try
             {
-                var document = BiographyDocumentParser.Parse(File.ReadAllText(filePath));
-                if (document.Metadata is { } metadata)
+                var result = BiographyDocumentParser.ParseSafely(File.ReadAllText(filePath));
+                if (!result.IsSuccess)
+                {
+                    var diagnostic = result.Diagnostic!;
+                    documents.Add(new MarkdownDocumentInfo(
+                        $"error:{Path.GetFileName(filePath)}",
+                        Path.GetFileName(filePath),
+                        filePath,
+                        diagnostic.Message,
+                        ToDanishCategory(diagnostic.Category),
+                        diagnostic.NextAction));
+                }
+                else if (result.Document!.Metadata is { } metadata)
                 {
                     documents.Add(new MarkdownDocumentInfo(
                         metadata.RecordId,
                         metadata.DisplayName ?? metadata.RecordId,
-                        filePath));
+                        filePath,
+                        result.RequiresMigration
+                            ? "Dokumentet bruger en ældre, understøttet formatversion."
+                            : null,
+                        null,
+                        result.RequiresMigration
+                            ? "Gennemse og godkend migrationsforslaget, før filen ændres."
+                            : null,
+                        result.RequiresMigration,
+                        result.MigrationCandidate));
                 }
                 else
                 {
@@ -37,24 +57,62 @@ public sealed class FileSystemMarkdownDocumentCatalog : IMarkdownDocumentCatalog
                         filePath));
                 }
             }
+            catch (UnauthorizedAccessException exception)
+            {
+                documents.Add(new MarkdownDocumentInfo(
+                    $"error:{Path.GetFileName(filePath)}",
+                    Path.GetFileName(filePath),
+                    filePath,
+                    $"Der mangler adgang til dokumentet: {exception.Message}",
+                    "Adgangsfejl",
+                    "Kontrollér filens adgangsrettigheder, og indlæs arbejdsområdet igen."));
+            }
             catch (IOException exception)
             {
                 documents.Add(new MarkdownDocumentInfo(
                     $"error:{Path.GetFileName(filePath)}",
                     Path.GetFileName(filePath),
                     filePath,
-                    $"Kunne ikke læse dokumentet: {exception.Message}"));
-            }
-            catch (FormatException exception)
-            {
-                documents.Add(new MarkdownDocumentInfo(
-                    $"error:{Path.GetFileName(filePath)}",
-                    Path.GetFileName(filePath),
-                    filePath,
-                    $"Dokumentets metadata er ugyldige: {exception.Message}"));
+                    $"Kunne ikke læse dokumentet: {exception.Message}",
+                    "Læsefejl",
+                    "Kontrollér filens adgangsrettigheder, og indlæs arbejdsområdet igen."));
             }
         }
 
-        return documents;
+        return MarkDuplicateRecordIds(documents);
+    }
+
+    private static IReadOnlyList<MarkdownDocumentInfo> MarkDuplicateRecordIds(
+        IReadOnlyList<MarkdownDocumentInfo> documents)
+    {
+        var duplicateIds = documents
+            .Where(document => !document.RecordId.StartsWith("error:", StringComparison.Ordinal) &&
+                               !document.RecordId.StartsWith("legacy:", StringComparison.Ordinal))
+            .GroupBy(document => document.RecordId, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return documents.Select(document => duplicateIds.Contains(document.RecordId)
+            ? document with
+            {
+                ErrorMessage = $"Record-id '{document.RecordId}' findes i flere Markdown-dokumenter.",
+                ErrorCategory = "Tvetydigt record-id",
+                NextAction = "Sammenlign filerne manuelt, og behold eller ret kun den tilsigtede fil.",
+            }
+            : document).ToList();
+    }
+
+    private static string ToDanishCategory(BiographyDocumentErrorCategory category)
+    {
+        return category switch
+        {
+            BiographyDocumentErrorCategory.MalformedFrontMatter => "Ugyldig frontmatter",
+            BiographyDocumentErrorCategory.DuplicateKey => "Dubleret nøgle",
+            BiographyDocumentErrorCategory.InvalidValue => "Ugyldig værdi",
+            BiographyDocumentErrorCategory.MissingRequiredField => "Manglende obligatorisk felt",
+            BiographyDocumentErrorCategory.UnsupportedFormatVersion => "Ikke-understøttet formatversion",
+            _ => "Dokumentfejl",
+        };
     }
 }

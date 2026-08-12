@@ -88,6 +88,44 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void Constructor_WhenCatalogContainsValidAndDefectiveFiles_ShouldExposeBothWithoutThrowing()
+    {
+        var folder = CreateBiographyWorkspace("@I1@", "Anna Jensen", "anna.md");
+        var defectivePath = Path.Combine(folder, "defekt.md");
+        File.WriteAllText(
+            defectivePath,
+            "---\nformatVersion: 99\nrecordId: \"@I2@\"\n---\n# Defekt\n");
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = folder,
+                }),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                markdownFileStore: new FileSystemMarkdownFileStore());
+
+            viewModel.People.Should().HaveCount(2);
+            viewModel.People.Should().Contain(person => person.RecordId == "@I1@");
+            var defective = viewModel.People.Single(person => person.MarkdownFilePath == defectivePath);
+
+            var action = () => viewModel.SelectedPerson = defective;
+
+            action.Should().NotThrow();
+            viewModel.Editor.Should().BeNull();
+            viewModel.ErrorMessage.Should().Contain("Ikke-understøttet formatversion");
+            viewModel.ErrorMessage.Should().Contain(defectivePath);
+            viewModel.ErrorMessage.Should().Contain("Næste handling");
+            File.ReadAllText(defectivePath).Should().Contain("formatVersion: 99");
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void SettingSelectedPerson_ShouldRaisePropertyChanged()
     {
         var viewModel = CreateViewModel();
@@ -1147,6 +1185,103 @@ public class MainWindowViewModelTests
             {
                 Directory.Delete(outputFolder, recursive: true);
             }
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenExpectedFileHasUnknownVersion_ShouldPreserveAndBlockIt()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var tree = new GedcomLoader().Load(file.Path);
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var documentPath = Path.Combine(
+            outputFolder,
+            BiographyFileNameGenerator.Generate(tree.FindPerson("@I1@")!));
+        const string content = "---\nformatVersion: 99\nrecordId: \"@I1@\"\n---\n# Bevar mig\n";
+        File.WriteAllText(documentPath, content);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = outputFolder,
+            }),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            var action = () => viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            await action.Should().NotThrowAsync();
+            File.ReadAllText(documentPath).Should().Be(content);
+            Directory.GetFiles(outputFolder, "*.md").Should().ContainSingle();
+            viewModel.People.Should().ContainSingle();
+            viewModel.People[0].HasDocumentDiagnostic.Should().BeTrue();
+            viewModel.People[0].DocumentErrorCategory.Should().Be("Ikke-understøttet formatversion");
+            viewModel.Editor.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenOlderFormatMigrationIsApproved_ShouldUpgradeAndPreserveFreeText()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var tree = new GedcomLoader().Load(file.Path);
+        var person = tree.FindPerson("@I1@")!;
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var documentPath = Path.Combine(outputFolder, BiographyFileNameGenerator.Generate(person));
+        var oldMetadata = new BiographyDocumentMetadata(
+            1,
+            person.RecordId,
+            person.FullName,
+            BiographyFactsSnapshot.FromPerson(person));
+        File.WriteAllText(
+            documentPath,
+            BiographyDocumentSerializer.Serialize(
+                oldMetadata,
+                "# Anna Jensen\n\n## Biografi\nBrugerens frie tekst.\n"));
+        var differenceDialog = new ChoosingGedcomDifferenceDialogService(useGedcom: true);
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settingsService,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            gedcomDifferenceDialogService: differenceDialog);
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            differenceDialog.LastDifferences.Should().ContainSingle();
+            differenceDialog.LastDifferences[0].RequiresMigration.Should().BeTrue();
+            viewModel.HasDirtyEditors.Should().BeTrue();
+            viewModel.SaveAllCommand.Execute(null);
+            var migrated = BiographyDocumentParser.Parse(File.ReadAllText(documentPath));
+            migrated.Metadata!.FormatVersion.Should().Be(BiographyDocumentParser.CurrentFormatVersion);
+            migrated.Body.Should().Contain("Brugerens frie tekst.");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
         }
     }
 

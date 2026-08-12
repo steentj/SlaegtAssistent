@@ -98,7 +98,7 @@
                                         Margin="0,0,0,4"
                                         Background="{DynamicResource AppPanelMutedBrush}"
                                         CornerRadius="4"
-                                        ToolTip.Tip="{Binding RawGedcom}">
+                                        ToolTip.Tip="{Binding ToolTipText}">
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="{Binding DisplayName}"
                                                    FontWeight="SemiBold" />
@@ -108,6 +108,11 @@
                                         <TextBlock Text="{Binding SyncStatusText}"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource AppAccentBrush}" />
+                                        <TextBlock Text="{Binding StatusNoticeText}"
+                                                   IsVisible="{Binding HasStatusNotice}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource AppDangerBrush}"
+                                                   TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

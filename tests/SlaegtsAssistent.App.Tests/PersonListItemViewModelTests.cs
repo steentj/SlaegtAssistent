@@ -14,4 +14,22 @@ public class PersonListItemViewModelTests
         viewModel.DisplayName.Should().Be("Anna Jensen");
         viewModel.MarkdownFilePath.Should().Be("/tmp/anna-jensen.md");
     }
+
+    [Fact]
+    public void Constructor_WithDocumentDiagnostic_ShouldExposePathCategoryAndNextAction()
+    {
+        var viewModel = new PersonListItemViewModel(
+            "error:defekt.md",
+            "defekt.md",
+            "/tmp/defekt.md",
+            documentErrorCategory: "Dubleret nøgle",
+            documentErrorMessage: "Nøglen recordId forekommer flere gange.",
+            documentNextAction: "Ret den dublerede nøgle.");
+
+        viewModel.HasDocumentDiagnostic.Should().BeTrue();
+        viewModel.DocumentDiagnosticText.Should().Contain("Dubleret nøgle");
+        viewModel.DocumentDiagnosticText.Should().Contain("/tmp/defekt.md");
+        viewModel.DocumentDiagnosticText.Should().Contain("Ret den dublerede nøgle");
+        viewModel.ToolTipText.Should().Be(viewModel.DocumentDiagnosticText);
+    }
 }

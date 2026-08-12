@@ -8,7 +8,7 @@
 - [x] Mappeskift håndterer dirty editorer eksplicit.
 - [x] Ingen fil i gammel mappe ændres efter aktivering af ny mappe.
 - [x] `dotnet build` og `dotnet test` er grønne.
-- [ ] Manuel test med navneændring og to arbejdsmapper er gennemført.
+- [x] Manuel test med navneændring og to arbejdsmapper er gennemført.
 
 ## Automatiseret verifikation
 
@@ -19,9 +19,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-12
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsmappe, 120 automatiske tests bestået
+- **Bemærkninger:** Manuel test af stabil dokumentidentitet, dubletter og arbejdsområdeskift er godkendt.
 
-- [ ] Feature 02 er godkendt, og feature 03 må påbegyndes.
+- [x] Feature 02 er godkendt, og feature 03 må påbegyndes.

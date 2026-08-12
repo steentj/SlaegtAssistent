@@ -193,18 +193,33 @@ public partial class MainWindowViewModel : ViewModelBase
                     var expectedPath = Path.Combine(
                         outputFolder,
                         BiographyFileNameGenerator.Generate(person));
+                    var pathMatch = _documentPeople.FirstOrDefault(document => string.Equals(
+                        document.MarkdownFilePath,
+                        expectedPath,
+                        StringComparison.Ordinal));
                     var stableFilePath = documentMatches.Count switch
                     {
                         1 => documentMatches[0].MarkdownFilePath,
                         > 1 => string.Empty,
-                        _ => _documentPeople
-                            .FirstOrDefault(document => string.Equals(
-                                document.MarkdownFilePath,
-                                expectedPath,
-                                StringComparison.Ordinal))
-                            ?.MarkdownFilePath,
+                        _ => pathMatch?.MarkdownFilePath,
                     };
-                    return CreatePersonListItem(person, outputFolder, syncStatus, stableFilePath);
+                    var duplicatePaths = documentMatches.Count > 1
+                        ? string.Join(", ", documentMatches.Select(document => document.MarkdownFilePath))
+                        : null;
+                    return CreatePersonListItem(
+                        person,
+                        outputFolder,
+                        syncStatus,
+                        stableFilePath,
+                        documentMatches.Count > 1
+                            ? "Tvetydigt record-id"
+                            : pathMatch?.DocumentErrorCategory,
+                        documentMatches.Count > 1
+                            ? $"Record-id '{person.RecordId}' findes i flere dokumenter: {duplicatePaths}."
+                            : pathMatch?.DocumentErrorMessage,
+                        documentMatches.Count > 1
+                            ? "Sammenlign filerne manuelt, og behold eller ret kun den tilsigtede fil."
+                            : pathMatch?.DocumentNextAction);
                 })
                 .OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(person => person.RecordId, StringComparer.Ordinal)
@@ -422,9 +437,18 @@ public partial class MainWindowViewModel : ViewModelBase
                 continue;
             }
 
+            var pathDocument = _documentPeople.FirstOrDefault(
+                document => string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
+            if (pathDocument?.HasDocumentDiagnostic == true)
+            {
+                syncStatuses[person.RecordId] = BiographySyncStatus.Ukendt;
+                continue;
+            }
+
             var matchedPerson = recordIdMatches.SingleOrDefault()
                 ?? _documentPeople.FirstOrDefault(
-                    document => string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
+                    document => !document.RecordId.StartsWith("error:", StringComparison.Ordinal) &&
+                                string.Equals(document.MarkdownFilePath, expectedPath, StringComparison.Ordinal));
             MarkdownDocumentInfo? documentInfo = matchedPerson is null
                 ? null
                 : new MarkdownDocumentInfo(
@@ -432,7 +456,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     matchedPerson.DisplayName,
                     matchedPerson.MarkdownFilePath,
                     matchedPerson.RawGedcom);
-            if (documentInfo is null && File.Exists(expectedPath))
+            if (documentInfo is null && pathDocument is null && File.Exists(expectedPath))
             {
                 documentInfo = new MarkdownDocumentInfo(
                     $"legacy:{Path.GetFileName(expectedPath)}",
@@ -504,7 +528,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 true)
             {
                 CandidateContent = candidateContent,
-                RequiresMigration = generatedSectionCandidate.RequiresMigration,
+                RequiresMigration = generatedSectionCandidate.RequiresMigration ||
+                                    document.Metadata?.FormatVersion < BiographyDocumentParser.CurrentFormatVersion,
             };
             reviewItems.Add(reviewItem);
         }
@@ -599,6 +624,13 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (value.HasDocumentDiagnostic)
+        {
+            Editor = null;
+            ErrorMessage = value.DocumentDiagnosticText;
+            return;
+        }
+
         if (!_editors.TryGetValue(value.MarkdownFilePath, out var editor))
         {
             editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
@@ -634,7 +666,10 @@ public partial class MainWindowViewModel : ViewModelBase
         Person person,
         string outputFolder,
         BiographySyncStatus syncStatus = BiographySyncStatus.Ukendt,
-        string? stableFilePath = null)
+        string? stableFilePath = null,
+        string? documentErrorCategory = null,
+        string? documentErrorMessage = null,
+        string? documentNextAction = null)
     {
         var displayName = string.IsNullOrWhiteSpace(person.FullName)
             ? $"Unavngiven ({person.RecordId})"
@@ -647,7 +682,10 @@ public partial class MainWindowViewModel : ViewModelBase
             displayName,
             markdownFilePath,
             person.RawGedcom,
-            syncStatus);
+            syncStatus,
+            documentErrorCategory,
+            documentErrorMessage,
+            documentNextAction);
     }
 
     private void ReloadDocumentCatalog(
@@ -663,7 +701,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 familyTree?.FindPerson(document.RecordId)?.RawGedcom
                     ?? (snapshot?.RawPersonSegments.TryGetValue(document.RecordId, out var rawGedcom) == true
                         ? rawGedcom
-                        : document.ErrorMessage ?? string.Empty))));
+                        : string.Empty),
+                BiographySyncStatus.Ukendt,
+                document.ErrorCategory,
+                document.ErrorMessage,
+                document.NextAction,
+                document.RequiresMigration)));
     }
 
     partial void OnPersonFilterTextChanged(string value)
