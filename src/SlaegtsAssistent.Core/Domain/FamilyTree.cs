@@ -23,6 +23,8 @@ public sealed class FamilyTree
 
     public GedcomImportReport ImportReport { get; internal set; } = GedcomImportReport.Empty;
 
+    public string? SourceFilePath { get; internal set; }
+
     public Person? FindPerson(string recordId)
     {
         if (string.IsNullOrWhiteSpace(recordId))

@@ -16,7 +16,9 @@ public sealed class BiographyTemplateLoader
 
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException("Skabelonfilen blev ikke fundet.", filePath);
+            throw new FileNotFoundException(
+                $"Skabelonfilen `{filePath}` blev ikke fundet.",
+                filePath);
         }
 
         return _parser.Parse(File.ReadAllText(filePath, Utf8WithoutBom), filePath);

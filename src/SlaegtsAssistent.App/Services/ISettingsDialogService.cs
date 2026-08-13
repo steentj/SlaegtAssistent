@@ -11,4 +11,13 @@ public interface ISettingsDialogService
     {
         return EditSettingsAsync(currentSettings);
     }
+
+    Task<AppSettings?> EditSettingsAsync(
+        AppSettings currentSettings,
+        Person? previewPerson,
+        string? gedcomFilePath,
+        string? outputFolder)
+    {
+        return EditSettingsAsync(currentSettings, previewPerson);
+    }
 }

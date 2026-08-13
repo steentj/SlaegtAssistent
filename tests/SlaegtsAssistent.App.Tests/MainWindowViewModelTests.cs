@@ -1488,6 +1488,98 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_ShouldRejectInvalidGlobalTemplateBeforeCommit()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var templatePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.md");
+        File.WriteAllText(templatePath, "# Person\n{{ person.ukendt }}\n");
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+            GlobalBiographyTemplatePath = templatePath,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settings,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportPhaseText.Should().Be("Fejl");
+            viewModel.ErrorMessage.Should().Contain("Ukendt skabelonfelt");
+            viewModel.ErrorMessage.Should().Contain(templatePath);
+            viewModel.ErrorMessage.Should().Contain("linje 2, kolonne 1");
+            Directory.Exists(outputFolder).Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(templatePath);
+            if (Directory.Exists(outputFolder))
+            {
+                Directory.Delete(outputFolder, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldResolveMediaFromGedcomFolderAndPublishMissingMediaWarning()
+    {
+        var area = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gedcomFolder = Directory.CreateDirectory(Path.Combine(area, "gedcom")).FullName;
+        var outputFolder = Path.Combine(area, "markdown");
+        var mediaFolder = Directory.CreateDirectory(Path.Combine(gedcomFolder, "medier")).FullName;
+        File.WriteAllText(Path.Combine(mediaFolder, "anna foto.jpg"), "foto");
+        var gedcomPath = Path.Combine(gedcomFolder, "familie.ged");
+        File.WriteAllLines(gedcomPath,
+        [
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 OBJE",
+            "2 FILE medier/anna foto.jpg",
+            "1 OBJE",
+            "2 FILE medier/mangler.jpg",
+            "0 TRLR",
+        ]);
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(gedcomPath),
+            settingsService: settings,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportPhaseText.Should().Be("Færdig");
+            viewModel.ImportDiagnostics.Should().Contain(item =>
+                item.Severity == GedcomDiagnosticSeverity.Warning &&
+                item.Message.Contains("mangler.jpg", StringComparison.Ordinal));
+            var markdown = File.ReadAllText(viewModel.People.Single().MarkdownFilePath);
+            markdown.Should().Contain("../gedcom/medier/anna%20foto.jpg");
+            BiographyDocumentParser.Parse(markdown).Body.Should().NotContain("mangler.jpg");
+        }
+        finally
+        {
+            Directory.Delete(area, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_WhileReviewWaits_ShouldNotWriteAndCanBeCancelled()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -2307,6 +2399,8 @@ public class MainWindowViewModelTests
             {
                 DefaultGedcomInputFolder = _loadedSettings.DefaultGedcomInputFolder,
                 DefaultMarkdownOutputFolder = _loadedSettings.DefaultMarkdownOutputFolder,
+                GlobalBiographyTemplatePath = _loadedSettings.GlobalBiographyTemplatePath,
+                Theme = _loadedSettings.Theme,
             };
         }
 
@@ -2316,6 +2410,8 @@ public class MainWindowViewModelTests
             {
                 DefaultGedcomInputFolder = settings.DefaultGedcomInputFolder,
                 DefaultMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder,
+                GlobalBiographyTemplatePath = settings.GlobalBiographyTemplatePath,
+                Theme = settings.Theme,
             };
         }
     }

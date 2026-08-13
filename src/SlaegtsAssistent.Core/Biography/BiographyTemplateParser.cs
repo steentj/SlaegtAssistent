@@ -83,7 +83,9 @@ public sealed class BiographyTemplateParser
                 block.Column);
         }
 
-        return new BiographyTemplate(source, root);
+        var template = new BiographyTemplate(source, root, BiographyTemplateContract.CurrentVersion);
+        BiographyTemplateContract.Validate(template, filePath);
+        return template;
     }
 
     private static void AddNode(

@@ -33,6 +33,15 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
         AppSettings currentSettings,
         Person? previewPerson)
     {
+        return await EditSettingsAsync(currentSettings, previewPerson, null, null);
+    }
+
+    public async Task<AppSettings?> EditSettingsAsync(
+        AppSettings currentSettings,
+        Person? previewPerson,
+        string? gedcomFilePath,
+        string? outputFolder)
+    {
         var owner = _applicationLifetime.MainWindow;
         if (owner is null)
         {
@@ -43,7 +52,9 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
             currentSettings,
             _folderPickerService,
             _templateFilePickerService,
-            previewPerson);
+            previewPerson,
+            gedcomFilePath,
+            outputFolder);
         var dialog = new SettingsWindow(viewModel);
         var result = await dialog.ShowDialog<AppSettings?>(owner);
         if (result is not null && Application.Current is { } application)

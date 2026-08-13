@@ -2,13 +2,16 @@ namespace SlaegtsAssistent.Core.Biography;
 
 public sealed class BiographyTemplate
 {
-    internal BiographyTemplate(string source, IReadOnlyList<BiographyTemplateNode> nodes)
+    internal BiographyTemplate(string source, IReadOnlyList<BiographyTemplateNode> nodes, int contractVersion)
     {
         Source = source;
         Nodes = nodes;
+        ContractVersion = contractVersion;
     }
 
     public string Source { get; }
+
+    public int ContractVersion { get; }
 
     internal IReadOnlyList<BiographyTemplateNode> Nodes { get; }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using SlaegtsAssistent.Core.Biography;
 using SlaegtsAssistent.Core.Domain;
 
@@ -39,13 +40,20 @@ public sealed class MarkdownBiographyExportService : IMarkdownBiographyExportSer
         {
             return new BiographyTemplateMarkdownGenerator(
                 submitter: familyTree.Submitter,
-                mediaBaseDirectory: outputDirectory);
+                mediaBaseDirectory: outputDirectory,
+                gedcomSourceDirectory: GetGedcomDirectory(familyTree));
         }
 
         var template = new BiographyTemplateLoader().Load(settings.GlobalBiographyTemplatePath);
         return new BiographyTemplateMarkdownGenerator(
             template.Source,
             familyTree.Submitter,
-            outputDirectory);
+            outputDirectory,
+            GetGedcomDirectory(familyTree));
     }
+
+    private static string? GetGedcomDirectory(FamilyTree familyTree) =>
+        string.IsNullOrWhiteSpace(familyTree.SourceFilePath)
+            ? null
+            : Path.GetDirectoryName(familyTree.SourceFilePath);
 }

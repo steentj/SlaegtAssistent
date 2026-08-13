@@ -245,12 +245,18 @@ public partial class MainWindowViewModel : ViewModelBase
                         return content;
                     },
                     StringComparer.Ordinal);
-                return new ImportPreflight(tree, documents, generatedBiographies, existingSnapshot);
+                var importReport = AddMediaDiagnostics(tree, outputFolder);
+                return new ImportPreflight(
+                    tree,
+                    documents,
+                    generatedBiographies,
+                    existingSnapshot,
+                    importReport);
             }, cancellationToken);
 
-            PublishImportReport(preflight.FamilyTree.ImportReport);
-            if (preflight.FamilyTree.ImportReport.IsPartial
-                && !await _partialImportDialogService.ConfirmAsync(preflight.FamilyTree.ImportReport))
+            PublishImportReport(preflight.ImportReport);
+            if (preflight.ImportReport.IsPartial
+                && !await _partialImportDialogService.ConfirmAsync(preflight.ImportReport))
             {
                 ImportPhaseText = "Afvist";
                 ErrorMessage =
@@ -358,6 +364,11 @@ public partial class MainWindowViewModel : ViewModelBase
             ImportPhaseText = "Fejl";
             ErrorMessage = $"Forhåndskontrollen af importen fejlede: {exception.Message}";
         }
+        catch (BiographyTemplateException exception)
+        {
+            ImportPhaseText = "Fejl";
+            ErrorMessage = $"Skabelonen blev afvist under importens forhåndskontrol: {exception.Message}";
+        }
         catch (ImportCommitException exception)
         {
             ImportPhaseText = "Fejl";
@@ -404,7 +415,7 @@ public partial class MainWindowViewModel : ViewModelBase
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
             Theme = Theme,
-        }, previewPerson);
+        }, previewPerson, SelectedGedcomFilePath, StandardMarkdownOutputFolder);
 
         if (updatedSettings is null)
         {
@@ -829,7 +840,10 @@ public partial class MainWindowViewModel : ViewModelBase
         var rendered = new BiographyTemplateMarkdownGenerator(
             templateSource,
             familyTree.Submitter,
-            outputFolder).Generate(
+            outputFolder,
+            string.IsNullOrWhiteSpace(familyTree.SourceFilePath)
+                ? null
+                : Path.GetDirectoryName(familyTree.SourceFilePath)).Generate(
                 selectedSnapshot,
                 importedSnapshot,
                 familyTree.People.ToDictionary(
@@ -1029,6 +1043,55 @@ public partial class MainWindowViewModel : ViewModelBase
             new GedcomDiagnosticViewModel(diagnostic)));
         ApplyDiagnosticFilter();
         OnPropertyChanged(nameof(HasImportDiagnostics));
+    }
+
+    private static GedcomImportReport AddMediaDiagnostics(
+        FamilyTree tree,
+        string outputFolder)
+    {
+        var resolver = new BiographyMediaResolver();
+        var gedcomDirectory = string.IsNullOrWhiteSpace(tree.SourceFilePath)
+            ? null
+            : Path.GetDirectoryName(tree.SourceFilePath);
+        var diagnostics = tree.ImportReport.Diagnostics.ToList();
+        var newWarnings = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var person in tree.People)
+        {
+            foreach (var media in person.Media)
+            {
+                var result = resolver.Resolve(media.File, gedcomDirectory, outputFolder);
+                if (result.Diagnostic is null)
+                {
+                    continue;
+                }
+
+                var severity = result.RequiresApproval
+                    ? GedcomDiagnosticSeverity.Error
+                    : GedcomDiagnosticSeverity.Warning;
+                var diagnostic = new GedcomDiagnostic(
+                    severity,
+                    result.Diagnostic,
+                    RecordId: person.RecordId,
+                    Tag: "OBJE",
+                    Consequence: result.RequiresApproval
+                        ? "Mediet medtages ikke uden manuel godkendelse."
+                        : "Øvrigt indhold renderes, men mediet udelades.",
+                    FilePath: tree.SourceFilePath);
+                if (!diagnostics.Contains(diagnostic))
+                {
+                    diagnostics.Add(diagnostic);
+                    tree.Diagnostics.Add(diagnostic);
+                }
+
+                newWarnings.Add(person.RecordId);
+            }
+        }
+
+        return tree.ImportReport with
+        {
+            ImportedWithWarnings = tree.ImportReport.ImportedWithWarnings + newWarnings.Count,
+            Diagnostics = diagnostics,
+        };
     }
 
     private void ApplyDiagnosticFilter()
@@ -1429,7 +1492,8 @@ public partial class MainWindowViewModel : ViewModelBase
         FamilyTree FamilyTree,
         IReadOnlyList<MarkdownDocumentInfo> Documents,
         IReadOnlyDictionary<string, string> GeneratedBiographies,
-        GedcomSnapshot? ExistingSnapshot);
+        GedcomSnapshot? ExistingSnapshot,
+        GedcomImportReport ImportReport);
 
     private sealed record PlannedDocumentChange(
         string FilePath,

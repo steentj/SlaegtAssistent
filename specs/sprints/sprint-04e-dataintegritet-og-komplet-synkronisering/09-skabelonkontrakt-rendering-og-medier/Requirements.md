@@ -10,3 +10,5 @@
 - Manglende eller utilgængelige mediefiler skal give synlig diagnostik uden at stoppe øvrig rendering.
 - En ugyldig eller manglende global skabelon må ikke kunne starte en importcommit.
 - Skabelonpreview skal bruge samme validering og rendering som den faktiske import.
+
+Den normative kontrakt, standardrendering og lokale mediepolitik er dokumenteret i [Skabelonkontrakt.md](Skabelonkontrakt.md).

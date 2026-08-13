@@ -3,7 +3,7 @@ namespace SlaegtsAssistent.Core.Biography;
 public sealed class BiographyTemplateException : Exception
 {
     public BiographyTemplateException(string message, string? filePath, int line, int column)
-        : base(message)
+        : base($"{message} ({filePath ?? "indbygget skabelon"}, linje {line}, kolonne {column})")
     {
         FilePath = filePath;
         Line = line;

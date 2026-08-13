@@ -96,3 +96,5 @@
 - [390ee0f] feat: Enhance GEDCOM import and reconciliation process
 - [998dbb0] feat: Enhance GEDCOM import and reconciliation process
 - [1d0c5c0] feat: Add BiographyConflictCandidateService and BiographyStructuredDifferenceService
+- [c135849] feat: Add BiographyConflictCandidateService and BiographyStructuredDifferenceService
+- [1a65a80] feat: Enhance biography template functionality and validation

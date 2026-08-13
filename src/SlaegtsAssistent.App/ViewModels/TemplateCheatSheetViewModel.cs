@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Markdig;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.ViewModels;
 
@@ -10,8 +11,9 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
     private static readonly MarkdownPipeline MarkdownPipeline =
         new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
 
-    public const string Content =
+    public static readonly string Content =
         "# Skabelon-cheat sheet\n\n" +
+        $"Offentlig feltkontrakt version {BiographyTemplateContract.CurrentVersion}.\n\n" +
         "Skabeloner er almindelig Markdown med sikre felter, betingelser og løkker. " +
         "Skabeloner kan ikke kalde C#-metoder, læse filer eller starte processer.\n\n" +
         "## Felter\n\n" +
@@ -75,7 +77,13 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
         "```\n\n" +
         "## Standardskabelon\n\n" +
         "Den indbyggede standardskabelon viser navn, fakta, hændelser, census, kilder, medier " +
-        "og afsender. Den kan bruges som udgangspunkt for en egen global skabelon.\n";
+        "og afsender. Den kan bruges som udgangspunkt for en egen global skabelon.\n\n" +
+        "## Normativ feltliste\n\n" +
+        ContractFieldList + "\n";
+
+    public static string ContractFieldList => string.Join(
+        "\n",
+        BiographyTemplateContract.PublicFieldPaths.Select(path => $"- `{path}`"));
 
     [ObservableProperty]
     private string searchText = string.Empty;

@@ -10,17 +10,59 @@ public sealed class SettingsWindowViewModelTests
     [Fact]
     public void Save_PersistsTemplatePathAndCancelDoesNotProduceSettings()
     {
+        var templatePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.md");
+        File.WriteAllText(templatePath, "# {{ person.fullName }}\n");
         var viewModel = new SettingsWindowViewModel(
-            new AppSettings { GlobalBiographyTemplatePath = " gammel.md " },
+            new AppSettings { GlobalBiographyTemplatePath = $" {templatePath} " },
             new StubFolderPickerService());
         AppSettings? saved = null;
         viewModel.CloseRequested += (_, settings) => saved = settings;
 
-        viewModel.SaveCommand.Execute(null);
+        try
+        {
+            viewModel.SaveCommand.Execute(null);
 
-        saved!.GlobalBiographyTemplatePath.Should().Be("gammel.md");
-        viewModel.CancelCommand.Execute(null);
-        saved.Should().BeNull();
+            saved!.GlobalBiographyTemplatePath.Should().Be(templatePath);
+            viewModel.CancelCommand.Execute(null);
+            saved.Should().BeNull();
+        }
+        finally
+        {
+            File.Delete(templatePath);
+        }
+    }
+
+    [Theory]
+    [InlineData("mangler")]
+    [InlineData("ukendt-felt")]
+    public void Save_ShouldNotCloseWithMissingOrInvalidActiveTemplate(string scenario)
+    {
+        var templatePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.md");
+        if (scenario == "ukendt-felt")
+        {
+            File.WriteAllText(templatePath, "{{ person.ukendt }}");
+        }
+        var viewModel = new SettingsWindowViewModel(
+            new AppSettings { GlobalBiographyTemplatePath = templatePath },
+            new StubFolderPickerService());
+        var wasClosed = false;
+        viewModel.CloseRequested += (_, _) => wasClosed = true;
+
+        try
+        {
+            viewModel.SaveCommand.Execute(null);
+
+            wasClosed.Should().BeFalse();
+            viewModel.TemplateErrorMessage.Should().Contain("kan ikke gemmes som aktiv");
+            viewModel.TemplateErrorMessage.Should().Contain(templatePath);
+        }
+        finally
+        {
+            if (File.Exists(templatePath))
+            {
+                File.Delete(templatePath);
+            }
+        }
     }
 
     [Fact]

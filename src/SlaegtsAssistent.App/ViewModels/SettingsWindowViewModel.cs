@@ -15,16 +15,22 @@ public partial class SettingsWindowViewModel : ViewModelBase
     private readonly IFolderPickerService _folderPickerService;
     private readonly ITemplateFilePickerService _templateFilePickerService;
     private readonly Person? _previewPerson;
+    private readonly string? _gedcomFilePath;
+    private readonly string? _previewOutputFolder;
 
     public SettingsWindowViewModel(
         AppSettings currentSettings,
         IFolderPickerService folderPickerService,
         ITemplateFilePickerService? templateFilePickerService = null,
-        Person? previewPerson = null)
+        Person? previewPerson = null,
+        string? gedcomFilePath = null,
+        string? previewOutputFolder = null)
     {
         _folderPickerService = folderPickerService;
         _templateFilePickerService = templateFilePickerService ?? new NullTemplateFilePickerService();
         _previewPerson = previewPerson;
+        _gedcomFilePath = gedcomFilePath;
+        _previewOutputFolder = previewOutputFolder;
         DefaultGedcomInputFolder = currentSettings.DefaultGedcomInputFolder;
         DefaultMarkdownOutputFolder = currentSettings.DefaultMarkdownOutputFolder;
         GlobalBiographyTemplatePath = currentSettings.GlobalBiographyTemplatePath;
@@ -136,7 +142,12 @@ public partial class SettingsWindowViewModel : ViewModelBase
                 : File.ReadAllText(GlobalBiographyTemplatePath);
             PreviewText = new BiographyTemplateRenderer().Render(
                 new BiographyTemplateLoader().Parse(template, GlobalBiographyTemplatePath),
-                BiographyTemplateContext.FromPerson(_previewPerson));
+                BiographyTemplateContext.FromPerson(
+                    _previewPerson,
+                    mediaBaseDirectory: _previewOutputFolder,
+                    gedcomSourceDirectory: string.IsNullOrWhiteSpace(_gedcomFilePath)
+                        ? null
+                        : Path.GetDirectoryName(_gedcomFilePath)));
             TemplateErrorMessage = null;
         }
         catch (Exception exception) when (
@@ -152,6 +163,11 @@ public partial class SettingsWindowViewModel : ViewModelBase
     [RelayCommand]
     private void Save()
     {
+        if (!ValidateSelectedTemplate())
+        {
+            return;
+        }
+
         CloseRequested?.Invoke(this, new AppSettings
         {
             DefaultGedcomInputFolder = NormalizeFolder(DefaultGedcomInputFolder),
@@ -159,6 +175,31 @@ public partial class SettingsWindowViewModel : ViewModelBase
             GlobalBiographyTemplatePath = NormalizePath(GlobalBiographyTemplatePath),
             Theme = Theme,
         });
+    }
+
+    private bool ValidateSelectedTemplate()
+    {
+        var path = NormalizePath(GlobalBiographyTemplatePath);
+        if (path is null)
+        {
+            TemplateErrorMessage = null;
+            return true;
+        }
+
+        try
+        {
+            new BiographyTemplateLoader().Load(path);
+            TemplateErrorMessage = null;
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or BiographyTemplateException)
+        {
+            TemplateErrorMessage = $"Skabelonen kan ikke gemmes som aktiv: {exception.Message}";
+            return false;
+        }
     }
 
     [RelayCommand]

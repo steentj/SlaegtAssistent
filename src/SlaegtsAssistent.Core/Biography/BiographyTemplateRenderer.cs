@@ -56,6 +56,11 @@ public sealed class BiographyTemplateRenderer
     private static object? Resolve(BiographyTemplateContext root, object? current, string path)
     {
         var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 1 && current is not null && !ReferenceEquals(current, root))
+        {
+            return GetMember(current, segments[0]);
+        }
+
         object? value = segments[0] switch
         {
             "person" => root.Person,
@@ -92,6 +97,7 @@ public sealed class BiographyTemplateRenderer
                 "deathDate" => person.DeathDate,
                 "deathPlace" => person.DeathPlace,
                 "parents" => person.Parents,
+                "parentNames" => person.ParentNames,
                 _ => null,
             },
             PersonReferenceTemplateContext person => name switch
@@ -103,7 +109,7 @@ public sealed class BiographyTemplateRenderer
             EventTemplateContext @event => name switch
             {
                 "tag" => @event.Tag,
-                "category" => @event.Category.ToString(),
+                "category" => DanishCategory(@event.Category),
                 "value" => @event.Value,
                 "date" => @event.Date,
                 "place" => @event.Place,
@@ -160,6 +166,19 @@ public sealed class BiographyTemplateRenderer
             _ => null,
         };
     }
+
+    private static string DanishCategory(GedcomEventCategory category) => category switch
+    {
+        GedcomEventCategory.Birth => "Fødsel",
+        GedcomEventCategory.Baptism => "Dåb",
+        GedcomEventCategory.Confirmation => "Konfirmation",
+        GedcomEventCategory.Marriage => "Vielse",
+        GedcomEventCategory.Death => "Død",
+        GedcomEventCategory.Burial => "Begravelse",
+        GedcomEventCategory.Census => "Folketælling",
+        GedcomEventCategory.MilitaryService => "Militærtjeneste",
+        _ => "Anden hændelse",
+    };
 
     private static bool IsTruthy(object? value)
     {

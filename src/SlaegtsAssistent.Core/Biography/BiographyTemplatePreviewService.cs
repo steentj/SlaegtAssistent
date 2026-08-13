@@ -8,7 +8,8 @@ public sealed class BiographyTemplatePreviewService
         string templatePath,
         Person person,
         Submitter? submitter = null,
-        string? mediaBaseDirectory = null)
+        string? mediaBaseDirectory = null,
+        string? gedcomSourceDirectory = null)
     {
         if (string.IsNullOrWhiteSpace(templatePath))
         {
@@ -18,7 +19,11 @@ public sealed class BiographyTemplatePreviewService
         ArgumentNullException.ThrowIfNull(person);
 
         var template = new BiographyTemplateLoader().Load(templatePath);
-        var context = BiographyTemplateContext.FromPerson(person, submitter, mediaBaseDirectory);
+        var context = BiographyTemplateContext.FromPerson(
+            person,
+            submitter,
+            mediaBaseDirectory,
+            gedcomSourceDirectory);
         return new BiographyTemplateRenderer().Render(template, context);
     }
 }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Tests;
 
@@ -15,6 +16,17 @@ public sealed class TemplateCheatSheetViewModelTests
         viewModel.FilteredContent.Should().Contain("submitter.name");
         viewModel.FilteredContent.Should().Contain("{{#each allEvents}}");
         viewModel.PreviewHtml.Should().Contain("<table");
+    }
+
+    [Fact]
+    public void Content_ShouldMatchEveryFieldInVersionedContract()
+    {
+        TemplateCheatSheetViewModel.Content.Should().Contain(
+            $"feltkontrakt version {BiographyTemplateContract.CurrentVersion}");
+        foreach (var path in BiographyTemplateContract.PublicFieldPaths)
+        {
+            TemplateCheatSheetViewModel.ContractFieldList.Should().Contain($"`{path}`");
+        }
     }
 
     [Fact]

@@ -60,6 +60,7 @@ public sealed class GedcomLoader : IGedcomLoader
         {
             var parsedGedcom = ParseGedcom(filePath, cancellationToken);
             var tree = existingTree ?? new FamilyTree();
+            tree.SourceFilePath = Path.GetFullPath(filePath);
 
             MergeIntoTree(tree, parsedGedcom, cancellationToken);
 
