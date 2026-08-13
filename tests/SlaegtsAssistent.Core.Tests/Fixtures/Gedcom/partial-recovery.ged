@@ -1,0 +1,18 @@
+0 HEAD
+1 SOUR SlaegtsAssistentTest
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Anna /Jensen/
+1 BIRT
+2 DATE 12 MAR 1900
+ugyldig lokal linje
+0 INDI
+1 NAME Mangler /RecordId/
+0 @I2@ INDI
+1 NAME Bent /Jensen/
+1 _FLYT Flytning
+2 DATE 1925
+0 TRLR

@@ -54,6 +54,7 @@ public partial class App : Application
         services.AddSingleton<IApplicationSettingsService, JsonApplicationSettingsService>();
         services.AddSingleton<ISettingsDialogService, AvaloniaSettingsDialogService>();
         services.AddSingleton<IUserDialogService, AvaloniaUserDialogService>();
+        services.AddSingleton<IPartialImportDialogService, AvaloniaPartialImportDialogService>();
         services.AddSingleton<IUnsavedChangesDialogService, AvaloniaUnsavedChangesDialogService>();
         services.AddSingleton<IApplicationControlService, AvaloniaApplicationControlService>();
         services.AddSingleton<IMarkdownBiographyExportService, MarkdownBiographyExportService>();

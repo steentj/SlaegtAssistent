@@ -224,12 +224,13 @@ public class GedcomLoaderTests
     }
 
     [Fact]
-    public void Load_MalformedGedcom_ThrowsGedcomLoadExceptionWithMessage()
+    public void Load_MalformedPersonRecord_SkipsRecordAndReportsPartialImport()
     {
-        var action = () => _loader.Load(FixturePath("malformed.ged"));
+        var tree = _loader.Load(FixturePath("malformed.ged"));
 
-        var exception = action.Should().Throw<GedcomLoadException>().Which;
-        exception.Message.Should().NotBeNullOrWhiteSpace();
+        tree.People.Should().BeEmpty();
+        tree.ImportReport.SkippedRecords.Should().Be(1);
+        tree.Diagnostics.Should().ContainSingle(diagnostic => diagnostic.Tag == "INDI");
     }
 
     [Fact]
@@ -239,7 +240,7 @@ public class GedcomLoaderTests
         var action = () => _loader.Load(missingPath);
 
         action.Should().Throw<GedcomLoadException>()
-            .WithMessage("GEDCOM file was not found:*");
+            .WithMessage("GEDCOM-filen blev ikke fundet:*");
     }
 
     private static string FixturePath(string fileName)

@@ -48,12 +48,12 @@ public sealed class GedcomLoader : IGedcomLoader
         cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            throw new GedcomLoadException("A GEDCOM file path is required.");
+            throw new GedcomLoadException("Der skal angives en sti til en GEDCOM-fil.");
         }
 
         if (!File.Exists(filePath))
         {
-            throw new GedcomLoadException($"GEDCOM file was not found: '{filePath}'.");
+            throw new GedcomLoadException($"GEDCOM-filen blev ikke fundet: '{filePath}'.");
         }
 
         try
@@ -65,6 +65,21 @@ public sealed class GedcomLoader : IGedcomLoader
 
             return tree;
         }
+        catch (GedcomLoadException exception) when (exception.ImportReport is null)
+        {
+            var diagnostic = new GedcomDiagnostic(
+                GedcomDiagnosticSeverity.Fatal,
+                exception.Message,
+                null,
+                null,
+                "FIL",
+                "Hele importen blev afbrudt uden ændringer.",
+                filePath);
+            throw new GedcomLoadException(
+                exception.Message,
+                exception,
+                new GedcomImportReport(0, 0, 0, 1, [diagnostic]));
+        }
         catch (GedcomLoadException)
         {
             throw;
@@ -75,9 +90,19 @@ public sealed class GedcomLoader : IGedcomLoader
         }
         catch (Exception exception)
         {
+            var message = $"GEDCOM-filen '{filePath}' kunne ikke indlæses. {exception.Message}";
+            var diagnostic = new GedcomDiagnostic(
+                GedcomDiagnosticSeverity.Fatal,
+                message,
+                null,
+                null,
+                "FIL",
+                "Hele importen blev afbrudt uden ændringer.",
+                filePath);
             throw new GedcomLoadException(
-                $"Failed to load GEDCOM file '{filePath}'. {exception.Message}",
-                exception);
+                message,
+                exception,
+                new GedcomImportReport(0, 0, 0, 1, [diagnostic]));
         }
     }
 
@@ -86,9 +111,10 @@ public sealed class GedcomLoader : IGedcomLoader
         CancellationToken cancellationToken)
     {
         var decoded = ReadGedcomFile(filePath);
+        var prepared = PrepareGedcomText(decoded.Text, filePath);
         var rawGedcomByRecordId = ReadRawPersonSegments(decoded.Text);
         cancellationToken.ThrowIfCancellationRequested();
-        using var stream = CreateParserStream(decoded.Text);
+        using var stream = CreateParserStream(prepared.Text);
         using var parser = new Parser(stream);
 
         var people = new Dictionary<string, ParsedPerson>(StringComparer.Ordinal);
@@ -156,7 +182,7 @@ public sealed class GedcomLoader : IGedcomLoader
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
                             throw new GedcomLoadException(
-                                $"Malformed GEDCOM: INDI record without an id at line {parser.No}.");
+                                $"Ugyldig GEDCOM: Personpost uden id på linje {parser.No}.");
                         }
 
                         if (!people.TryGetValue(value, out currentPerson))
@@ -172,7 +198,7 @@ public sealed class GedcomLoader : IGedcomLoader
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
                             throw new GedcomLoadException(
-                                $"Malformed GEDCOM: FAM record without an id at line {parser.No}.");
+                                $"Ugyldig GEDCOM: Familiepost uden id på linje {parser.No}.");
                         }
 
                         currentFamily = new ParsedFamily(value);
@@ -183,7 +209,7 @@ public sealed class GedcomLoader : IGedcomLoader
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
                             throw new GedcomLoadException(
-                                $"Malformed GEDCOM: SOUR record without an id at line {parser.No}.");
+                                $"Ugyldig GEDCOM: Kildepost uden id på linje {parser.No}.");
                         }
 
                         currentSource = new ParsedSource(value);
@@ -194,7 +220,7 @@ public sealed class GedcomLoader : IGedcomLoader
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
                             throw new GedcomLoadException(
-                                $"Malformed GEDCOM: OBJE record without an id at line {parser.No}.");
+                                $"Ugyldig GEDCOM: Mediepost uden id på linje {parser.No}.");
                         }
 
                         currentMedia = new ParsedMedia(value);
@@ -205,7 +231,7 @@ public sealed class GedcomLoader : IGedcomLoader
                         if (!parser.HasId || string.IsNullOrWhiteSpace(value))
                         {
                             throw new GedcomLoadException(
-                                $"Malformed GEDCOM: SUBM record without an id at line {parser.No}.");
+                                $"Ugyldig GEDCOM: Afsenderpost uden id på linje {parser.No}.");
                         }
 
                         currentSubmitter = new ParsedSubmitter(value);
@@ -275,6 +301,28 @@ public sealed class GedcomLoader : IGedcomLoader
             }
         }
 
+        var diagnostics = decoded.Diagnostics
+            .Concat(prepared.Diagnostics)
+            .Concat(people.Values.SelectMany(person => person.Diagnostics))
+            .Concat(families.SelectMany(family => family.Diagnostics))
+            .Select(diagnostic => diagnostic with
+            {
+                FilePath = diagnostic.FilePath ?? filePath,
+                Consequence = diagnostic.Consequence
+                    ?? "Værdien blev bevaret som ukendt og kræver brugerens gennemgang.",
+            })
+            .ToList();
+
+        foreach (var person in people.Values)
+        {
+            person.Diagnostics.Clear();
+        }
+
+        foreach (var family in families)
+        {
+            family.Diagnostics.Clear();
+        }
+
         return new ParsedGedcom(
             people.Values.ToList(),
             families,
@@ -282,7 +330,8 @@ public sealed class GedcomLoader : IGedcomLoader
             media.Values.ToList(),
             submitters.Values.ToList(),
             headerSubmitterId,
-            decoded.Diagnostics);
+            diagnostics,
+            prepared.SkippedRecords);
     }
 
     private static void ParsePersonLine(
@@ -366,7 +415,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     currentEvent = new ParsedEvent(tag, NormalizeToken(value));
                     person.Events.Add(currentEvent);
                     person.Diagnostics.Add(new GedcomDiagnostic(
-                        "Warning",
+                        GedcomDiagnosticSeverity.Warning,
                         $"Ukendt GEDCOM-hændelsestag '{tag}' er bevaret som en anden hændelse.",
                         line,
                         person.RecordId,
@@ -645,7 +694,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 currentEvent = new ParsedEvent(tag, NormalizeToken(value));
                 family.Events.Add(currentEvent);
                 family.Diagnostics.Add(new GedcomDiagnostic(
-                    "Warning",
+                    GedcomDiagnosticSeverity.Warning,
                     $"Ukendt GEDCOM-familietag '{tag}' er bevaret som en anden hændelse.",
                     line,
                     family.RecordId,
@@ -697,7 +746,7 @@ public sealed class GedcomLoader : IGedcomLoader
             cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(parsedSource.RecordId))
             {
-                throw new GedcomLoadException("Malformed GEDCOM: SOUR record without an id.");
+                throw new GedcomLoadException("Ugyldig GEDCOM: Kildepost uden id.");
             }
 
             var source = tree.GetOrAddSource(parsedSource.RecordId);
@@ -709,7 +758,7 @@ public sealed class GedcomLoader : IGedcomLoader
             cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(parsedMedia.RecordId))
             {
-                throw new GedcomLoadException("Malformed GEDCOM: OBJE record without an id.");
+                throw new GedcomLoadException("Ugyldig GEDCOM: Mediepost uden id.");
             }
 
             var media = tree.GetOrAddMedia(parsedMedia.RecordId);
@@ -860,6 +909,27 @@ public sealed class GedcomLoader : IGedcomLoader
         {
             tree.Diagnostics.Add(diagnostic);
         }
+
+        var importedRecordIdsForReport = parsedGedcom.People.Select(person => person.RecordId)
+            .Concat(parsedGedcom.Families.Select(family => family.RecordId))
+            .Concat(parsedGedcom.Sources.Select(source => source.RecordId))
+            .Concat(parsedGedcom.Media.Select(mediaRecord => mediaRecord.RecordId))
+            .Concat(parsedGedcom.Submitters.Select(submitter => submitter.RecordId))
+            .Where(recordId => !string.IsNullOrWhiteSpace(recordId))
+            .Select(recordId => recordId!)
+            .ToHashSet(StringComparer.Ordinal);
+        var importedWithWarnings = tree.Diagnostics
+            .Where(diagnostic => diagnostic.RecordId is not null
+                && importedRecordIdsForReport.Contains(diagnostic.RecordId))
+            .Select(diagnostic => diagnostic.RecordId!)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        tree.ImportReport = new GedcomImportReport(
+            importedRecordIdsForReport.Count,
+            importedWithWarnings,
+            parsedGedcom.SkippedRecords,
+            0,
+            tree.Diagnostics.ToList());
     }
 
     private static Submitter? CreateSubmitter(
@@ -1137,6 +1207,231 @@ public sealed class GedcomLoader : IGedcomLoader
         return new MemoryStream(Encoding.UTF8.GetBytes(normalizedLineEndings));
     }
 
+    private static PreparedGedcom PrepareGedcomText(string text, string filePath)
+    {
+        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var lines = normalized.Split('\n');
+        var nonEmptyLines = lines
+            .Select((line, index) => new { Line = line, Index = index })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Line))
+            .ToList();
+
+        if (nonEmptyLines.Count == 0 || nonEmptyLines[0].Line.Trim() != "0 HEAD")
+        {
+            throw CreateFatalStructureException(
+                filePath,
+                nonEmptyLines.Count == 0 ? 1 : nonEmptyLines[0].Index + 1,
+                "HEAD",
+                "GEDCOM-filen mangler en gyldig HEAD-post som første post.");
+        }
+
+        if (nonEmptyLines[^1].Line.Trim() != "0 TRLR")
+        {
+            throw CreateFatalStructureException(
+                filePath,
+                nonEmptyLines[^1].Index + 1,
+                "TRLR",
+                "GEDCOM-filen mangler en afsluttende TRLR-post.");
+        }
+
+        var output = new List<string>(lines.Length);
+        var diagnostics = new List<GedcomDiagnostic>();
+        var skippedRecords = 0;
+        var skipCurrentRecord = false;
+        var seenRecordIds = new HashSet<string>(StringComparer.Ordinal);
+        string? currentRecordId = null;
+        string? currentTag = null;
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+            if (line.StartsWith("0 ", StringComparison.Ordinal))
+            {
+                skipCurrentRecord = false;
+                currentRecordId = null;
+                currentTag = ReadLevelZeroTag(line);
+                TryReadRecordHeader(line, out currentRecordId);
+
+                if (RequiresRecordId(currentTag) && currentRecordId is null)
+                {
+                    skipCurrentRecord = true;
+                    skippedRecords++;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Error,
+                        RecordIdErrorMessage(currentTag),
+                        index + 1,
+                        null,
+                        currentTag,
+                        RecordSkipConsequence(currentTag),
+                        filePath));
+                    continue;
+                }
+
+                if (currentRecordId is not null && !seenRecordIds.Add(currentRecordId))
+                {
+                    skipCurrentRecord = true;
+                    skippedRecords++;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Error,
+                        $"Record-id '{currentRecordId}' forekommer flere gange i GEDCOM-filen.",
+                        index + 1,
+                        currentRecordId,
+                        currentTag,
+                        "Den senere dubletpost blev sprunget over; den første post blev bevaret.",
+                        filePath));
+                    continue;
+                }
+
+                if (currentTag is "NOTE" or "REPO" or "SUBN")
+                {
+                    skipCurrentRecord = true;
+                    skippedRecords++;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Error,
+                        $"GEDCOM-posten '{currentTag}' har endnu ikke et selvstændigt domæneobjekt.",
+                        index + 1,
+                        currentRecordId,
+                        currentTag,
+                        "Posten blev ikke importeret; pointere i understøttede felter blev bevaret.",
+                        filePath));
+                    continue;
+                }
+
+                if (!IsSupportedLevelZeroRecord(currentTag))
+                {
+                    skipCurrentRecord = true;
+                    skippedRecords++;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Error,
+                        $"Den ukendte GEDCOM-post '{currentTag}' kan ikke fortolkes sikkert.",
+                        index + 1,
+                        currentRecordId,
+                        currentTag,
+                        "Den ukendte post blev sprunget over; øvrige poster blev bevaret.",
+                        filePath));
+                    continue;
+                }
+            }
+
+            if (skipCurrentRecord)
+            {
+                continue;
+            }
+
+            if (line.Length > 0 && !IsSyntacticallyValidGedcomLine(line))
+            {
+                diagnostics.Add(new GedcomDiagnostic(
+                    GedcomDiagnosticSeverity.Error,
+                    "GEDCOM-linjen har ugyldig syntaks.",
+                    index + 1,
+                    currentRecordId,
+                    null,
+                    "Kun det ugyldige underfelt blev sprunget over.",
+                    filePath));
+                continue;
+            }
+
+            output.Add(line);
+        }
+
+        return new PreparedGedcom(string.Join('\n', output), diagnostics, skippedRecords);
+    }
+
+    private static GedcomLoadException CreateFatalStructureException(
+        string filePath,
+        int line,
+        string tag,
+        string message)
+    {
+        var diagnostic = new GedcomDiagnostic(
+            GedcomDiagnosticSeverity.Fatal,
+            message,
+            line,
+            null,
+            tag,
+            "Hele importen blev afbrudt uden ændringer.",
+            filePath);
+        return new GedcomLoadException(
+            message,
+            new GedcomImportReport(0, 0, 0, 1, [diagnostic]));
+    }
+
+    private static string? ReadLevelZeroTag(string line)
+    {
+        var fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return fields.Length switch
+        {
+            >= 3 when fields[1].StartsWith('@') => fields[2],
+            >= 2 => fields[1],
+            _ => null,
+        };
+    }
+
+    private static bool RequiresRecordId(string? tag)
+    {
+        return tag is "INDI" or "FAM" or "SOUR" or "OBJE" or "SUBM";
+    }
+
+    private static bool IsSupportedLevelZeroRecord(string? tag)
+    {
+        return tag is "HEAD" or "TRLR" or "INDI" or "FAM" or "SOUR" or "OBJE" or "SUBM";
+    }
+
+    private static bool TryReadRecordHeader(string line, out string? recordId)
+    {
+        recordId = null;
+        var fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (fields.Length != 3
+            || fields[0] != "0"
+            || !fields[1].StartsWith('@')
+            || !fields[1].EndsWith('@')
+            || fields[1].Length < 3)
+        {
+            return false;
+        }
+
+        recordId = fields[1];
+        return true;
+    }
+
+    private static string RecordIdErrorMessage(string? tag)
+    {
+        return tag switch
+        {
+            "INDI" => "Personposten mangler et gyldigt record-id.",
+            "FAM" => "Familieposten mangler et gyldigt record-id.",
+            "SOUR" => "Kildeposten mangler et gyldigt record-id.",
+            "OBJE" => "Medieposten mangler et gyldigt record-id.",
+            "SUBM" => "Afsenderposten mangler et gyldigt record-id.",
+            _ => "GEDCOM-posten mangler et gyldigt record-id.",
+        };
+    }
+
+    private static string RecordSkipConsequence(string? tag)
+    {
+        return tag switch
+        {
+            "INDI" => "Personposten blev sprunget over; øvrige poster blev bevaret.",
+            "FAM" => "Familieposten blev sprunget over; øvrige poster blev bevaret.",
+            "SOUR" => "Kildeposten blev sprunget over; øvrige poster blev bevaret.",
+            "OBJE" => "Medieposten blev sprunget over; øvrige poster blev bevaret.",
+            "SUBM" => "Afsenderposten blev sprunget over; øvrige poster blev bevaret.",
+            _ => "Posten blev sprunget over; øvrige poster blev bevaret.",
+        };
+    }
+
+    private static bool IsSyntacticallyValidGedcomLine(string line)
+    {
+        var firstSpace = line.IndexOf(' ');
+        if (firstSpace <= 0 || !int.TryParse(line[..firstSpace], out _))
+        {
+            return false;
+        }
+
+        var remainder = line[(firstSpace + 1)..];
+        return remainder.Length > 0 && !char.IsWhiteSpace(remainder[0]);
+    }
+
     private static DecodedGedcom ReadGedcomFile(string filePath)
     {
         var bytes = File.ReadAllBytes(filePath);
@@ -1153,8 +1448,9 @@ public sealed class GedcomLoader : IGedcomLoader
         if (characterSet is null)
         {
             diagnostics.Add(new GedcomDiagnostic(
-                "Warning",
-                "GEDCOM-headeren mangler det obligatoriske CHAR-felt; filen er fortolket som UTF-8."));
+                GedcomDiagnosticSeverity.Warning,
+                "GEDCOM-headeren mangler det obligatoriske CHAR-felt; filen er fortolket som UTF-8.",
+                Consequence: "Importen fortsatte med streng UTF-8-afkodning; resultatet kræver gennemgang."));
             characterSet = "UTF-8";
         }
 
@@ -1539,6 +1835,11 @@ public sealed class GedcomLoader : IGedcomLoader
 
     private sealed record PhysicalEncoding(string Name, int PreambleLength);
 
+    private sealed record PreparedGedcom(
+        string Text,
+        IReadOnlyCollection<GedcomDiagnostic> Diagnostics,
+        int SkippedRecords);
+
     private sealed record ParsedGedcom(
         IReadOnlyCollection<ParsedPerson> People,
         IReadOnlyCollection<ParsedFamily> Families,
@@ -1546,7 +1847,8 @@ public sealed class GedcomLoader : IGedcomLoader
         IReadOnlyCollection<ParsedMedia> Media,
         IReadOnlyCollection<ParsedSubmitter> Submitters,
         string? HeaderSubmitterId,
-        IReadOnlyCollection<GedcomDiagnostic> Diagnostics);
+        IReadOnlyCollection<GedcomDiagnostic> Diagnostics,
+        int SkippedRecords);
 
     private sealed class ParsedPerson
     {

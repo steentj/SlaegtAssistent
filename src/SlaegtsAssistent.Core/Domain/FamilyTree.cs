@@ -21,6 +21,8 @@ public sealed class FamilyTree
 
     public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
 
+    public GedcomImportReport ImportReport { get; internal set; } = GedcomImportReport.Empty;
+
     public Person? FindPerson(string recordId)
     {
         if (string.IsNullOrWhiteSpace(recordId))

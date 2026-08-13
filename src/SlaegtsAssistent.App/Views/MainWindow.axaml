@@ -244,6 +244,43 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                         </Expander>
 
+                        <Expander Header="Importrapport"
+                                  IsVisible="{Binding HasImportDiagnostics}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{Binding ImportSummaryText}"
+                                           TextWrapping="Wrap"
+                                           FontWeight="SemiBold" />
+                                <ComboBox ItemsSource="{Binding DiagnosticSeverityFilters}"
+                                          SelectedItem="{Binding SelectedDiagnosticSeverityFilter}" />
+                                <ListBox ItemsSource="{Binding ImportDiagnostics}"
+                                         SelectedItem="{Binding SelectedImportDiagnostic}"
+                                         MaxHeight="280">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:GedcomDiagnosticViewModel">
+                                            <StackPanel Spacing="2" Margin="4">
+                                                <TextBlock Text="{Binding SeverityText}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{DynamicResource AppDangerBrush}" />
+                                                <TextBlock Text="{Binding LocationText}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}" />
+                                                <TextBlock Text="{Binding Message}"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Consequence}"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}" />
+                                                <TextBlock Text="{Binding FilePath}"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </Expander>
+
                         <Expander Header="Filer">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="GEDCOM-fil" FontWeight="SemiBold" />

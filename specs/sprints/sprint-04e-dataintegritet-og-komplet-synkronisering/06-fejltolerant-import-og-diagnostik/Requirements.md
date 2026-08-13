@@ -9,3 +9,5 @@
 - En delvis import skal kræve brugerens udtrykkelige accept før commit.
 - Den tidligere arbejdsområdetilstand skal bevares, hvis brugeren afviser en delvis import.
 - Ældre tests, der kræver total afbrydelse ved enhver ugyldig post, skal opdateres til Missionens fejltolerante kontrakt.
+
+De normative grænser mellem fatale, postisolerbare og feltisolerbare fejl er dokumenteret i [Fejlklassifikation.md](Fejlklassifikation.md).

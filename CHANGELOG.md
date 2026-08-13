@@ -1,7 +1,8 @@
 # Changelog
 
 ## 2026-08-12
-- [ada97fe] Add GEDCOM fixture and completeness tests for GEDCOM 5.5.
+- [441c578] feat: Add import diagnostics and reporting for GEDCOM file imports
+- [6ce899a] Add GEDCOM fixture and completeness tests for GEDCOM 5.5.1
 - [5083b39] feat: Update validation documentation to reflect manual catalog test completion and approval details
 - [b55e0ed] Implement robust document validation and error handling in BiographyDocumentParser
 - [42a16ec] Implement Sprint 04E: Data Integrity and Complete Synchronization

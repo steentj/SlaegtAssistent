@@ -1794,6 +1794,195 @@ public class MainWindowViewModelTests
         viewModel.HasDirtyEditors.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldNotCommitPartialImport_WhenUserRejectsReport()
+    {
+        using var gedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 INDI",
+            "1 NAME Mangler /Id/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var export = new RecordingMarkdownBiographyExportService();
+        var snapshot = new RecordingGedcomSnapshotStore();
+        var partialDialog = new RecordingPartialImportDialogService(false);
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                gedcomLoader: new GedcomLoader(),
+                gedcomFilePickerService: new FakeGedcomFilePickerService(gedcom.Path),
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = outputFolder,
+                }),
+                markdownBiographyExportService: export,
+                gedcomSnapshotStore: snapshot,
+                partialImportDialogService: partialDialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            partialDialog.Calls.Should().Be(1);
+            partialDialog.LastReport!.SkippedRecords.Should().Be(1);
+            export.Calls.Should().Be(0);
+            snapshot.SaveCalls.Should().Be(0);
+            viewModel.People.Should().BeEmpty();
+            viewModel.SelectedGedcomFilePath.Should().BeNull();
+            viewModel.ImportPhaseText.Should().Be("Afvist");
+            viewModel.ErrorMessage.Should().Contain("Arbejdsområdets filer og aktive data er uændrede");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldCommitAndPublishReport_WhenPartialImportIsAccepted()
+    {
+        using var gedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 INDI",
+            "1 NAME Mangler /Id/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var snapshot = new RecordingGedcomSnapshotStore();
+        var partialDialog = new RecordingPartialImportDialogService(true);
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                gedcomLoader: new GedcomLoader(),
+                gedcomFilePickerService: new FakeGedcomFilePickerService(gedcom.Path),
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = outputFolder,
+                }),
+                gedcomSnapshotStore: snapshot,
+                partialImportDialogService: partialDialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            snapshot.SaveCalls.Should().Be(1);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I1@");
+            viewModel.ImportSummaryText.Should().Be(
+                "Importerede: 1 · Med advarsler: 0 · Oversprungne: 1 · Fatale: 0");
+            viewModel.ImportDiagnostics.Should().ContainSingle();
+            viewModel.HasImportDiagnostics.Should().BeTrue();
+            viewModel.ImportPhaseText.Should().Be("Færdig");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ImportDiagnostics_ShouldFilterAndNavigateToRelevantPerson()
+    {
+        using var gedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "ugyldig linje",
+            "1 _UKENDT Bevares",
+            "0 @I2@ INDI",
+            "1 NAME Bent /Jensen/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                gedcomLoader: new GedcomLoader(),
+                gedcomFilePickerService: new FakeGedcomFilePickerService(gedcom.Path),
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = outputFolder,
+                }),
+                partialImportDialogService: new RecordingPartialImportDialogService(true));
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ImportDiagnostics.Should().HaveCount(2);
+            viewModel.SelectedDiagnosticSeverityFilter = "Fejl";
+            viewModel.ImportDiagnostics.Should().ContainSingle(item => item.Message.Contains("ugyldig syntaks"));
+            viewModel.SelectedPerson = viewModel.People.Single(person => person.RecordId == "@I2@");
+            viewModel.SelectedImportDiagnostic = viewModel.ImportDiagnostics.Single();
+            viewModel.SelectedPerson!.RecordId.Should().Be("@I1@");
+            viewModel.SelectedDiagnosticSeverityFilter = "Advarsler";
+            viewModel.ImportDiagnostics.Should().ContainSingle(item => item.Message.Contains("_UKENDT"));
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldPublishFatalReportWithoutCommit()
+    {
+        using var validGedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I0@ INDI",
+            "1 NAME Eksisterende /Person/",
+            "0 TRLR");
+        using var fatalGedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var snapshot = new RecordingGedcomSnapshotStore();
+        var partialDialog = new RecordingPartialImportDialogService(true);
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                gedcomLoader: new GedcomLoader(),
+                gedcomFilePickerService: new SequencedGedcomFilePickerService(
+                    [validGedcom.Path, fatalGedcom.Path]),
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = outputFolder,
+                }),
+                gedcomSnapshotStore: snapshot,
+                partialImportDialogService: partialDialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I0@");
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            partialDialog.Calls.Should().Be(0);
+            snapshot.SaveCalls.Should().Be(1);
+            viewModel.ImportPhaseText.Should().Be("Fejl");
+            viewModel.ImportSummaryText.Should().Be(
+                "Importerede: 0 · Med advarsler: 0 · Oversprungne: 0 · Fatale: 1");
+            viewModel.ImportDiagnostics.Should().ContainSingle(item =>
+                item.Severity == GedcomDiagnosticSeverity.Fatal
+                && item.Diagnostic.Tag == "TRLR");
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I0@");
+            viewModel.SelectedGedcomFilePath.Should().Be(validGedcom.Path);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
     private static MainWindowViewModel CreateViewModel(
         IGedcomLoader? gedcomLoader = null,
         IGedcomFilePickerService? gedcomFilePickerService = null,
@@ -1807,7 +1996,8 @@ public class MainWindowViewModelTests
         IMarkdownFileStore? markdownFileStore = null,
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
         IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
-        IGedcomSnapshotStore? gedcomSnapshotStore = null)
+        IGedcomSnapshotStore? gedcomSnapshotStore = null,
+        IPartialImportDialogService? partialImportDialogService = null)
     {
         return new MainWindowViewModel(
             gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
@@ -1822,7 +2012,8 @@ public class MainWindowViewModelTests
             markdownFileStore ?? new RecordingMarkdownFileStore(),
             markdownDocumentCatalog,
             gedcomDifferenceDialogService,
-            gedcomSnapshotStore: gedcomSnapshotStore);
+            gedcomSnapshotStore: gedcomSnapshotStore,
+            partialImportDialogService: partialImportDialogService);
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)
@@ -2136,6 +2327,20 @@ public class MainWindowViewModelTests
         {
             Calls++;
             return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class RecordingPartialImportDialogService(bool result) : IPartialImportDialogService
+    {
+        public int Calls { get; private set; }
+
+        public GedcomImportReport? LastReport { get; private set; }
+
+        public Task<bool> ConfirmAsync(GedcomImportReport report)
+        {
+            Calls++;
+            LastReport = report;
+            return Task.FromResult(result);
         }
     }
 

@@ -9,7 +9,7 @@
 - [x] Danske tegn bevares uden lydløs erstatning.
 - [x] Output og rækkefølge er deterministisk.
 - [x] `dotnet build` og `dotnet test` er grønne.
-- [ ] Manuel sammenligning med repræsentativ GEDCOM er gennemført.
+- [x] Manuel sammenligning med repræsentativ GEDCOM er gennemført.
 
 ## Automatiseret resultat
 
@@ -32,9 +32,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-12
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsmappe, 153 automatiske tests bestået
+- **Bemærkninger:** Den repræsentative GEDCOM 5.5.1-import og genimport er godkendt.
 
-- [ ] Feature 05 er godkendt, og feature 06 må påbegyndes.
+- [x] Feature 05 er godkendt, og feature 06 må påbegyndes.

@@ -32,8 +32,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
     private readonly IMarkdownCheatSheetService _markdownCheatSheetService;
     private readonly ITemplateCheatSheetService _templateCheatSheetService;
+    private readonly IPartialImportDialogService _partialImportDialogService;
     private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
+    private readonly List<GedcomDiagnosticViewModel> _allImportDiagnostics = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
     private FamilyTree? _familyTree;
     private CancellationTokenSource? _importCancellation;
@@ -68,7 +70,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
         IMarkdownCheatSheetService? markdownCheatSheetService = null,
         ITemplateCheatSheetService? templateCheatSheetService = null,
-        IGedcomSnapshotStore? gedcomSnapshotStore = null)
+        IGedcomSnapshotStore? gedcomSnapshotStore = null,
+        IPartialImportDialogService? partialImportDialogService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -85,6 +88,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
         _markdownCheatSheetService = markdownCheatSheetService ?? new NullMarkdownCheatSheetService();
         _templateCheatSheetService = templateCheatSheetService ?? new NullTemplateCheatSheetService();
+        _partialImportDialogService = partialImportDialogService ?? new RejectingPartialImportDialogService();
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
@@ -150,7 +154,22 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int importProgressPercent;
 
+    [ObservableProperty]
+    private string importSummaryText = "Ingen importrapport";
+
+    [ObservableProperty]
+    private string selectedDiagnosticSeverityFilter = "Alle";
+
+    [ObservableProperty]
+    private GedcomDiagnosticViewModel? selectedImportDiagnostic;
+
     public ObservableCollection<PersonListItemViewModel> People { get; } = [];
+
+    public ObservableCollection<GedcomDiagnosticViewModel> ImportDiagnostics { get; } = [];
+
+    public IReadOnlyList<string> DiagnosticSeverityFilters { get; } = ["Alle", "Advarsler", "Fejl"];
+
+    public bool HasImportDiagnostics => _allImportDiagnostics.Count > 0;
 
     public string ActivePersonText => SelectedPerson is null
         ? "Ingen person valgt"
@@ -227,6 +246,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 return new ImportPreflight(tree, documents, generatedBiographies);
             }, cancellationToken);
 
+            PublishImportReport(preflight.FamilyTree.ImportReport);
+            if (preflight.FamilyTree.ImportReport.IsPartial
+                && !await _partialImportDialogService.ConfirmAsync(preflight.FamilyTree.ImportReport))
+            {
+                ImportPhaseText = "Afvist";
+                ErrorMessage =
+                    "Den delvise GEDCOM-import blev afvist. Arbejdsområdets filer og aktive data er uændrede.";
+                return;
+            }
+
             SetImportPhase("Gennemgang", 45);
             var review = await ReviewGedcomDifferencesAsync(
                 preflight.FamilyTree,
@@ -294,6 +323,11 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (GedcomLoadException exception)
         {
+            if (exception.ImportReport is not null)
+            {
+                PublishImportReport(exception.ImportReport);
+            }
+
             ImportPhaseText = "Fejl";
             ErrorMessage = $"Kunne ikke indlæse GEDCOM-fil: {exception.Message}";
         }
@@ -787,6 +821,38 @@ public partial class MainWindowViewModel : ViewModelBase
         ImportProgressPercent = progressPercent;
     }
 
+    private void PublishImportReport(GedcomImportReport report)
+    {
+        ImportSummaryText =
+            $"Importerede: {report.ImportedRecords} · " +
+            $"Med advarsler: {report.ImportedWithWarnings} · " +
+            $"Oversprungne: {report.SkippedRecords} · " +
+            $"Fatale: {report.FatalErrors}";
+        _allImportDiagnostics.Clear();
+        _allImportDiagnostics.AddRange(report.Diagnostics.Select(diagnostic =>
+            new GedcomDiagnosticViewModel(diagnostic)));
+        ApplyDiagnosticFilter();
+        OnPropertyChanged(nameof(HasImportDiagnostics));
+    }
+
+    private void ApplyDiagnosticFilter()
+    {
+        IEnumerable<GedcomDiagnosticViewModel> diagnostics = _allImportDiagnostics;
+        diagnostics = SelectedDiagnosticSeverityFilter switch
+        {
+            "Advarsler" => diagnostics.Where(item => item.Severity == GedcomDiagnosticSeverity.Warning),
+            "Fejl" => diagnostics.Where(item =>
+                item.Severity is GedcomDiagnosticSeverity.Error or GedcomDiagnosticSeverity.Fatal),
+            _ => diagnostics,
+        };
+
+        ImportDiagnostics.Clear();
+        foreach (var diagnostic in diagnostics)
+        {
+            ImportDiagnostics.Add(diagnostic);
+        }
+    }
+
     private bool CanStartImport() => !IsImporting;
 
     private bool CanCancelImport()
@@ -1144,6 +1210,25 @@ public partial class MainWindowViewModel : ViewModelBase
         CancelImportCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedDiagnosticSeverityFilterChanged(string value)
+    {
+        ApplyDiagnosticFilter();
+    }
+
+    partial void OnSelectedImportDiagnosticChanged(GedcomDiagnosticViewModel? value)
+    {
+        if (value?.RecordId is null)
+        {
+            return;
+        }
+
+        var person = People.FirstOrDefault(candidate => candidate.RecordId == value.RecordId);
+        if (person is not null)
+        {
+            SelectedPerson = person;
+        }
+    }
+
     private sealed record ImportPreflight(
         FamilyTree FamilyTree,
         IReadOnlyList<MarkdownDocumentInfo> Documents,
@@ -1166,6 +1251,14 @@ public partial class MainWindowViewModel : ViewModelBase
         public Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
         {
             return Task.FromResult<string?>(null);
+        }
+    }
+
+    private sealed class RejectingPartialImportDialogService : IPartialImportDialogService
+    {
+        public Task<bool> ConfirmAsync(GedcomImportReport report)
+        {
+            return Task.FromResult(false);
         }
     }
 
