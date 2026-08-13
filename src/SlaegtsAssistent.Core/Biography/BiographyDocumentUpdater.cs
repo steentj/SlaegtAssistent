@@ -34,7 +34,6 @@ public static class BiographyDocumentUpdater
         {
             DisplayName = UseGedcom("Navn") ? gedcomFacts.FullName : metadata.DisplayName,
             Facts = updatedFacts,
-            GedcomBaselineHash = gedcomFacts.ComputeFingerprint(),
         };
 
         var updatedBody = document.Body;

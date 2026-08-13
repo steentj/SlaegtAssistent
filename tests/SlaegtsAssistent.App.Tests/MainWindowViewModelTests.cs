@@ -392,11 +392,69 @@ public class MainWindowViewModelTests
             markdownFileStore: new FileSystemMarkdownFileStore());
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        var filesAfterFirstImport = SnapshotFiles(outputFolder);
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
         differenceDialog.LastDifferences.Should().BeEmpty();
         viewModel.People.Should().ContainSingle(person =>
             person.SyncStatus == BiographySyncStatus.Uændret);
+        viewModel.ImportPhaseText.Should().Be("Færdig – ingen ændringer");
+        SnapshotFiles(outputFolder).Should().BeEquivalentTo(filesAfterFirstImport);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldDetectChangeInFieldHiddenByTemplate()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 NOTE Første note",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 NOTE Ændret note, som standardskabelonen ikke viser",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var dialog = new RecordingGedcomDifferenceDialogService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: dialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            var before = File.ReadAllText(viewModel.People.Single().MarkdownFilePath);
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            dialog.LastDifferences.Should().ContainSingle();
+            dialog.LastDifferences[0].Difference.FieldName.Should().Be("Synkroniseringsbaseline");
+            dialog.LastDifferences[0].BaselineStatus.Should().Be(BiographyBaselineStatus.Changed);
+            var reconciliation = dialog.LastDifferences[0].ReconciliationState;
+            reconciliation.Should().NotBeNull();
+            reconciliation!.Approved.Should().NotBeNull();
+            reconciliation.Imported.Person.Notes
+                .Should().ContainSingle("Ændret note, som standardskabelonen ikke viser");
+            reconciliation.DocumentFacts.FullName.Should().Be("Anna Jensen");
+            dialog.LastDifferences[0].Difference.DocumentValue.Should().NotBe(
+                dialog.LastDifferences[0].Difference.GedcomValue);
+            File.ReadAllText(viewModel.People.Single().MarkdownFilePath).Should().Be(before);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
     }
 
     [Fact]
@@ -1273,11 +1331,61 @@ public class MainWindowViewModelTests
 
             differenceDialog.LastDifferences.Should().ContainSingle();
             differenceDialog.LastDifferences[0].RequiresMigration.Should().BeTrue();
+            differenceDialog.LastDifferences[0].BaselineStatus.Should().Be(BiographyBaselineStatus.Missing);
             viewModel.HasDirtyEditors.Should().BeTrue();
             viewModel.SaveAllCommand.Execute(null);
             var migrated = BiographyDocumentParser.Parse(File.ReadAllText(documentPath));
             migrated.Metadata!.FormatVersion.Should().Be(BiographyDocumentParser.CurrentFormatVersion);
             migrated.Body.Should().Contain("Brugerens frie tekst.");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldRequireReviewForUnknownBaselineVersion()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var tree = new GedcomLoader().Load(file.Path);
+        var person = tree.FindPerson("@I1@")!;
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var generator = new BiographyTemplateMarkdownGenerator();
+        var generated = BiographyDocumentParser.Parse(generator.Generate(person));
+        var unknownBaseline = generated.Metadata!.SyncBaseline! with { Version = 99 };
+        var content = BiographyDocumentSerializer.Serialize(
+            generated.Metadata with { SyncBaseline = unknownBaseline },
+            generated.Body);
+        var path = Path.Combine(outputFolder, BiographyFileNameGenerator.Generate(person));
+        File.WriteAllText(path, content);
+        var dialog = new RecordingGedcomDifferenceDialogService();
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settings,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            gedcomDifferenceDialogService: dialog);
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            dialog.LastDifferences.Should().ContainSingle();
+            dialog.LastDifferences[0].BaselineStatus.Should().Be(BiographyBaselineStatus.UnsupportedVersion);
+            dialog.LastDifferences[0].RequiresMigration.Should().BeTrue();
+            File.ReadAllText(path).Should().Be(content);
         }
         finally
         {

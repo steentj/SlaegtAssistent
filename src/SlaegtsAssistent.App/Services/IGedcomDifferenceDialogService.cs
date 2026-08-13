@@ -16,6 +16,10 @@ public sealed record GedcomDifferenceReviewItem(
     public string? CandidateContent { get; init; }
 
     public bool RequiresMigration { get; init; }
+
+    public BiographyBaselineStatus BaselineStatus { get; init; } = BiographyBaselineStatus.Unchanged;
+
+    public BiographyReconciliationState? ReconciliationState { get; init; }
 }
 
 public interface IGedcomDifferenceDialogService

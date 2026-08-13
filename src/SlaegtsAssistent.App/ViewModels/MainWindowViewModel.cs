@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.ComponentModel;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -224,6 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 var tree = _gedcomLoader.Load(filePath, null, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 var documents = _markdownDocumentCatalog.Load(outputFolder);
+                var existingSnapshot = _gedcomSnapshotStore.Load(outputFolder);
                 var generatedBiographies = tree.People.ToDictionary(
                     person => person.RecordId,
                     person =>
@@ -243,7 +245,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         return content;
                     },
                     StringComparer.Ordinal);
-                return new ImportPreflight(tree, documents, generatedBiographies);
+                return new ImportPreflight(tree, documents, generatedBiographies, existingSnapshot);
             }, cancellationToken);
 
             PublishImportReport(preflight.FamilyTree.ImportReport);
@@ -264,6 +266,18 @@ public partial class MainWindowViewModel : ViewModelBase
                 outputFolder,
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (IsUnchangedImportNoOp(preflight, review, filePath))
+            {
+                SetImportPhase("Publicering", 90);
+                StandardMarkdownOutputFolder = outputFolder;
+                _familyTree = preflight.FamilyTree;
+                ReloadDocumentCatalog(preflight.FamilyTree);
+                PublishImport(preflight.FamilyTree, review.SyncStatuses, outputFolder, filePath);
+                SetDefaultInputFolderFromSelectedGedcom(filePath);
+                SetImportPhase("Færdig – ingen ændringer", 100);
+                return;
+            }
 
             SetImportPhase("Gennemførelse", 70);
             var workspaceState = await Task.Run(
@@ -340,6 +354,11 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             ImportPhaseText = "Fejl";
             ErrorMessage = exception.Message;
+        }
+        catch (GedcomSnapshotException exception)
+        {
+            ImportPhaseText = "Fejl";
+            ErrorMessage = $"GEDCOM-snapshotet kunne ikke forhåndskontrolleres: {exception.Message}";
         }
         catch (IOException exception)
         {
@@ -597,11 +616,15 @@ public partial class MainWindowViewModel : ViewModelBase
             var candidateContent = BiographyDocumentSerializer.Serialize(
                 candidateMetadata,
                 generatedSectionCandidate.Content);
+            var importedSnapshot = candidateMetadata.SyncBaseline?.Imported;
+            var baselineState = importedSnapshot is null
+                ? null
+                : BiographyReconciliationState.Create(
+                    document.Metadata?.SyncBaseline,
+                    importedSnapshot,
+                    document.Metadata?.Facts ?? candidateMetadata.Facts);
             var metadataMatches = document.Metadata is not null &&
-                                  string.Equals(
-                                      document.Metadata.GedcomBaselineHash,
-                                      candidateMetadata.GedcomBaselineHash,
-                                      StringComparison.Ordinal) &&
+                                  baselineState?.Status == BiographyBaselineStatus.Unchanged &&
                                   string.Equals(
                                       document.Metadata.TemplateHash,
                                       candidateMetadata.TemplateHash,
@@ -617,10 +640,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? document
                 : generatedDocument;
             var candidateDocument = BiographyDocumentParser.Parse(candidateContent);
-            var difference = new BiographyDifference(
-                "Genereret sektion",
-                document.Body,
-                candidateDocument.Body);
+            var generatedSectionChanged = generatedSectionCandidate.ChangesExistingDocument;
+            var difference = generatedSectionChanged
+                ? new BiographyDifference(
+                    "Genereret sektion",
+                    document.Body,
+                    candidateDocument.Body)
+                : new BiographyDifference(
+                    "Synkroniseringsbaseline",
+                    document.Metadata?.SyncBaseline?.Approved.ComputeFingerprint(),
+                    importedSnapshot?.ComputeFingerprint());
             var reviewItem = new GedcomDifferenceReviewItem(
                 $"{documentInfo.FilePath}|generated",
                 person.FullName ?? person.RecordId,
@@ -632,7 +661,11 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 CandidateContent = candidateContent,
                 RequiresMigration = generatedSectionCandidate.RequiresMigration ||
-                                    document.Metadata?.FormatVersion < BiographyDocumentParser.CurrentFormatVersion,
+                                    document.Metadata?.FormatVersion < BiographyDocumentParser.CurrentFormatVersion ||
+                                    baselineState?.Status is BiographyBaselineStatus.Missing
+                                        or BiographyBaselineStatus.UnsupportedVersion,
+                BaselineStatus = baselineState?.Status ?? BiographyBaselineStatus.Missing,
+                ReconciliationState = baselineState,
             };
             reviewItems.Add(reviewItem);
         }
@@ -819,6 +852,27 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         ImportPhaseText = phase;
         ImportProgressPercent = progressPercent;
+    }
+
+    private static bool IsUnchangedImportNoOp(
+        ImportPreflight preflight,
+        ImportReviewResult review,
+        string sourcePath)
+    {
+        if (review.Changes.Count > 0
+            || review.SyncStatuses.Count == 0
+            || review.SyncStatuses.Values.Any(status => status != BiographySyncStatus.Uændret)
+            || preflight.ExistingSnapshot is null
+            || !File.Exists(sourcePath))
+        {
+            return false;
+        }
+
+        var sourceHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(sourcePath)));
+        return string.Equals(
+            sourceHash,
+            preflight.ExistingSnapshot.SourceHash,
+            StringComparison.Ordinal);
     }
 
     private void PublishImportReport(GedcomImportReport report)
@@ -1232,7 +1286,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private sealed record ImportPreflight(
         FamilyTree FamilyTree,
         IReadOnlyList<MarkdownDocumentInfo> Documents,
-        IReadOnlyDictionary<string, string> GeneratedBiographies);
+        IReadOnlyDictionary<string, string> GeneratedBiographies,
+        GedcomSnapshot? ExistingSnapshot);
 
     private sealed record PlannedDocumentChange(
         string FilePath,

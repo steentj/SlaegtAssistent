@@ -13,6 +13,7 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
 
         var facts = BuildFacts(person);
         var factsSnapshot = BiographyFactsSnapshot.FromPerson(person);
+        var canonicalSnapshot = CanonicalBiographySnapshot.Create(person);
         var headingName = string.IsNullOrWhiteSpace(person.FullName)
             ? person.RecordId
             : person.FullName;
@@ -39,12 +40,13 @@ public sealed class BiographyMarkdownGenerator : IBiographyMarkdownGenerator
 
         return BiographyDocumentSerializer.Serialize(
             new BiographyDocumentMetadata(
-                1,
+                BiographyDocumentParser.CurrentFormatVersion,
                 person.RecordId,
                 person.FullName,
                 factsSnapshot)
             {
-                GedcomBaselineHash = factsSnapshot.ComputeFingerprint(),
+                GedcomBaselineHash = canonicalSnapshot.ComputeFingerprint(),
+                SyncBaseline = BiographySyncBaseline.CreateInitial(canonicalSnapshot),
             },
             body.ToString());
     }

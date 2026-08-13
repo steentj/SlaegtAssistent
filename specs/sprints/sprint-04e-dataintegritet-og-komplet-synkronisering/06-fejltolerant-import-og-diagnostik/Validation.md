@@ -8,7 +8,7 @@
 - [x] Delvis import kræver eksplicit accept.
 - [x] Afvist delvis import efterlader filer og UI-state uændret.
 - [x] `dotnet build` og `dotnet test` er grønne.
-- [ ] Manuel gendannelses- og fatalfejltest er gennemført.
+- [x] Manuel gendannelses- og fatalfejltest er gennemført.
 
 ## Automatiseret resultat
 
@@ -41,9 +41,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-13
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsmappe, 168 automatiske tests bestået
+- **Bemærkninger:** Delvis import, afvisning, accept, diagnostikfiltrering og fatal import er godkendt.
 
-- [ ] Feature 06 er godkendt, og feature 07 må påbegyndes.
+- [x] Feature 06 er godkendt, og feature 07 må påbegyndes.

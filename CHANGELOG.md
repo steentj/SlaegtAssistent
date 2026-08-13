@@ -83,3 +83,14 @@
 - [d154392] feat: Update theme colors and enhance preview functionality in EditorViewModel and MainWindow
 - [5fb5e89] feat: Update theme colors and enhance preview functionality in EditorViewModel and MainWindow
 - [0cb4b51] feat: Enhance GEDCOM handling with template hash support and improved biography generation
+- [3f186d6] feat: Enhance GEDCOM handling with template hash support and improved biography generation
+
+## 2026-08-12
+- [42a16ec] Implement Sprint 04E: Data Integrity and Complete Synchronization
+- [b55e0ed] Implement robust document validation and error handling in BiographyDocumentParser
+- [5083b39] feat: Update validation documentation to reflect manual catalog test completion and approval details
+- [6ce899a] Add GEDCOM fixture and completeness tests for GEDCOM 5.5.1
+
+## 2026-08-13
+- [98da5c1] feat: Add import diagnostics and reporting for GEDCOM file imports
+- [390ee0f] feat: Enhance GEDCOM import and reconciliation process

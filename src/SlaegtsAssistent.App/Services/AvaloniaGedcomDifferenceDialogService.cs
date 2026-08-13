@@ -62,7 +62,13 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                 ColumnSpacing = 8,
             };
             row.Children.Add(CreateValueBlock(difference.PersonName, 0, FontWeight.SemiBold));
-            row.Children.Add(CreateValueBlock(difference.Difference.FieldName, 1, FontWeight.SemiBold));
+            var fieldName = difference.BaselineStatus switch
+            {
+                BiographyBaselineStatus.Missing => $"{difference.Difference.FieldName}\nBaseline mangler",
+                BiographyBaselineStatus.UnsupportedVersion => $"{difference.Difference.FieldName}\nUkendt baselineversion",
+                _ => difference.Difference.FieldName,
+            };
+            row.Children.Add(CreateValueBlock(fieldName, 1, FontWeight.SemiBold));
             row.Children.Add(CreateValueBlock(difference.Difference.DocumentValue, 2));
             row.Children.Add(CreateValueBlock(difference.Difference.GedcomValue, 3));
             Grid.SetColumn(choicePanel, 4);

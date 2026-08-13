@@ -4,7 +4,7 @@ namespace SlaegtsAssistent.Core.Biography;
 
 public static class BiographyDocumentParser
 {
-    public const int CurrentFormatVersion = 2;
+    public const int CurrentFormatVersion = 3;
 
     public static BiographyDocument Parse(string content)
     {
@@ -246,8 +246,27 @@ public static class BiographyDocumentParser
             facts)
         {
             GedcomBaselineHash = ParseString(values, "gedcomBaselineHash"),
-        TemplateHash = ParseString(values, "templateHash"),
+            TemplateHash = ParseString(values, "templateHash"),
+            SyncBaseline = ParseSyncBaseline(values),
         };
+    }
+
+    private static BiographySyncBaseline? ParseSyncBaseline(IReadOnlyDictionary<string, string> values)
+    {
+        if (!values.TryGetValue("syncBaseline", out var value) || value is "null" or "")
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<BiographySyncBaseline>(value)
+                ?? throw InvalidValue("syncBaseline");
+        }
+        catch (JsonException)
+        {
+            throw InvalidValue("syncBaseline");
+        }
     }
 
     private static int ParseRequiredInt(IReadOnlyDictionary<string, string> values, string key)

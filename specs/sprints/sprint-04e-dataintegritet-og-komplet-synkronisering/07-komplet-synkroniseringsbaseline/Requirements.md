@@ -9,3 +9,5 @@
 - En ændring skal kunne opdages, selv om den aktuelle skabelon ikke renderer feltet.
 - Manglende eller ugyldig baseline skal give en tydelig migrerings- eller gennemgangsstatus.
 - Uændret genimport skal være et dokumenteret no-op.
+
+Den normative baselinekontrakt, kanonisering og afstemning er dokumenteret i [KanoniskBaseline.md](KanoniskBaseline.md).

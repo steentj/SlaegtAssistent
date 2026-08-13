@@ -17,6 +17,7 @@ public static class BiographyDocumentSerializer
             .Append("displayName: ").AppendLine(JsonSerializer.Serialize(metadata.DisplayName))
             .Append("gedcomBaselineHash: ").AppendLine(JsonSerializer.Serialize(metadata.GedcomBaselineHash))
             .Append("templateHash: ").AppendLine(JsonSerializer.Serialize(metadata.TemplateHash))
+            .Append("syncBaseline: ").AppendLine(JsonSerializer.Serialize(metadata.SyncBaseline))
             .AppendLine("facts:")
             .Append("  fullName: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.FullName))
             .Append("  sex: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.Sex))

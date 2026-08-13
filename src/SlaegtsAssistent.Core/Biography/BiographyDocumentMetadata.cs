@@ -9,4 +9,6 @@ public sealed record BiographyDocumentMetadata(
     public string? GedcomBaselineHash { get; init; }
 
     public string? TemplateHash { get; init; }
+
+    public BiographySyncBaseline? SyncBaseline { get; init; }
 }

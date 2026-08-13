@@ -15,6 +15,11 @@
 1 TEXT Original registrering
 2 CONC  med bilag
 1 NOTE Kontrolleret kilde
+0 @M1@ OBJE
+1 FILE portraet-anna.jpg
+1 FORM jpeg
+1 TITL Portræt af Anna
+1 NOTE Forsidefoto
 0 @I1@ INDI
 1 NAME Anna /Jensen/
 1 SEX F
@@ -35,6 +40,7 @@
 2 PLAC Aarhus
 2 SOUR @S1@
 3 PAGE Folketælling 1911, opslag 8
+1 OBJE @M1@
 1 FAMC @F1@
 1 CHAN
 2 DATE 1 JAN 2026
