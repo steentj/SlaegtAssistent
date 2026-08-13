@@ -1164,7 +1164,20 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (!_editors.TryGetValue(value.MarkdownFilePath, out var editor))
         {
-            editor = new EditorViewModel(value.MarkdownFilePath, _markdownFileStore);
+            var allowedPreviewRoots = new[]
+            {
+                Path.GetDirectoryName(value.MarkdownFilePath),
+                StandardMarkdownOutputFolder,
+                Path.GetDirectoryName(SelectedGedcomFilePath),
+            }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path!)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            editor = new EditorViewModel(
+                value.MarkdownFilePath,
+                _markdownFileStore,
+                allowedPreviewRoots);
             editor.PropertyChanged += EditorOnPropertyChanged;
 
             try

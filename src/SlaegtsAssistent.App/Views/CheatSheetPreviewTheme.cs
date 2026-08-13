@@ -22,6 +22,8 @@ internal static class CheatSheetPreviewTheme
             .Replace("color:#4d626a", "color:#AAB7C4", StringComparison.Ordinal)
             .Replace("border-left:4px solid #6e9eaa", "border-left:4px solid #70C4D6", StringComparison.Ordinal)
             .Replace("border:1px solid #9aaeb5", "border:1px solid #35404C", StringComparison.Ordinal)
-            .Replace("background:#edf2f3", "background:#252E38", StringComparison.Ordinal);
+            .Replace("background:#edf2f3", "background:#252E38", StringComparison.Ordinal)
+            .Replace("background:#FFF8E6", "background:#352D1F", StringComparison.Ordinal)
+            .Replace("color:#6B4E16", "color:#F7D794", StringComparison.Ordinal);
     }
 }

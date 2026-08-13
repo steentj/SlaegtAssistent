@@ -98,3 +98,5 @@
 - [1d0c5c0] feat: Add BiographyConflictCandidateService and BiographyStructuredDifferenceService
 - [c135849] feat: Add BiographyConflictCandidateService and BiographyStructuredDifferenceService
 - [1a65a80] feat: Enhance biography template functionality and validation
+- [dd72060] feat: Enhance biography template functionality and validation
+- [947b2f8] Implement SafeMarkdownPreviewService for secure Markdown previews

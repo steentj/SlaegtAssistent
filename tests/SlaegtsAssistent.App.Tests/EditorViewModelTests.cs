@@ -189,6 +189,34 @@ public class EditorViewModelTests
         viewModel.PreviewHtmlDocument.Should().Contain("background:#FFFFFF");
     }
 
+    [Fact]
+    public void Preview_ShouldEmbedAllowedLocalImageWithoutChangingMarkdown()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        var imagePath = Path.Combine(folder, "foto.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50, 0x4e, 0x47]);
+        const string markdown = "![Anna](foto.png)";
+        var viewModel = new EditorViewModel(
+            Path.Combine(folder, "anna.md"),
+            new RecordingMarkdownFileStore(),
+            [folder])
+        {
+            MarkdownText = markdown,
+        };
+
+        try
+        {
+            viewModel.PreviewHtml.Should().Contain("data:image/png;base64,");
+            viewModel.MarkdownText.Should().Be(markdown);
+            viewModel.HasPreviewSecurityMessage.Should().BeFalse();
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     private sealed class RecordingMarkdownFileStore : IMarkdownFileStore
     {
         public string ReadResult { get; set; } = string.Empty;

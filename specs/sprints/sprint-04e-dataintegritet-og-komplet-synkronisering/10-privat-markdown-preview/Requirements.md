@@ -9,3 +9,5 @@
 - Blokeret indhold skal give en diskret dansk forklaring uden at ændre Markdown-dokumentet.
 - Samme sikkerhedspolitik skal gælde hovedpreview og hjælpevinduers previews.
 - Preview skal fortsat fungere i lyst, mørkt og systemstyret tema.
+
+Den konkrete afgrænsning og brugeradfærd er beskrevet i [Previewpolitik.md](Previewpolitik.md).

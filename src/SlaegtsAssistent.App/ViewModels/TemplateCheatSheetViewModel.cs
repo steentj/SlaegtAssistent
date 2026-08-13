@@ -1,15 +1,14 @@
 using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Markdig;
 using SlaegtsAssistent.Core.Biography;
+using SlaegtsAssistent.App.Services;
 
 namespace SlaegtsAssistent.App.ViewModels;
 
 public partial class TemplateCheatSheetViewModel : ViewModelBase
 {
-    private static readonly MarkdownPipeline MarkdownPipeline =
-        new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    private static readonly SafeMarkdownPreviewService PreviewService = new();
 
     public static readonly string Content =
         "# Skabelon-cheat sheet\n\n" +
@@ -108,17 +107,9 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
         }
     }
 
-    public string PreviewHtml => Markdig.Markdown.ToHtml(FilteredContent, MarkdownPipeline);
+    public string PreviewHtml => PreviewService.RenderHelp(FilteredContent).Html;
 
-    public string PreviewHtmlDocument =>
-        $"<!doctype html><html><head><meta charset=\"utf-8\"><style>" +
-        "body{font-family:system-ui,sans-serif;line-height:1.55;margin:24px;color:#23313a;background:#FFFFFF;}" +
-        "h1,h2,h3{line-height:1.2;color:#174a5b;}" +
-        "code,pre{background:#edf2f3;padding:2px 4px;}" +
-        "table{border-collapse:collapse;margin:12px 0;}th,td{border:1px solid #9aaeb5;padding:6px 10px;text-align:left;}" +
-        "</style></head><body>" +
-        PreviewHtml +
-        "</body></html>";
+    public string PreviewHtmlDocument => PreviewService.RenderHelp(FilteredContent).HtmlDocument;
 
     partial void OnSearchTextChanged(string value)
     {

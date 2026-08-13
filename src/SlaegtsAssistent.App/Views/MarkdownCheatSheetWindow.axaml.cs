@@ -3,6 +3,7 @@ using Avalonia;
 using System;
 using System.ComponentModel;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.App.Services;
 
 namespace SlaegtsAssistent.App.Views;
 
@@ -14,6 +15,7 @@ public partial class MarkdownCheatSheetWindow : Window
     public MarkdownCheatSheetWindow()
     {
         InitializeComponent();
+        SafePreviewWebViewController.Attach(PreviewWebView, this);
         DataContextChanged += HandleDataContextChanged;
         Opened += (_, _) => FocusSearch();
         Closed += HandleClosed;

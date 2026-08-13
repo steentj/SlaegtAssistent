@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using System;
 using System.ComponentModel;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.App.Services;
 
 namespace SlaegtsAssistent.App.Views;
 
@@ -15,6 +16,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SafePreviewWebViewController.Attach(PreviewWebView, this);
         DataContextChanged += HandleDataContextChanged;
         PreviewWebView.AdapterCreated += (_, _) =>
         {

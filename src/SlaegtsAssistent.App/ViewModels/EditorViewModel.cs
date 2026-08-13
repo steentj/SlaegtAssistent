@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Markdig;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.Core.Biography;
 
@@ -13,11 +13,19 @@ public partial class EditorViewModel : ViewModelBase
     private readonly IMarkdownFileStore _markdownFileStore;
     private bool _suppressDirtyTracking;
     private BiographyDocumentMetadata? _metadata;
+    private readonly SafeMarkdownPreviewService _previewService = new();
+    private readonly IReadOnlyCollection<string> _allowedPreviewRoots;
+    private string? _cachedPreviewSource;
+    private SafeMarkdownPreviewResult? _cachedPreview;
 
-    public EditorViewModel(string filePath, IMarkdownFileStore markdownFileStore)
+    public EditorViewModel(
+        string filePath,
+        IMarkdownFileStore markdownFileStore,
+        IReadOnlyCollection<string>? allowedPreviewRoots = null)
     {
         _filePath = filePath;
         _markdownFileStore = markdownFileStore;
+        _allowedPreviewRoots = allowedPreviewRoots ?? [];
     }
 
     [ObservableProperty]
@@ -31,7 +39,7 @@ public partial class EditorViewModel : ViewModelBase
 
     public string PreviewHtml => string.IsNullOrWhiteSpace(MarkdownText)
         ? string.Empty
-        : Markdown.ToHtml(MarkdownText);
+        : CreatePreview().Html;
 
     public Uri PreviewWebUri => string.IsNullOrWhiteSpace(PreviewHtml)
         ? new Uri("about:blank")
@@ -40,13 +48,11 @@ public partial class EditorViewModel : ViewModelBase
             Uri.EscapeDataString(
                 PreviewHtmlDocument));
 
-    public string PreviewHtmlDocument =>
-        $"<!doctype html><html><head><meta charset=\"utf-8\"><style>" +
-        "body{font-family:system-ui,sans-serif;line-height:1.55;margin:24px;color:#23313a;background:#FFFFFF;}" +
-        "h1,h2,h3{line-height:1.2;color:#174a5b;}" +
-        "code,pre{background:#edf2f3;padding:2px 4px;}" +
-        "blockquote{border-left:4px solid #6e9eaa;margin-left:0;padding-left:12px;color:#4d626a;}" +
-        $"</style></head><body>{PreviewHtml}</body></html>";
+    public string PreviewHtmlDocument => CreatePreview().HtmlDocument;
+
+    public string PreviewSecurityMessage => string.Join(" ", CreatePreview().Diagnostics);
+
+    public bool HasPreviewSecurityMessage => CreatePreview().Diagnostics.Count > 0;
 
     public bool IsWebPreviewSelected
     {
@@ -129,9 +135,13 @@ public partial class EditorViewModel : ViewModelBase
 
     partial void OnMarkdownTextChanged(string value)
     {
+        _cachedPreviewSource = null;
+        _cachedPreview = null;
         OnPropertyChanged(nameof(PreviewHtml));
         OnPropertyChanged(nameof(PreviewWebUri));
         OnPropertyChanged(nameof(PreviewHtmlDocument));
+        OnPropertyChanged(nameof(PreviewSecurityMessage));
+        OnPropertyChanged(nameof(HasPreviewSecurityMessage));
 
         if (!_suppressDirtyTracking)
         {
@@ -143,5 +153,19 @@ public partial class EditorViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsWebPreviewSelected));
         OnPropertyChanged(nameof(IsHtmlPreviewSelected));
+    }
+
+    private SafeMarkdownPreviewResult CreatePreview()
+    {
+        var source = MarkdownText ?? string.Empty;
+        if (_cachedPreview is not null &&
+            string.Equals(_cachedPreviewSource, source, StringComparison.Ordinal))
+        {
+            return _cachedPreview;
+        }
+
+        _cachedPreviewSource = source;
+        _cachedPreview = _previewService.Render(source, _filePath, _allowedPreviewRoots);
+        return _cachedPreview;
     }
 }
