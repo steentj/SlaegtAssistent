@@ -11,3 +11,5 @@
 - Afvisning og lukning uden anvendelse må ikke ændre fil, editor, baseline eller snapshot.
 - Godkendelse skal markere en åben editor som ugemt; lukket dokument må først skrives i importens atomiske commit.
 - Dokumenter uden markører og dokumenter med manglende baseline skal have særskilt, tydelig migreringshandling.
+
+Den normative beslutningsmodel, feltstierne og commitgrænsen er dokumenteret i [Konfliktmodel.md](Konfliktmodel.md).

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SlaegtsAssistent.Core.Biography;
@@ -20,6 +21,10 @@ public sealed record GedcomDifferenceReviewItem(
     public BiographyBaselineStatus BaselineStatus { get; init; } = BiographyBaselineStatus.Unchanged;
 
     public BiographyReconciliationState? ReconciliationState { get; init; }
+
+    public BiographyStructuredDifference? StructuredDifference { get; init; }
+
+    public Func<IReadOnlyDictionary<string, bool>, string?>? CandidatePreviewFactory { get; init; }
 }
 
 public interface IGedcomDifferenceDialogService

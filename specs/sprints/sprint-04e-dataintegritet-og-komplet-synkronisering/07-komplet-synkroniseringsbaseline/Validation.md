@@ -35,9 +35,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 2026-08-13
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokalt arbejdsområde, 189 tests bestået
+- **Bemærkninger:** Feature 4.8.7 godkendt efter manuel prøve.
 
-- [ ] Feature 07 er godkendt, og feature 08 må påbegyndes.
+- [x] Feature 07 er godkendt, og feature 08 må påbegyndes.

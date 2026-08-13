@@ -267,6 +267,14 @@ public partial class MainWindowViewModel : ViewModelBase
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (review.RequiresApproval && !review.WasApplied)
+            {
+                ImportPhaseText = "Afvist";
+                ErrorMessage =
+                    "Konfliktgennemgangen blev lukket eller afvist. Dokumenter, editorer, baseline og GEDCOM-snapshot er uændrede.";
+                return;
+            }
+
             if (IsUnchangedImportNoOp(preflight, review, filePath))
             {
                 SetImportPhase("Publicering", 90);
@@ -641,7 +649,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 : generatedDocument;
             var candidateDocument = BiographyDocumentParser.Parse(candidateContent);
             var generatedSectionChanged = generatedSectionCandidate.ChangesExistingDocument;
-            var difference = generatedSectionChanged
+            var legacyDifference = generatedSectionChanged
                 ? new BiographyDifference(
                     "Genereret sektion",
                     document.Body,
@@ -650,31 +658,81 @@ public partial class MainWindowViewModel : ViewModelBase
                     "Synkroniseringsbaseline",
                     document.Metadata?.SyncBaseline?.Approved.ComputeFingerprint(),
                     importedSnapshot?.ComputeFingerprint());
-            var reviewItem = new GedcomDifferenceReviewItem(
-                $"{documentInfo.FilePath}|generated",
-                person.FullName ?? person.RecordId,
-                documentInfo.FilePath,
-                reviewDocument,
-                BiographyFactsSnapshot.FromPerson(person),
-                difference,
-                true)
-            {
-                CandidateContent = candidateContent,
-                RequiresMigration = generatedSectionCandidate.RequiresMigration ||
+            var requiresMigration = generatedSectionCandidate.RequiresMigration ||
                                     document.Metadata?.FormatVersion < BiographyDocumentParser.CurrentFormatVersion ||
                                     baselineState?.Status is BiographyBaselineStatus.Missing
-                                        or BiographyBaselineStatus.UnsupportedVersion,
-                BaselineStatus = baselineState?.Status ?? BiographyBaselineStatus.Missing,
-                ReconciliationState = baselineState,
-            };
-            reviewItems.Add(reviewItem);
+                                        or BiographyBaselineStatus.UnsupportedVersion;
+            var templateChanged = !string.Equals(
+                document.Metadata?.TemplateHash,
+                candidateMetadata.TemplateHash,
+                StringComparison.Ordinal);
+            var structuredDifferences = baselineState is null
+                ? []
+                : new BiographyStructuredDifferenceService().Compare(
+                    baselineState,
+                    templateChanged,
+                    requiresMigration);
+            if (structuredDifferences.Count == 0)
+            {
+                structuredDifferences =
+                [
+                    new BiographyStructuredDifference(
+                        "generatedSection",
+                        "Genereret sektion",
+                        document.Body,
+                        document.Body,
+                        candidateDocument.Body,
+                        BiographyDifferenceKind.Changed,
+                        BiographyDifferenceCause.Gedcom),
+                ];
+            }
+
+            string? PreviewFactory(IReadOnlyDictionary<string, bool> selectedChoices) =>
+                CreateStructuredCandidate(
+                    document,
+                    familyTree,
+                    importedSnapshot!,
+                    baselineState,
+                    structuredDifferences,
+                    selectedChoices,
+                    documentInfo.FilePath,
+                    outputFolder);
+            var defaultChoices = structuredDifferences.ToDictionary(
+                item => $"{documentInfo.FilePath}|{item.Path}",
+                _ => true,
+                StringComparer.Ordinal);
+            var defaultCandidate = PreviewFactory(defaultChoices) ?? candidateContent;
+
+            foreach (var structuredDifference in structuredDifferences)
+            {
+                reviewItems.Add(new GedcomDifferenceReviewItem(
+                    $"{documentInfo.FilePath}|{structuredDifference.Path}",
+                    person.FullName ?? person.RecordId,
+                    documentInfo.FilePath,
+                    reviewDocument,
+                    BiographyFactsSnapshot.FromPerson(person),
+                    legacyDifference,
+                    true)
+                {
+                    CandidateContent = defaultCandidate,
+                    RequiresMigration = requiresMigration,
+                    BaselineStatus = baselineState?.Status ?? BiographyBaselineStatus.Missing,
+                    ReconciliationState = baselineState,
+                    StructuredDifference = structuredDifference,
+                    CandidatePreviewFactory = PreviewFactory,
+                });
+            }
         }
 
         var choices = await _gedcomDifferenceDialogService.ShowAsync(reviewItems)
             .WaitAsync(cancellationToken);
         if (choices is null)
         {
-            return new ImportReviewResult(syncStatuses, changes);
+            return new ImportReviewResult(
+                syncStatuses,
+                changes,
+                RequiresApproval: reviewItems.Count > 0,
+                WasApplied: false);
         }
 
         foreach (var documentGroup in reviewItems.GroupBy(item => item.FilePath, StringComparer.Ordinal))
@@ -682,7 +740,11 @@ public partial class MainWindowViewModel : ViewModelBase
             var first = documentGroup.First();
             if (first.CandidateContent is { } candidateContent)
             {
-                if (!choices.TryGetValue(first.Key, out var useCandidate) || !useCandidate)
+                var chosenContent = first.CandidatePreviewFactory?.Invoke(choices)
+                    ?? (choices.TryGetValue(first.Key, out var useCandidate) && useCandidate
+                        ? candidateContent
+                        : null);
+                if (chosenContent is null)
                 {
                     continue;
                 }
@@ -690,7 +752,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 _editors.TryGetValue(first.FilePath, out var candidateEditor);
                 changes.Add(new PlannedDocumentChange(
                     first.FilePath,
-                    candidateContent,
+                    chosenContent,
                     candidateEditor));
 
                 continue;
@@ -713,7 +775,87 @@ public partial class MainWindowViewModel : ViewModelBase
             changes.Add(new PlannedDocumentChange(first.FilePath, updatedContent, openEditor));
         }
 
-        return new ImportReviewResult(syncStatuses, changes);
+        return new ImportReviewResult(
+            syncStatuses,
+            changes,
+            RequiresApproval: reviewItems.Count > 0,
+            WasApplied: reviewItems.Count == 0 || changes.Count > 0);
+    }
+
+    private string? CreateStructuredCandidate(
+        BiographyDocument document,
+        FamilyTree familyTree,
+        CanonicalBiographySnapshot importedSnapshot,
+        BiographyReconciliationState? reconciliation,
+        IReadOnlyList<BiographyStructuredDifference> differences,
+        IReadOnlyDictionary<string, bool> choices,
+        string filePath,
+        string outputFolder)
+    {
+        bool IsSelected(string path) =>
+            choices.TryGetValue($"{filePath}|{path}", out var selected) && selected;
+
+        if (!differences.Any(item => IsSelected(item.Path)))
+        {
+            return null;
+        }
+
+        var migration = differences.FirstOrDefault(item =>
+            item.Causes.HasFlag(BiographyDifferenceCause.BaselineMigration));
+        if (migration is not null && !IsSelected(migration.Path))
+        {
+            return null;
+        }
+
+        var template = differences.FirstOrDefault(item =>
+            item.Causes == BiographyDifferenceCause.Template);
+        if (template is not null && !IsSelected(template.Path))
+        {
+            return null;
+        }
+
+        var selectedSnapshot = reconciliation?.Approved is { } approved &&
+                               reconciliation.Status != BiographyBaselineStatus.UnsupportedVersion
+            ? new BiographySnapshotDecisionService().Apply(
+                ApplyDocumentFacts(approved, reconciliation.DocumentFacts),
+                importedSnapshot,
+                differences
+                    .Where(item => item.Causes.HasFlag(BiographyDifferenceCause.Gedcom))
+                    .ToDictionary(item => item.Path, item => IsSelected(item.Path), StringComparer.Ordinal))
+            : importedSnapshot;
+        var templateSource = string.IsNullOrWhiteSpace(GlobalBiographyTemplatePath)
+            ? null
+            : new BiographyTemplateLoader().Load(GlobalBiographyTemplatePath).Source;
+        var rendered = new BiographyTemplateMarkdownGenerator(
+            templateSource,
+            familyTree.Submitter,
+            outputFolder).Generate(
+                selectedSnapshot,
+                importedSnapshot,
+                familyTree.People.ToDictionary(
+                    person => person.RecordId,
+                    person => person.FullName,
+                    StringComparer.Ordinal));
+        return BiographyConflictCandidateService.MergeWithExistingDocument(document, rendered);
+
+        static CanonicalBiographySnapshot ApplyDocumentFacts(
+            CanonicalBiographySnapshot baseline,
+            BiographyFactsSnapshot facts)
+        {
+            return baseline with
+            {
+                Person = baseline.Person with
+                {
+                    FullName = facts.FullName,
+                    Sex = facts.Sex,
+                    BirthDate = facts.BirthDate,
+                    BirthPlace = facts.BirthPlace,
+                    DeathDate = facts.DeathDate,
+                    DeathPlace = facts.DeathPlace,
+                },
+                ParentRecordIds = facts.ParentRecordIds,
+            };
+        }
     }
 
     private void PublishImport(
@@ -1296,7 +1438,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private sealed record ImportReviewResult(
         IReadOnlyDictionary<string, BiographySyncStatus> SyncStatuses,
-        IReadOnlyList<PlannedDocumentChange> Changes);
+        IReadOnlyList<PlannedDocumentChange> Changes,
+        bool RequiresApproval = false,
+        bool WasApplied = true);
 
     private sealed class ImportCommitException(string message, Exception innerException)
         : IOException(message, innerException);

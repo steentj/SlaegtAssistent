@@ -497,12 +497,11 @@ public class MainWindowViewModelTests
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
-        differenceDialog.LastDifferences.Should().ContainSingle(difference =>
+        differenceDialog.LastDifferences.Should().Contain(difference =>
             difference.Difference.FieldName == "Genereret sektion" &&
             difference.UseGedcomByDefault &&
             difference.CandidateContent!.Contains("12 MAR 1900", StringComparison.Ordinal));
-        viewModel.People.Should().ContainSingle(person =>
-            person.SyncStatus == BiographySyncStatus.Ændret);
+        viewModel.ImportPhaseText.Should().Be("Afvist");
     }
 
     [Fact]
@@ -551,9 +550,72 @@ public class MainWindowViewModelTests
         viewModel.Editor.MarkdownText.Should().Contain("Min egen tekst.");
         viewModel.Editor.MarkdownText.Should().Contain("12 MAR 1900");
         viewModel.Editor.IsDirty.Should().BeTrue();
-        differenceDialog.LastDifferences.Should().ContainSingle();
-        differenceDialog.LastDifferences[0].CandidateContent.Should().NotBeNull();
-        differenceDialog.LastDifferences[0].UseGedcomByDefault.Should().BeTrue();
+        differenceDialog.LastDifferences.Should().NotBeEmpty();
+        differenceDialog.LastDifferences.Should().OnlyContain(item =>
+            item.CandidateContent != null && item.UseGedcomByDefault);
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldApplyIndividualFieldChoicesToPreviewCandidate()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 BIRT",
+            "2 DATE 1 JAN 1900",
+            "2 PLAC Odense",
+            "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "1 BIRT",
+            "2 DATE 2 FEB 1901",
+            "2 PLAC Aarhus",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var dialog = new PathChoosingGedcomDifferenceDialogService("person.birthPlace");
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: dialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            var visibleFact = "1 JAN 1900 i Odense";
+            var factIndex = viewModel.Editor!.MarkdownText.IndexOf(visibleFact, StringComparison.Ordinal);
+            viewModel.Editor.MarkdownText = viewModel.Editor.MarkdownText[..factIndex] +
+                                            "3 MAR 1902 i Odense" +
+                                            viewModel.Editor.MarkdownText[(factIndex + visibleFact.Length)..];
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            dialog.LastDifferences.Select(item => item.StructuredDifference!.Path)
+                .Should().Contain(["person.birthDate", "person.birthPlace"]);
+            dialog.LastDifferences.Should().Contain(item =>
+                item.StructuredDifference!.Path.StartsWith("person.events[", StringComparison.Ordinal));
+            viewModel.Editor!.MarkdownText.Should().Contain("3 MAR 1902 i Aarhus");
+            viewModel.Editor.MarkdownText.Should().Contain("1 JAN 1900");
+            viewModel.Editor.MarkdownText.Should().NotContain("2 FEB 1901");
+            viewModel.Editor.IsDirty.Should().BeTrue();
+            var candidate = viewModel.Editor.CreateDocument();
+            candidate.Metadata!.SyncBaseline!.Imported.Person.BirthPlace.Should().Be("Aarhus");
+            candidate.Metadata.SyncBaseline.Approved.Person.BirthDate.Should().Be("3 MAR 1902");
+            candidate.Metadata.SyncBaseline.Approved.Person.BirthPlace.Should().Be("Aarhus");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
     }
 
     [Fact]
@@ -595,11 +657,22 @@ public class MainWindowViewModelTests
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
         var original = viewModel.Editor!.MarkdownText;
+        var snapshotDirectory = Path.Combine(outputFolder, ".slaegtsassistent", "gedcom");
+        var snapshotBefore = Directory.GetFiles(snapshotDirectory)
+            .ToDictionary(path => Path.GetFileName(path)!, File.ReadAllBytes, StringComparer.Ordinal);
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
         viewModel.Editor.MarkdownText.Should().Be(original);
         viewModel.Editor.MarkdownText.Should().NotContain("12 MAR 1900");
         viewModel.Editor.IsDirty.Should().BeFalse();
+        viewModel.ImportPhaseText.Should().Be("Afvist");
+        var snapshotAfter = Directory.GetFiles(snapshotDirectory)
+            .ToDictionary(path => Path.GetFileName(path)!, File.ReadAllBytes, StringComparer.Ordinal);
+        snapshotAfter.Keys.Should().BeEquivalentTo(snapshotBefore.Keys);
+        foreach (var file in snapshotBefore)
+        {
+            snapshotAfter[file.Key].Should().Equal(file.Value);
+        }
     }
 
     [Fact]
@@ -1128,7 +1201,8 @@ public class MainWindowViewModelTests
             markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
             markdownFileStore: new FileSystemMarkdownFileStore(),
             markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
-            gedcomSnapshotStore: new FileSystemGedcomSnapshotStore());
+            gedcomSnapshotStore: new FileSystemGedcomSnapshotStore(),
+            gedcomDifferenceDialogService: new ChoosingGedcomDifferenceDialogService(true));
 
         try
         {
@@ -2380,6 +2454,22 @@ public class MainWindowViewModelTests
                 return Task.FromResult<IReadOnlyDictionary<string, bool>?>(
                     differences.ToDictionary(item => item.Key, _ => _useGedcom, StringComparer.Ordinal));
             }
+    }
+
+    private sealed class PathChoosingGedcomDifferenceDialogService(string selectedPath)
+        : IGedcomDifferenceDialogService
+    {
+        public IReadOnlyList<GedcomDifferenceReviewItem> LastDifferences { get; private set; } = [];
+
+        public Task<IReadOnlyDictionary<string, bool>?> ShowAsync(
+            IReadOnlyList<GedcomDifferenceReviewItem> differences)
+        {
+            LastDifferences = differences;
+            return Task.FromResult<IReadOnlyDictionary<string, bool>?>(differences.ToDictionary(
+                item => item.Key,
+                item => string.Equals(item.StructuredDifference?.Path, selectedPath, StringComparison.Ordinal),
+                StringComparer.Ordinal));
+        }
     }
 
     private sealed class ThrowingGedcomSnapshotStore : IGedcomSnapshotStore

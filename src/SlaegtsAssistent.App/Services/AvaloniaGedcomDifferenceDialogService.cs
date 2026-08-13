@@ -5,6 +5,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using SlaegtsAssistent.Core.Biography;
+using SlaegtsAssistent.App.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,23 +33,63 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         }
 
         var gedcomChoices = new Dictionary<string, RadioButton>(StringComparer.Ordinal);
+        var approvedChoices = new Dictionary<string, RadioButton>(StringComparer.Ordinal);
+        var reviewState = new GedcomDifferenceReviewViewModel(differences);
         var rows = new StackPanel { Spacing = 6 };
+        var preview = new TextBox
+        {
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            MinHeight = 180,
+            FontFamily = new FontFamily("monospace"),
+        };
+
+        void UpdatePreview()
+        {
+            var content = reviewState.PreviewContent;
+            preview.Text = content is null
+                ? "Ingen kandidat anvendes med de aktuelle valg."
+                : BiographyDocumentParser.Parse(content).Body;
+        }
 
         foreach (var difference in differences)
         {
+            var structured = difference.StructuredDifference;
             var markdownChoice = new RadioButton
             {
-                Content = "Markdown",
+                Content = structured?.Causes.HasFlag(BiographyDifferenceCause.BaselineMigration) == true
+                    ? "_Bevar"
+                    : "_Dokument",
                 GroupName = difference.Key,
                 IsChecked = !difference.UseGedcomByDefault,
             };
             var gedcomChoice = new RadioButton
             {
-                Content = "GEDCOM",
+                Content = structured?.Causes.HasFlag(BiographyDifferenceCause.BaselineMigration) == true
+                    ? "_Migrér"
+                    : "Ny _GEDCOM",
                 GroupName = difference.Key,
                 IsChecked = difference.UseGedcomByDefault,
             };
+            markdownChoice.IsCheckedChanged += (_, _) =>
+            {
+                if (markdownChoice.IsChecked == true)
+                {
+                    reviewState.SetChoice(difference.Key, false);
+                    UpdatePreview();
+                }
+            };
+            gedcomChoice.IsCheckedChanged += (_, _) =>
+            {
+                if (gedcomChoice.IsChecked == true)
+                {
+                    reviewState.SetChoice(difference.Key, true);
+                    UpdatePreview();
+                }
+            };
             gedcomChoices[difference.Key] = gedcomChoice;
+            approvedChoices[difference.Key] = markdownChoice;
             var choicePanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -58,7 +99,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
 
             var row = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitions("170,130,*,*,210"),
+                ColumnDefinitions = new ColumnDefinitions("145,190,95,135,*,*,*,210"),
                 ColumnSpacing = 8,
             };
             row.Children.Add(CreateValueBlock(difference.PersonName, 0, FontWeight.SemiBold));
@@ -68,13 +109,18 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                 BiographyBaselineStatus.UnsupportedVersion => $"{difference.Difference.FieldName}\nUkendt baselineversion",
                 _ => difference.Difference.FieldName,
             };
-            row.Children.Add(CreateValueBlock(fieldName, 1, FontWeight.SemiBold));
-            row.Children.Add(CreateValueBlock(difference.Difference.DocumentValue, 2));
-            row.Children.Add(CreateValueBlock(difference.Difference.GedcomValue, 3));
-            Grid.SetColumn(choicePanel, 4);
+            row.Children.Add(CreateValueBlock(structured?.Path ?? fieldName, 1, FontWeight.SemiBold));
+            row.Children.Add(CreateValueBlock(ActionText(structured), 2));
+            row.Children.Add(CreateValueBlock(CauseText(structured), 3));
+            row.Children.Add(CreateValueBlock(structured?.DocumentValue ?? difference.Difference.DocumentValue, 4));
+            row.Children.Add(CreateValueBlock(structured?.ApprovedValue ?? difference.Difference.DocumentValue, 5));
+            row.Children.Add(CreateValueBlock(structured?.ImportedValue ?? difference.Difference.GedcomValue, 6));
+            Grid.SetColumn(choicePanel, 7);
             row.Children.Add(choicePanel);
             rows.Children.Add(row);
         }
+
+        UpdatePreview();
 
         var completion = new TaskCompletionSource<IReadOnlyDictionary<string, bool>?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -82,7 +128,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         var dialog = new Window
         {
             Title = "Forskelle mellem GEDCOM og Markdown",
-            Width = 1120,
+            Width = 1480,
             Height = Math.Min(760, 230 + differences.Count * 48),
             MinWidth = 900,
             MinHeight = 320,
@@ -90,24 +136,43 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
-        var applyButton = new Button { Content = "Anvend valgte", MinWidth = 130 };
+        var applyButton = new Button { Content = "_Anvend valgte", MinWidth = 130, IsDefault = true };
         applyButton.Click += (_, _) =>
         {
-            selectedResult = gedcomChoices.ToDictionary(
-                pair => pair.Key,
-                pair => pair.Value.IsChecked == true,
-                StringComparer.Ordinal);
+            selectedResult = reviewState.CreateDecision();
             dialog.Close();
         };
-        var closeButton = new Button { Content = "Luk uden ændringer", MinWidth = 150 };
+        var closeButton = new Button { Content = "_Luk uden ændringer", MinWidth = 150, IsCancel = true };
         closeButton.Click += (_, _) => dialog.Close();
+        var keepAllButton = new Button { Content = "Bevar alle dokumentværdier", MinWidth = 195 };
+        keepAllButton.Click += (_, _) =>
+        {
+            reviewState.KeepAllDocumentValues();
+            foreach (var choice in approvedChoices.Values)
+            {
+                choice.IsChecked = true;
+            }
+
+            UpdatePreview();
+        };
+        var useAllButton = new Button { Content = "Vælg alle nye GEDCOM-værdier", MinWidth = 215 };
+        useAllButton.Click += (_, _) =>
+        {
+            reviewState.UseAllImported();
+            foreach (var choice in gedcomChoices.Values)
+            {
+                choice.IsChecked = true;
+            }
+
+            UpdatePreview();
+        };
 
         var buttonBar = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Children = { closeButton, applyButton },
+            Children = { keepAllButton, useAllButton, closeButton, applyButton },
         };
         DockPanel.SetDock(buttonBar, Dock.Bottom);
 
@@ -120,6 +185,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                 new ScrollViewer
                 {
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Content = new StackPanel
                     {
                         Spacing = 12,
@@ -132,6 +198,13 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                             },
                             CreateHeaderRow(),
                             rows,
+                            new TextBlock
+                            {
+                                Text = "Preview af den valgte dokumentkandidat",
+                                FontWeight = FontWeight.Bold,
+                                Margin = new Thickness(0, 10, 0, 0),
+                            },
+                            preview,
                         },
                     },
                 },
@@ -147,15 +220,52 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
     {
         var row = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("170,130,*,*,210"),
+            ColumnDefinitions = new ColumnDefinitions("145,190,95,135,*,*,*,210"),
             ColumnSpacing = 8,
         };
         row.Children.Add(CreateValueBlock("Person", 0, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("Felt", 1, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("Markdown", 2, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("GEDCOM", 3, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("Kilde", 4, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Feltsti", 1, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Handling", 2, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Årsag", 3, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Dokument", 4, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Godkendt", 5, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Ny GEDCOM", 6, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock("Valg", 7, FontWeight.Bold));
         return row;
+    }
+
+    private static string ActionText(BiographyStructuredDifference? difference) => difference?.Kind switch
+    {
+        BiographyDifferenceKind.Added => "Tilføj",
+        BiographyDifferenceKind.Removed => "Fjern",
+        BiographyDifferenceKind.Changed => "Ændr",
+        _ => "Ændr",
+    };
+
+    private static string CauseText(BiographyStructuredDifference? difference)
+    {
+        if (difference is null)
+        {
+            return "GEDCOM";
+        }
+
+        var causes = new List<string>();
+        if (difference.Causes.HasFlag(BiographyDifferenceCause.Gedcom))
+        {
+            causes.Add("GEDCOM");
+        }
+
+        if (difference.Causes.HasFlag(BiographyDifferenceCause.Template))
+        {
+            causes.Add("Skabelon");
+        }
+
+        if (difference.Causes.HasFlag(BiographyDifferenceCause.BaselineMigration))
+        {
+            causes.Add("Migrering");
+        }
+
+        return string.Join(" + ", causes);
     }
 
     private static TextBlock CreateValueBlock(

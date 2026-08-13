@@ -94,3 +94,5 @@
 ## 2026-08-13
 - [98da5c1] feat: Add import diagnostics and reporting for GEDCOM file imports
 - [390ee0f] feat: Enhance GEDCOM import and reconciliation process
+- [998dbb0] feat: Enhance GEDCOM import and reconciliation process
+- [1d0c5c0] feat: Add BiographyConflictCandidateService and BiographyStructuredDifferenceService

@@ -76,6 +76,112 @@ public sealed class BiographyTemplateContext
             sources,
             media);
     }
+
+    public static BiographyTemplateContext FromSnapshot(
+        CanonicalBiographySnapshot snapshot,
+        string? mediaBaseDirectory = null,
+        IReadOnlyDictionary<string, string?>? personNames = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var person = snapshot.Person;
+        var events = person.Events.Select(ToEvent).ToArray();
+        var familyEvents = snapshot.Families.SelectMany(family => family.Events).Select(ToEvent).ToArray();
+        var census = person.Census.Select(item => new CensusTemplateContext(
+            item.Date,
+            item.Place,
+            item.Note,
+            item.Sources.Select(ToSource).ToArray())).ToArray();
+        var sources = person.Sources
+            .Concat(person.Events.SelectMany(item => item.Sources))
+            .Concat(snapshot.Families.SelectMany(family => family.Sources))
+            .Concat(snapshot.Families.SelectMany(family => family.Events).SelectMany(item => item.Sources))
+            .Concat(person.Census.SelectMany(item => item.Sources))
+            .Select(ToSource)
+            .DistinctBy(source => source.Key, StringComparer.Ordinal)
+            .ToArray();
+        var media = person.Media.Select(item =>
+        {
+            var relativeFile = item.File;
+            if (!string.IsNullOrWhiteSpace(relativeFile) && Path.IsPathRooted(relativeFile))
+            {
+                relativeFile = string.IsNullOrWhiteSpace(mediaBaseDirectory)
+                    ? Path.GetFileName(relativeFile)
+                    : Path.GetRelativePath(mediaBaseDirectory, relativeFile);
+            }
+
+            return new MediaTemplateContext(
+                item.RecordId,
+                item.File,
+                relativeFile?.Replace('\\', '/'),
+                item.Form,
+                item.Title,
+                item.Type,
+                item.Note);
+        }).ToArray();
+        var submitter = snapshot.Submitter is null
+            ? null
+            : new SubmitterTemplateContext(
+                snapshot.Submitter.RecordId,
+                snapshot.Submitter.Name,
+                snapshot.Submitter.Address,
+                snapshot.Submitter.Phone,
+                snapshot.Submitter.Email,
+                snapshot.Submitter.Website,
+                snapshot.Submitter.Language);
+
+        return new BiographyTemplateContext(
+            new PersonTemplateContext(
+                person.RecordId,
+                person.FullName,
+                person.Sex,
+                person.BirthDate,
+                person.BirthPlace,
+                person.DeathDate,
+                person.DeathPlace,
+                snapshot.ParentRecordIds
+                    .Select(recordId => new PersonReferenceTemplateContext(
+                        recordId,
+                        personNames is not null && personNames.TryGetValue(recordId, out var name)
+                            ? name
+                            : recordId))
+                    .ToArray()),
+            submitter,
+            events,
+            familyEvents,
+            census,
+            sources,
+            media);
+
+        static EventTemplateContext ToEvent(CanonicalEventData item)
+        {
+            var category = Enum.TryParse<GedcomEventCategory>(item.Category, out var parsed)
+                ? parsed
+                : GedcomEventCategory.Other;
+            return new EventTemplateContext(
+                item.Tag,
+                category,
+                item.Value,
+                item.Date,
+                item.Place,
+                item.Type,
+                item.Note,
+                item.Sources.Select(ToSource).ToArray());
+        }
+
+        static SourceTemplateContext ToSource(CanonicalSourceData item) => new(
+            item.Identity,
+            item.RecordId,
+            item.Title,
+            item.Author,
+            item.Publication,
+            item.Text,
+            item.Repository,
+            item.Page,
+            item.Data,
+            item.Date,
+            item.Note);
+    }
 }
 
 public sealed record PersonTemplateContext(

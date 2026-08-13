@@ -61,6 +61,48 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
             CreateDocumentBody(body));
     }
 
+    public string Generate(
+        CanonicalBiographySnapshot approvedSnapshot,
+        CanonicalBiographySnapshot importedSnapshot,
+        IReadOnlyDictionary<string, string?>? personNames = null)
+    {
+        ArgumentNullException.ThrowIfNull(approvedSnapshot);
+        ArgumentNullException.ThrowIfNull(importedSnapshot);
+
+        var person = approvedSnapshot.Person;
+        var context = BiographyTemplateContext.FromSnapshot(
+            approvedSnapshot,
+            _mediaBaseDirectory,
+            personNames);
+        var body = _renderer.Render(_template, context);
+        var facts = new BiographyFactsSnapshot(
+            person.FullName,
+            person.Sex,
+            person.BirthDate,
+            person.BirthPlace,
+            person.DeathDate,
+            person.DeathPlace,
+            approvedSnapshot.ParentRecordIds)
+        {
+            ParentDisplayText = string.Join(", ", approvedSnapshot.ParentRecordIds),
+        };
+        return BiographyDocumentSerializer.Serialize(
+            new BiographyDocumentMetadata(
+                BiographyDocumentParser.CurrentFormatVersion,
+                person.RecordId,
+                person.FullName,
+                facts)
+            {
+                GedcomBaselineHash = importedSnapshot.ComputeFingerprint(),
+                TemplateHash = _templateHash,
+                SyncBaseline = new BiographySyncBaseline(
+                    BiographySyncBaseline.CurrentVersion,
+                    importedSnapshot,
+                    approvedSnapshot),
+            },
+            CreateDocumentBody(body));
+    }
+
     private static string CreateDocumentBody(string body)
     {
         var biographyHeading = body.IndexOf("## Biografi", StringComparison.Ordinal);
