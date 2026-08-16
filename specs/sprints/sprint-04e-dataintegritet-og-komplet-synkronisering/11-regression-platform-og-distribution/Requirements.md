@@ -10,3 +10,5 @@
 - Native AOT- og enkeltfilsmålet fra `TechStack.md` skal enten bestå publicering og grundlæggende funktionstest pr. platform eller ændres gennem en udtrykkeligt godkendt arkitekturbeslutning.
 - WebView og øvrige native komponenter skal gennemgå grundlæggende funktionstest på hver målplatform.
 - Alle manuelle valideringer fra feature 01–10 skal være godkendt før den samlede prøve.
+
+Sporbarheden er dokumenteret i [Risikomatrix.md](Risikomatrix.md), og platformskørslen i [Platformtest.md](Platformtest.md). Ændringen af den bogstavelige enkeltfilskontrakt til én platformspakke er udtrykkeligt godkendt af produktejeren i [ADR-001](ADR-001-platformspakker-med-native-biblioteker.md).

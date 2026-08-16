@@ -2,18 +2,11 @@ using System;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace SlaegtsAssistent.App.Services;
 
 public sealed class JsonApplicationSettingsService : IApplicationSettingsService
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
     private readonly string _settingsFilePath;
     private readonly IAtomicFileWriter _atomicFileWriter;
 
@@ -48,7 +41,7 @@ public sealed class JsonApplicationSettingsService : IApplicationSettingsService
         }
 
         var json = File.ReadAllText(_settingsFilePath);
-        return JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions) ?? new AppSettings();
+        return JsonSerializer.Deserialize(json, AppJsonContext.Default.AppSettings) ?? new AppSettings();
     }
 
     public void Save(AppSettings settings)
@@ -61,7 +54,7 @@ public sealed class JsonApplicationSettingsService : IApplicationSettingsService
             throw new InvalidOperationException("Kunne ikke bestemme mappe til indstillingsfil.");
         }
 
-        var json = JsonSerializer.Serialize(settings, SerializerOptions);
+        var json = JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings);
         _atomicFileWriter.WriteText(_settingsFilePath, json, new UTF8Encoding(false));
     }
 

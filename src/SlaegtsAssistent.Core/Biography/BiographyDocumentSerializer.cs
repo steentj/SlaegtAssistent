@@ -13,22 +13,25 @@ public static class BiographyDocumentSerializer
         var builder = new StringBuilder()
             .AppendLine("---")
             .Append("formatVersion: ").AppendLine(metadata.FormatVersion.ToString())
-            .Append("recordId: ").AppendLine(JsonSerializer.Serialize(metadata.RecordId))
-            .Append("displayName: ").AppendLine(JsonSerializer.Serialize(metadata.DisplayName))
-            .Append("gedcomBaselineHash: ").AppendLine(JsonSerializer.Serialize(metadata.GedcomBaselineHash))
-            .Append("templateHash: ").AppendLine(JsonSerializer.Serialize(metadata.TemplateHash))
-            .Append("syncBaseline: ").AppendLine(JsonSerializer.Serialize(metadata.SyncBaseline))
+            .Append("recordId: ").AppendLine(Serialize(metadata.RecordId))
+            .Append("displayName: ").AppendLine(Serialize(metadata.DisplayName))
+            .Append("gedcomBaselineHash: ").AppendLine(Serialize(metadata.GedcomBaselineHash))
+            .Append("templateHash: ").AppendLine(Serialize(metadata.TemplateHash))
+            .Append("syncBaseline: ").AppendLine(JsonSerializer.Serialize(metadata.SyncBaseline, BiographyDocumentJsonContext.Default.BiographySyncBaseline))
             .AppendLine("facts:")
-            .Append("  fullName: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.FullName))
-            .Append("  sex: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.Sex))
-            .Append("  birthDate: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.BirthDate))
-            .Append("  birthPlace: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.BirthPlace))
-            .Append("  deathDate: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.DeathDate))
-            .Append("  deathPlace: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.DeathPlace))
-            .Append("  parentRecordIds: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.ParentRecordIds))
+            .Append("  fullName: ").AppendLine(Serialize(metadata.Facts.FullName))
+            .Append("  sex: ").AppendLine(Serialize(metadata.Facts.Sex))
+            .Append("  birthDate: ").AppendLine(Serialize(metadata.Facts.BirthDate))
+            .Append("  birthPlace: ").AppendLine(Serialize(metadata.Facts.BirthPlace))
+            .Append("  deathDate: ").AppendLine(Serialize(metadata.Facts.DeathDate))
+            .Append("  deathPlace: ").AppendLine(Serialize(metadata.Facts.DeathPlace))
+            .Append("  parentRecordIds: ").AppendLine(JsonSerializer.Serialize(metadata.Facts.ParentRecordIds, BiographyDocumentJsonContext.Default.IReadOnlyListString))
             .AppendLine("---")
             .Append(body);
 
         return builder.ToString();
     }
+
+    private static string Serialize(string? value) =>
+        JsonSerializer.Serialize(value, BiographyDocumentJsonContext.Default.String);
 }

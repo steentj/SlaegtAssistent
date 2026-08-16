@@ -248,7 +248,7 @@ public sealed class BiographyStructuredDifferenceService
         ? null
         : value is string text
             ? text
-            : JsonSerializer.Serialize(value);
+            : JsonSerializer.Serialize(value, value.GetType(), BiographyDocumentJsonContext.Default);
 
     internal static string SourceKey(CanonicalSourceData source) => source.RecordId ?? source.Identity;
 

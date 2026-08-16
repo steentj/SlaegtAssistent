@@ -34,9 +34,9 @@
 
 ## Manuel godkendelse
 
-- **Dato:**
-- **Godkendt af:**
-- **Build eller commit:**
-- **Bemærkninger:**
+- **Dato:** 13. august 2026
+- **Godkendt af:** Produktejer
+- **Build eller commit:** Lokal arbejdsgren; 106 Core-tests og 115 App-tests bestået
+- **Bemærkninger:** Manuel godkendelse modtaget efter gennemgang af Feature 4.8.10.
 
-- [ ] Feature 10 er godkendt, og feature 11 må påbegyndes.
+- [x] Feature 10 er godkendt, og feature 11 må påbegyndes.

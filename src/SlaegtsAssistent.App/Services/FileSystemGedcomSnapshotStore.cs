@@ -16,10 +16,6 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
     private const string GedcomDirectoryName = "gedcom";
     private const string ManifestFileName = "manifest.json";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-    };
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
     private readonly IAtomicFileWriter _atomicFileWriter;
 
@@ -49,9 +45,9 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
 
         try
         {
-            var manifest = JsonSerializer.Deserialize<GedcomSnapshotManifest>(
+            var manifest = JsonSerializer.Deserialize(
                 File.ReadAllText(manifestPath),
-                SerializerOptions);
+                AppJsonContext.Default.GedcomSnapshotManifest);
             if (manifest is null)
             {
                 throw new GedcomSnapshotException("GEDCOM-snapshotets manifest er tomt.");
@@ -150,7 +146,7 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
             _atomicFileWriter.WriteBytes(sourceCopyPath, sourceBytes);
             _atomicFileWriter.WriteText(
                 manifestPath,
-                JsonSerializer.Serialize(manifest, SerializerOptions),
+                JsonSerializer.Serialize(manifest, AppJsonContext.Default.GedcomSnapshotManifest),
                 Utf8WithoutBom);
 
             DeleteObsoleteSourceCopies(directory, sourceCopyFileName);
@@ -230,12 +226,4 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
         }
     }
 
-    private sealed record GedcomSnapshotManifest(
-        int FormatVersion,
-        string SourcePath,
-        string SourceFileName,
-        string SourceHash,
-        DateTimeOffset ImportedAt,
-        string SourceCopyFileName,
-        IReadOnlyDictionary<string, string> RawPersonSegments);
 }

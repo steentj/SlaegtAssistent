@@ -24,12 +24,20 @@ public sealed class AvaloniaUnsavedChangesDialogService : IUnsavedChangesDialogS
             return UnsavedChangesDecision.Annullér;
         }
 
-        var result = UnsavedChangesDecision.Annullér;
+        var dialogState = CreateDialog();
+        await dialogState.Dialog.ShowDialog(owner);
+        return dialogState.Decision;
+    }
+
+    internal static UnsavedChangesDialogState CreateDialog()
+    {
+        var dialogState = new UnsavedChangesDialogState();
 
         var saveButton = new Button
         {
             Content = "Gem",
             MinWidth = 90,
+            IsDefault = true,
         };
 
         var discardButton = new Button
@@ -42,6 +50,7 @@ public sealed class AvaloniaUnsavedChangesDialogService : IUnsavedChangesDialogS
         {
             Content = "Annullér",
             MinWidth = 90,
+            IsCancel = true,
         };
 
         var dialog = new Window
@@ -80,19 +89,26 @@ public sealed class AvaloniaUnsavedChangesDialogService : IUnsavedChangesDialogS
 
         saveButton.Click += (_, _) =>
         {
-            result = UnsavedChangesDecision.Gem;
+            dialogState.Decision = UnsavedChangesDecision.Gem;
             dialog.Close();
         };
 
         discardButton.Click += (_, _) =>
         {
-            result = UnsavedChangesDecision.Kassér;
+            dialogState.Decision = UnsavedChangesDecision.Kassér;
             dialog.Close();
         };
 
         cancelButton.Click += (_, _) => dialog.Close();
 
-        await dialog.ShowDialog(owner);
-        return result;
+        dialogState.Dialog = dialog;
+        return dialogState;
     }
+}
+
+internal sealed class UnsavedChangesDialogState
+{
+    public Window Dialog { get; set; } = null!;
+
+    public UnsavedChangesDecision Decision { get; set; } = UnsavedChangesDecision.Annullér;
 }

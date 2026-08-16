@@ -1,0 +1,87 @@
+name: Platform og distribution
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-publish:
+    name: ${{ matrix.platform }} · ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS ARM64
+            os: macos-15
+            rid: osx-arm64
+          - platform: Windows x64
+            os: windows-latest
+            rid: win-x64
+          - platform: Linux x64
+            os: ubuntu-latest
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      CI: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+      AVALONIA_TELEMETRY_OPTOUT: true
+    steps:
+      - name: Hent kildekode
+        uses: actions/checkout@v4
+
+      - name: Installér låst .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Kontrollér runnerarkitektur
+        shell: bash
+        run: |
+          arkitektur="$(uname -m 2>/dev/null || echo x86_64)"
+          if [[ "${{ matrix.rid }}" == "osx-arm64" && "$arkitektur" != "arm64" ]]; then
+            echo "macOS-runneren er $arkitektur, men ARM64 er påkrævet."
+            exit 1
+          fi
+
+      - name: Gendan låste dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Gendan låste distributionsdependencies
+        run: dotnet restore src/SlaegtsAssistent.App/SlaegtsAssistent.App.csproj --locked-mode -p:DistributionBuild=true
+
+      - name: Byg
+        run: dotnet build --configuration Release --no-restore --warnaserror
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build --no-restore
+
+      - name: Publicér Native AOT-distribution
+        run: dotnet publish src/SlaegtsAssistent.App/SlaegtsAssistent.App.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --no-restore -p:DistributionBuild=true -p:IncludeNativeLibrariesForSelfExtract=true -p:StripSymbols=true -p:DebugType=None --output artifacts/${{ matrix.rid }}
+
+      - name: Kontrollér distributionsartefakt
+        shell: bash
+        run: |
+          antal="$(find "artifacts/${{ matrix.rid }}" -maxdepth 1 -type f \( -name 'SlaegtsAssistent.App' -o -name 'SlaegtsAssistent.App.exe' \) | wc -l | tr -d ' ')"
+          test "$antal" = "1"
+
+      - name: Kør grundlæggende funktionstest af artefakten
+        shell: bash
+        run: |
+          program="artifacts/${{ matrix.rid }}/SlaegtsAssistent.App"
+          if [[ "${{ matrix.rid }}" == "win-x64" ]]; then
+            program="artifacts/${{ matrix.rid }}/SlaegtsAssistent.App.exe"
+          fi
+          "$program" --release-smoke-test
+
+      - name: Gem distributionsartefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlaegtsAssistent-${{ matrix.rid }}
+          path: artifacts/${{ matrix.rid }}
+          if-no-files-found: error

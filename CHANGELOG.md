@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-08-16
+- [dfd09b0] Refactor JSON serialization in BiographyStructuredDifferenceService and CanonicalBiographySnapshot
+
 ## 2026-08-12
 - [441c578] feat: Add import diagnostics and reporting for GEDCOM file imports
 - [6ce899a] Add GEDCOM fixture and completeness tests for GEDCOM 5.5.1

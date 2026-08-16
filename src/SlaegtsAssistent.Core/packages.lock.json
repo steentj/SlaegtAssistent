@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Gedcom.Net.SDK": {
+        "type": "Direct",
+        "requested": "[1.0.8, )",
+        "resolved": "1.0.8",
+        "contentHash": "jEt8WJjBAgCJUtNW4gfYuz4fiWCrYGEhrfDDTJBt17RQ3pkCWfLrHP8UXezevCMfRzwtr9F/WpsiPPwZ5VCdlw=="
+      }
+    }
+  }
+}

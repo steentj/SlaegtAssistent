@@ -15,14 +15,9 @@ public sealed record CanonicalBiographySnapshot(
 {
     public const int CurrentVersion = 1;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
     public string ToCanonicalJson()
     {
-        return JsonSerializer.Serialize(this, SerializerOptions);
+        return JsonSerializer.Serialize(this, CanonicalBiographyJsonContext.Default.CanonicalBiographySnapshot);
     }
 
     public string ComputeFingerprint()

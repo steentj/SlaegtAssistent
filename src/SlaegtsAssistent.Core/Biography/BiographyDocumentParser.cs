@@ -260,7 +260,7 @@ public static class BiographyDocumentParser
 
         try
         {
-            return JsonSerializer.Deserialize<BiographySyncBaseline>(value)
+            return JsonSerializer.Deserialize(value, BiographyDocumentJsonContext.Default.BiographySyncBaseline)
                 ?? throw InvalidValue("syncBaseline");
         }
         catch (JsonException)
@@ -293,7 +293,7 @@ public static class BiographyDocumentParser
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<string>(value);
+            var parsed = JsonSerializer.Deserialize(value, BiographyDocumentJsonContext.Default.String);
             return string.IsNullOrWhiteSpace(parsed) ? throw MissingField(key) : parsed;
         }
         catch (JsonException)
@@ -311,7 +311,7 @@ public static class BiographyDocumentParser
 
         try
         {
-            return JsonSerializer.Deserialize<string>(value);
+            return JsonSerializer.Deserialize(value, BiographyDocumentJsonContext.Default.String);
         }
         catch (JsonException)
         {
@@ -328,7 +328,7 @@ public static class BiographyDocumentParser
 
         try
         {
-            return JsonSerializer.Deserialize<string[]>(value)
+            return JsonSerializer.Deserialize(value, BiographyDocumentJsonContext.Default.StringArray)
                 ?? throw InvalidValue(key);
         }
         catch (JsonException)
