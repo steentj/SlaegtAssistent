@@ -11,6 +11,7 @@
     <PublishAot>true</PublishAot>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    <NuGetLockFilePath>packages.distribution.lock.json</NuGetLockFilePath>
   </PropertyGroup>
 
   <ItemGroup>
