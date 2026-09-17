@@ -17,8 +17,8 @@ public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
 
     public async Task<string?> PickGedcomFileAsync(string? suggestedStartFolder)
     {
-        var mainWindow = _applicationLifetime.MainWindow;
-        if (mainWindow is null)
+        var pickerWindow = AvaloniaPickerWindowResolver.Resolve(_applicationLifetime);
+        if (pickerWindow is null)
         {
             return null;
         }
@@ -26,10 +26,10 @@ public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
         IStorageFolder? suggestedStartLocation = null;
         if (!string.IsNullOrWhiteSpace(suggestedStartFolder) && Directory.Exists(suggestedStartFolder))
         {
-            suggestedStartLocation = await mainWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
+            suggestedStartLocation = await pickerWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
         }
 
-        var files = await mainWindow.StorageProvider.OpenFilePickerAsync(
+        var files = await pickerWindow.StorageProvider.OpenFilePickerAsync(
             CreateOpenOptions(suggestedStartLocation));
 
         if (files.Count == 0)

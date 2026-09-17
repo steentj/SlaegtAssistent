@@ -16,8 +16,8 @@ public sealed class AvaloniaFolderPickerService : IFolderPickerService
 
     public async Task<string?> PickFolderAsync(string title, string? suggestedStartFolder)
     {
-        var mainWindow = _applicationLifetime.MainWindow;
-        if (mainWindow is null)
+        var pickerWindow = AvaloniaPickerWindowResolver.Resolve(_applicationLifetime);
+        if (pickerWindow is null)
         {
             return null;
         }
@@ -25,10 +25,10 @@ public sealed class AvaloniaFolderPickerService : IFolderPickerService
         IStorageFolder? suggestedStartLocation = null;
         if (!string.IsNullOrWhiteSpace(suggestedStartFolder) && Directory.Exists(suggestedStartFolder))
         {
-            suggestedStartLocation = await mainWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
+            suggestedStartLocation = await pickerWindow.StorageProvider.TryGetFolderFromPathAsync(suggestedStartFolder);
         }
 
-        var folders = await mainWindow.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await pickerWindow.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = title,
             AllowMultiple = false,
