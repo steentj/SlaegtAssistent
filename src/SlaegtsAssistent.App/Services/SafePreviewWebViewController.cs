@@ -22,6 +22,11 @@ public static class SafePreviewWebViewController
                 return;
             }
 
+            if (IsInternalPreviewTransport(eventArgs.Request))
+            {
+                return;
+            }
+
             var decision = PreviewNavigationPolicy.Evaluate(eventArgs.Request);
             if (decision.AllowInPreview)
             {
@@ -126,4 +131,7 @@ public static class SafePreviewWebViewController
         closeButton.Click += (_, _) => dialog.Close();
         await dialog.ShowDialog(owner);
     }
+
+    private static bool IsInternalPreviewTransport(Uri destination) =>
+        destination.Scheme == "http" && destination.Host == "localhost";
 }

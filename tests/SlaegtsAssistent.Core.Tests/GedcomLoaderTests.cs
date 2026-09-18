@@ -23,6 +23,35 @@ public class GedcomLoaderTests
     }
 
     [Fact]
+    public void Load_MultipleNamesFixture_ShowsBirthNameAndMarriedSurname()
+    {
+        var fixturePath = CreateTemporaryFixture(
+            """
+            0 HEAD
+            0 @64156748@ INDI
+            1 NAME /Hansen/
+            2 GIVN Marie
+            2 SURN Hansen
+            2 TYPE birth
+            1 NAME Marie /Jensen/
+            2 TYPE married
+            0 TRLR
+            """);
+
+        try
+        {
+            var person = _loader.Load(fixturePath).FindPerson("@64156748@");
+
+            person.Should().NotBeNull();
+            person!.FullName.Should().Be("Marie Hansen (Jensen)");
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
     public void Load_SinglePersonFixture_PreservesRawGedcomSegment()
     {
         var tree = _loader.Load(FixturePath("single-person.ged"));

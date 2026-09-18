@@ -35,6 +35,11 @@ public sealed class GedcomLoader : IGedcomLoader
         "SUBM", "WIFE",
     };
 
+    private static readonly HashSet<string> IgnoredMacFamilyTreeRecordTags = new(StringComparer.Ordinal)
+    {
+        "_LABL", "_PLAC", "_PTE", "_PTF", "_STE", "_STF",
+    };
+
     public FamilyTree Load(string filePath, FamilyTree? existingTree = null)
     {
         return Load(filePath, existingTree, CancellationToken.None);
@@ -131,6 +136,7 @@ public sealed class GedcomLoader : IGedcomLoader
         ParsedSubmitter? currentSubmitter = null;
         ParsedEvent? currentEvent = null;
         ParsedCensus? currentCensus = null;
+        ParsedName? currentName = null;
         ParsedSource? currentPersonSource = null;
         int currentPersonSourceLevel = -1;
         ParsedMedia? currentPersonMedia = null;
@@ -163,6 +169,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 currentSubmitter = null;
                 currentEvent = null;
                 currentCensus = null;
+                currentName = null;
                 currentPersonSource = null;
                 currentPersonSourceLevel = -1;
                 currentPersonMedia = null;
@@ -253,6 +260,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     parser.No,
                     ref currentEvent,
                     ref currentCensus,
+                    ref currentName,
                     ref currentPersonSource,
                     ref currentPersonSourceLevel,
                     ref currentPersonMedia,
@@ -316,6 +324,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         foreach (var person in people.Values)
         {
+            person.FullName = ResolvePersonName(person);
             person.Diagnostics.Clear();
         }
 
@@ -343,6 +352,7 @@ public sealed class GedcomLoader : IGedcomLoader
         int line,
         ref ParsedEvent? currentEvent,
         ref ParsedCensus? currentCensus,
+        ref ParsedName? currentName,
         ref ParsedSource? currentSource,
         ref int currentSourceLevel,
         ref ParsedMedia? currentMedia,
@@ -365,6 +375,7 @@ public sealed class GedcomLoader : IGedcomLoader
         {
             currentEvent = null;
             currentCensus = null;
+            currentName = null;
             currentSource = null;
             currentSourceLevel = -1;
             currentMedia = null;
@@ -373,6 +384,8 @@ public sealed class GedcomLoader : IGedcomLoader
             switch (tag)
             {
                 case "NAME":
+                    currentName = ParseName(value);
+                    person.Names.Add(currentName);
                     person.FullName = NormalizeName(value);
                     break;
 
@@ -431,6 +444,24 @@ public sealed class GedcomLoader : IGedcomLoader
         if (currentMedia is not null)
         {
             ParseMediaLine(currentMedia, level, tag, value);
+            return;
+        }
+
+        if (currentName is not null && level == 2 && tag is "GIVN" or "SURN" or "TYPE")
+        {
+            switch (tag)
+            {
+                case "GIVN":
+                    currentName.GivenName = NormalizeToken(value);
+                    break;
+                case "SURN":
+                    currentName.Surname = NormalizeToken(value);
+                    break;
+                case "TYPE":
+                    currentName.Type = NormalizeToken(value);
+                    break;
+            }
+
             return;
         }
 
@@ -1283,6 +1314,20 @@ public sealed class GedcomLoader : IGedcomLoader
                     continue;
                 }
 
+                if (currentTag is not null && IgnoredMacFamilyTreeRecordTags.Contains(currentTag))
+                {
+                    skipCurrentRecord = true;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Warning,
+                        $"MacFamilyTree-metadatafeltet '{currentTag}' blev sprunget over; det påvirker ikke personposterne.",
+                        index + 1,
+                        currentRecordId,
+                        currentTag,
+                        "Metadatafeltet blev ikke importeret; øvrige poster blev bevaret.",
+                        filePath));
+                    continue;
+                }
+
                 if (currentTag is "NOTE" or "REPO" or "SUBN")
                 {
                     skipCurrentRecord = true;
@@ -1804,6 +1849,63 @@ public sealed class GedcomLoader : IGedcomLoader
         return compact.Length == 0 ? null : compact;
     }
 
+    private static ParsedName ParseName(string? value)
+    {
+        var normalized = NormalizeToken(value) ?? string.Empty;
+        var firstSlash = normalized.IndexOf('/', StringComparison.Ordinal);
+        var secondSlash = firstSlash >= 0
+            ? normalized.IndexOf('/', firstSlash + 1)
+            : -1;
+
+        return new ParsedName
+        {
+            GivenName = NormalizeToken(firstSlash >= 0 ? normalized[..firstSlash] : normalized),
+            Surname = NormalizeToken(firstSlash >= 0 && secondSlash > firstSlash
+                ? normalized[(firstSlash + 1)..secondSlash]
+                : null),
+        };
+    }
+
+    private static string? ResolvePersonName(ParsedPerson person)
+    {
+        if (person.Names.Count == 0)
+        {
+            return person.FullName;
+        }
+
+        var birthName = person.Names.FirstOrDefault(name => IsBirthName(name))
+            ?? person.Names.FirstOrDefault(name => !IsMarriedName(name));
+        var marriedName = person.Names.FirstOrDefault(IsMarriedName);
+        var givenName = birthName?.GivenName ?? marriedName?.GivenName;
+        var birthSurname = birthName?.Surname;
+        var marriedSurname = marriedName?.Surname;
+
+        if (string.IsNullOrWhiteSpace(givenName) && string.IsNullOrWhiteSpace(birthSurname))
+        {
+            return person.FullName;
+        }
+
+        var baseName = string.Join(' ', new[] { givenName, birthSurname }
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
+        if (!string.IsNullOrWhiteSpace(marriedSurname) &&
+            !string.Equals(marriedSurname, birthSurname, StringComparison.OrdinalIgnoreCase))
+        {
+            baseName = $"{baseName} ({marriedSurname})";
+        }
+
+        return string.IsNullOrWhiteSpace(baseName) ? person.FullName : baseName;
+    }
+
+    private static bool IsBirthName(ParsedName name) =>
+        name.Type?.Contains("birth", StringComparison.OrdinalIgnoreCase) == true ||
+        name.Type?.Contains("maiden", StringComparison.OrdinalIgnoreCase) == true ||
+        name.Type?.Contains("døbe", StringComparison.OrdinalIgnoreCase) == true ||
+        name.Type?.Contains("føde", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static bool IsMarriedName(ParsedName name) =>
+        name.Type?.Contains("married", StringComparison.OrdinalIgnoreCase) == true ||
+        name.Type?.Contains("gift", StringComparison.OrdinalIgnoreCase) == true;
+
     private static ParsedSource CreateCitation(string? value)
     {
         var normalized = NormalizeToken(value);
@@ -1864,6 +1966,8 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public string? FullName { get; set; }
 
+        public IList<ParsedName> Names { get; } = new List<ParsedName>();
+
         public string? Sex { get; set; }
 
         public string? BirthDate { get; set; }
@@ -1885,6 +1989,15 @@ public sealed class GedcomLoader : IGedcomLoader
         public IList<ParsedCensus> Census { get; } = new List<ParsedCensus>();
 
         public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
+    }
+
+    private sealed class ParsedName
+    {
+        public string? GivenName { get; set; }
+
+        public string? Surname { get; set; }
+
+        public string? Type { get; set; }
     }
 
     private sealed class ParsedEvent

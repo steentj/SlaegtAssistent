@@ -299,5 +299,7 @@ public static class PreviewNavigationPolicy
         return new PreviewNavigationDecision(false, false, destination.AbsoluteUri);
     }
 
-    public static bool AllowsResource(Uri destination) => destination.Scheme is "data" or "about";
+    public static bool AllowsResource(Uri destination) =>
+        destination.Scheme is "data" or "about" ||
+        destination.Scheme == "http" && destination.Host == "localhost";
 }

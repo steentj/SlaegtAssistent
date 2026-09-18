@@ -107,6 +107,37 @@ public sealed class GedcomFaultToleranceTests
         }
     }
 
+    [Fact]
+    public void Load_MacFamilyTreePlaceringstypeIgnoreresUdenAtBlokereImporten()
+    {
+        var path = CreateFixture(
+            "0 HEAD\n" +
+            "1 CHAR UTF-8\n" +
+            "0 @TF1@ _PTF\n" +
+            "1 _LNA Parish\n" +
+            "0 @P1@ _PLAC\n" +
+            "1 NAME Place metadata\n" +
+            "0 @I1@ INDI\n" +
+            "1 NAME Anna /Jensen/\n" +
+            "0 TRLR\n");
+
+        try
+        {
+            var tree = new GedcomLoader().Load(path);
+
+            tree.FindPerson("@I1@").Should().NotBeNull();
+            tree.ImportReport.FatalErrors.Should().Be(0);
+            tree.ImportReport.Diagnostics.Should().HaveCount(2);
+            tree.ImportReport.Diagnostics.Should().OnlyContain(diagnostic =>
+                diagnostic.Severity == GedcomDiagnosticSeverity.Warning
+                && (diagnostic.Tag == "_PTF" || diagnostic.Tag == "_PLAC"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Theory]
     [InlineData("1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anna /Jensen/\n0 TRLR\n", "HEAD")]
     [InlineData("0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anna /Jensen/\n", "TRLR")]

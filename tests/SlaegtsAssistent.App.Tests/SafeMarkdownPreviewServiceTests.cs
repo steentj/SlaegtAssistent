@@ -96,6 +96,18 @@ public sealed class SafeMarkdownPreviewServiceTests
         decision.DisplayDestination.Should().Be("https://example.dk/person");
     }
 
+    [Fact]
+    public void NavigationPolicy_ShouldKeepLocalhostOutsideExternalLinkPolicy()
+    {
+        var destination = new Uri("http://localhost:12345/");
+
+        var decision = PreviewNavigationPolicy.Evaluate(destination);
+
+        decision.AllowInPreview.Should().BeFalse();
+        decision.RequiresConfirmation.Should().BeTrue();
+        PreviewNavigationPolicy.AllowsResource(destination).Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("file:///etc/passwd")]
