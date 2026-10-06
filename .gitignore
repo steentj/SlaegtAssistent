@@ -65,6 +65,7 @@ obj/
 *.temp
 *~
 .#*
+TestGedComData/
 
 # OS
 .DS_Store
