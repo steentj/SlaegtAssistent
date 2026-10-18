@@ -9,7 +9,7 @@
 - Kandidaten må kun ændre metadata og indhold mellem de genererede markører.
 - Fri Markdown- og AI-tekst uden for markørerne skal bevares byte-for-byte.
 - Afvisning og lukning uden anvendelse må ikke ændre fil, editor, baseline eller snapshot.
-- Godkendelse skal markere en åben editor som ugemt; lukket dokument må først skrives i importens atomiske commit.
+- Godkendelse skal markere en åben editor med brugerens egne ugemte rettelser som ugemt, uden at skrive til dens fil. En åben editor uden ugemte rettelser og et lukket dokument skrives i importens atomiske commit, og editoren forbliver ren, så brugeren ikke advares om ugemte ændringer, der ikke stammer fra brugeren.
 - Dokumenter uden markører og dokumenter med manglende baseline skal have særskilt, tydelig migreringshandling.
 
 Den normative beslutningsmodel, feltstierne og commitgrænsen er dokumenteret i [Konfliktmodel.md](Konfliktmodel.md).

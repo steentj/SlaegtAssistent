@@ -105,7 +105,7 @@ public partial class EditorViewModel : ViewModelBase
         return BiographyDocumentParser.Parse(serialized);
     }
 
-    public void ApplySerializedDocument(string content)
+    public void ApplySerializedDocument(string content, bool markDirty = true)
     {
         var document = BiographyDocumentParser.Parse(content);
         _suppressDirtyTracking = true;
@@ -113,7 +113,7 @@ public partial class EditorViewModel : ViewModelBase
         {
             _metadata = document.Metadata;
             MarkdownText = document.Body;
-            IsDirty = true;
+            IsDirty = markDirty;
         }
         finally
         {

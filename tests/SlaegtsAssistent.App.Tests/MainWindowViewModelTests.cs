@@ -741,6 +741,91 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task PersonFilterText_ShouldKeepPreviewHtmlAndRawGedcom_ForFilteredPerson()
+    {
+        using var file = CreateTwoPersonGedcomFile();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateRealStorageViewModel(file.Path, outputFolder);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "anna";
+
+        viewModel.SelectedPerson.Should().NotBeNull();
+        viewModel.SelectedPerson!.DisplayName.Should().Be("Anna Jensen");
+        viewModel.SelectedPerson.RawGedcom.Should().Contain("Anna /Jensen/");
+        viewModel.Editor.Should().NotBeNull();
+        viewModel.Editor!.MarkdownText.Should().NotBeNullOrWhiteSpace();
+        viewModel.Editor.PreviewHtml.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldShowRawGedcom_AfterRestartFromSnapshot()
+    {
+        using var file = CreateTwoPersonGedcomFile();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        await CreateRealStorageViewModel(file.Path, outputFolder)
+            .SelectGedcomFileCommand.ExecuteAsync(null);
+
+        var restarted = CreateRealStorageViewModel(file.Path, outputFolder);
+        restarted.PersonFilterText = "anna";
+
+        restarted.SelectedPerson.Should().NotBeNull();
+        restarted.SelectedPerson!.RawGedcom.Should().Contain("Anna /Jensen/");
+        restarted.Editor!.PreviewHtml.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldNotMarkEditorsDirty_WhenFilterIsChangedOrCleared()
+    {
+        using var file = CreateTwoPersonGedcomFile();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateRealStorageViewModel(file.Path, outputFolder);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "anna";
+        viewModel.PersonFilterText = string.Empty;
+        viewModel.PersonFilterText = "bo";
+
+        viewModel.HasDirtyEditors.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldNotMarkOpenEditorsDirty_WhenReimportingUnchangedGedcom()
+    {
+        using var file = CreateTwoPersonGedcomFile();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateRealStorageViewModel(file.Path, outputFolder);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        foreach (var person in viewModel.People.ToList())
+        {
+            viewModel.SelectedPerson = person;
+        }
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "anna";
+        viewModel.PersonFilterText = string.Empty;
+
+        viewModel.HasDirtyEditors.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PersonFilterText_ShouldNotMarkEditorsDirty_WhenSwitchingPerson()
+    {
+        using var file = CreateTwoPersonGedcomFile();
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = CreateRealStorageViewModel(file.Path, outputFolder);
+
+        await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        foreach (var person in viewModel.People.ToList())
+        {
+            viewModel.SelectedPerson = person;
+        }
+
+        viewModel.HasDirtyEditors.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task PersonFilterText_ShouldFilterCaseInsensitive()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -1406,11 +1491,115 @@ public class MainWindowViewModelTests
             differenceDialog.LastDifferences.Should().ContainSingle();
             differenceDialog.LastDifferences[0].RequiresMigration.Should().BeTrue();
             differenceDialog.LastDifferences[0].BaselineStatus.Should().Be(BiographyBaselineStatus.Missing);
-            viewModel.HasDirtyEditors.Should().BeTrue();
-            viewModel.SaveAllCommand.Execute(null);
+            viewModel.HasDirtyEditors.Should().BeFalse();
             var migrated = BiographyDocumentParser.Parse(File.ReadAllText(documentPath));
             migrated.Metadata!.FormatVersion.Should().Be(BiographyDocumentParser.CurrentFormatVersion);
             migrated.Body.Should().Contain("Brugerens frie tekst.");
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenApprovedChangeHitsCleanOpenEditor_ShouldWriteToDiskAndStayClean()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var tree = new GedcomLoader().Load(file.Path);
+        var person = tree.FindPerson("@I1@")!;
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var documentPath = Path.Combine(outputFolder, BiographyFileNameGenerator.Generate(person));
+        File.WriteAllText(
+            documentPath,
+            BiographyDocumentSerializer.Serialize(
+                new BiographyDocumentMetadata(
+                    1,
+                    person.RecordId,
+                    person.FullName,
+                    BiographyFactsSnapshot.FromPerson(person)),
+                "# Anna Jensen\n\n## Biografi\nBrugerens frie tekst.\n"));
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settingsService,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            gedcomDifferenceDialogService: new ChoosingGedcomDifferenceDialogService(useGedcom: true));
+
+        try
+        {
+            viewModel.Editor.Should().NotBeNull();
+            viewModel.Editor!.IsDirty.Should().BeFalse();
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.HasDirtyEditors.Should().BeFalse();
+            viewModel.Editor!.IsDirty.Should().BeFalse();
+            viewModel.SaveStatusText.Should().Be("Gemt");
+            var onDisk = BiographyDocumentParser.Parse(File.ReadAllText(documentPath));
+            onDisk.Metadata!.FormatVersion.Should().Be(BiographyDocumentParser.CurrentFormatVersion);
+            onDisk.Body.Should().Contain("Brugerens frie tekst.");
+            viewModel.Editor.CreateDocument().Metadata!.FormatVersion
+                .Should().Be(BiographyDocumentParser.CurrentFormatVersion);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_WhenApprovedChangeHitsEditedOpenEditor_ShouldKeepItUnsavedAndNotWriteToDisk()
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 TRLR");
+        var tree = new GedcomLoader().Load(file.Path);
+        var person = tree.FindPerson("@I1@")!;
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var documentPath = Path.Combine(outputFolder, BiographyFileNameGenerator.Generate(person));
+        var originalContent = BiographyDocumentSerializer.Serialize(
+            new BiographyDocumentMetadata(
+                1,
+                person.RecordId,
+                person.FullName,
+                BiographyFactsSnapshot.FromPerson(person)),
+            "# Anna Jensen\n\n## Biografi\nBrugerens frie tekst.\n");
+        File.WriteAllText(documentPath, originalContent);
+        var settingsService = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(file.Path),
+            settingsService: settingsService,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settingsService),
+            markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+            markdownFileStore: new FileSystemMarkdownFileStore(),
+            gedcomDifferenceDialogService: new ChoosingGedcomDifferenceDialogService(useGedcom: true));
+
+        try
+        {
+            viewModel.Editor!.MarkdownText = "# Anna Jensen\n\n## Biografi\nBrugerens frie tekst.\nNy linje.\n";
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.HasDirtyEditors.Should().BeTrue();
+            File.ReadAllText(documentPath).Should().Be(originalContent);
+            viewModel.Editor!.MarkdownText.Should().Contain("Ny linje.");
         }
         finally
         {
@@ -2308,6 +2497,32 @@ public class MainWindowViewModelTests
             gedcomSnapshotStore: gedcomSnapshotStore,
             partialImportDialogService: partialImportDialogService,
             gedcomHelpService: gedcomHelpService);
+    }
+
+    private static TemporaryGedcomFile CreateTwoPersonGedcomFile() => CreateTemporaryGedcomFile(
+        "0 HEAD",
+        "1 SOUR SlaegtsAssistentTests",
+        "1 GEDC",
+        "2 VERS 5.5.1",
+        "1 CHAR UTF-8",
+        "0 @I2@ INDI",
+        "1 NAME Bo /Jensen/",
+        "0 @I1@ INDI",
+        "1 NAME Anna /Jensen/",
+        "1 SEX F",
+        "0 TRLR");
+
+    private static MainWindowViewModel CreateRealStorageViewModel(string gedcomPath, string outputFolder)
+    {
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        return CreateViewModel(
+            gedcomFilePickerService: new FakeGedcomFilePickerService(gedcomPath),
+            settingsService: settings,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)

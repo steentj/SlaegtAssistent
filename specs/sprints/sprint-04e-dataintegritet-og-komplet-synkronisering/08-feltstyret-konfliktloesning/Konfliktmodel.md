@@ -28,4 +28,4 @@ En kandidatrække angiver en eller flere årsager: **GEDCOM**, **Skabelon** og *
 
 Nye GEDCOM-værdier er valgt som standard. Brugeren kan ændre hvert valg, bevare alle dokumentværdier eller vælge alle nye GEDCOM-værdier. Previewet genberegnes uden fil-, editor- eller snapshotændringer. Først knappen **Anvend valgte** afleverer den samlede beslutning til importens atomiske commit.
 
-En lukning, et fravalg af alle kandidater eller en afvist migrering giver ingen planlagt dokumentændring. En godkendt kandidat til en åben editor anvendes kun i hukommelsen og markerer editoren som ugemt. Et lukket dokument skrives først sammen med resten af importtransaktionen.
+En lukning, et fravalg af alle kandidater eller en afvist migrering giver ingen planlagt dokumentændring. En godkendt kandidat til en åben editor med brugerens egne ugemte rettelser anvendes kun i hukommelsen og markerer editoren som ugemt. En åben editor uden ugemte rettelser og et lukket dokument skrives sammen med resten af importtransaktionen, og editoren forbliver ren.

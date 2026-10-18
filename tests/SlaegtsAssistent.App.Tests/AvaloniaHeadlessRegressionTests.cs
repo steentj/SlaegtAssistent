@@ -10,93 +10,98 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class AvaloniaHeadlessRegressionTests
 {
     [Fact]
-    public void MainWindow_ShouldLoadCriticalBindingsAndMinimumLayoutWithoutRenderer()
-    {
-        HeadlessTestApplication.EnsureInitialized();
-        var viewModel = new MainWindowViewModel();
-        var window = new MainWindow
+    public Task MainWindow_ShouldLoadCriticalBindingsAndMinimumLayoutWithoutRenderer() =>
+        HeadlessTestApplication.RunAsync(() =>
         {
-            DataContext = viewModel,
-        };
+            var viewModel = new MainWindowViewModel();
+            var window = new MainWindow
+            {
+                DataContext = viewModel,
+            };
 
-        window.MinWidth.Should().Be(960);
-        window.MinHeight.Should().Be(600);
-        window.FindControl<NativeWebView>("PreviewWebView").Should().NotBeNull();
-        window.DataContext.Should().BeSameAs(viewModel);
-    }
+            window.MinWidth.Should().Be(960);
+            window.MinHeight.Should().Be(600);
+            window.FindControl<NativeWebView>("PreviewWebView").Should().NotBeNull();
+            window.DataContext.Should().BeSameAs(viewModel);
+            return Task.CompletedTask;
+        });
 
     [Fact]
-    public void SettingsWindow_ShouldBindCommandsAndExposeKeyboardAccessibleButtons()
-    {
-        HeadlessTestApplication.EnsureInitialized();
-        var window = new SettingsWindow
+    public Task SettingsWindow_ShouldBindCommandsAndExposeKeyboardAccessibleButtons() =>
+        HeadlessTestApplication.RunAsync(() =>
         {
-            DataContext = new SettingsWindowViewModel(new AppSettings(), new EmptyFolderPicker()),
-        };
-        var buttons = Descendants<Button>(window).ToArray();
+            var window = new SettingsWindow
+            {
+                DataContext = new SettingsWindowViewModel(new AppSettings(), new EmptyFolderPicker()),
+            };
+            var buttons = Descendants<Button>(window).ToArray();
 
-        buttons.Should().Contain(button => button.Content as string == "Gem" && button.Focusable);
-        buttons.Should().Contain(button => button.Content as string == "Annuller" && button.Focusable);
-        buttons.Should().OnlyContain(button => button.Command != null);
-    }
+            buttons.Should().Contain(button => button.Content as string == "Gem" && button.Focusable);
+            buttons.Should().Contain(button => button.Content as string == "Annuller" && button.Focusable);
+            buttons.Should().OnlyContain(button => button.Command != null);
+            return Task.CompletedTask;
+        });
 
     [Fact]
-    public void HelpWindow_ShouldBeReusableAfterCloseAndKeepSearchKeyboardFocusable()
-    {
-        HeadlessTestApplication.EnsureInitialized();
-        var first = new MarkdownCheatSheetWindow
+    public Task HelpWindow_ShouldBeReusableAfterCloseAndKeepSearchKeyboardFocusable() =>
+        HeadlessTestApplication.RunAsync(() =>
         {
-            DataContext = new MarkdownCheatSheetViewModel(),
-        };
-        var search = Descendants<TextBox>(first).First(textBox => textBox.PlaceholderText != null);
+            var first = new MarkdownCheatSheetWindow
+            {
+                DataContext = new MarkdownCheatSheetViewModel(),
+            };
+            var search = Descendants<TextBox>(first).First(textBox => textBox.PlaceholderText != null);
 
-        search.Focusable.Should().BeTrue();
-        first.Close();
+            search.Focusable.Should().BeTrue();
+            first.Close();
 
-        var reopened = new MarkdownCheatSheetWindow
-        {
-            DataContext = new MarkdownCheatSheetViewModel(),
-        };
-        Descendants<TextBox>(reopened).Should().Contain(textBox => textBox.PlaceholderText != null);
-    }
+            var reopened = new MarkdownCheatSheetWindow
+            {
+                DataContext = new MarkdownCheatSheetViewModel(),
+            };
+            Descendants<TextBox>(reopened).Should().Contain(textBox => textBox.PlaceholderText != null);
+            return Task.CompletedTask;
+        });
 
     [Fact]
-    public void GedcomHelpWindow_ShouldShowIntroductionAndLoadInfographic()
-    {
-        HeadlessTestApplication.EnsureInitialized();
-        var window = new GedcomHelpWindow
+    public Task GedcomHelpWindow_ShouldShowIntroductionAndLoadInfographic() =>
+        HeadlessTestApplication.RunAsync(() =>
         {
-            DataContext = new GedcomHelpViewModel(),
-        };
+            var window = new GedcomHelpWindow
+            {
+                DataContext = new GedcomHelpViewModel(),
+            };
 
-        var tabs = Descendants<TabItem>(window).Select(tab => tab.Header as string).ToArray();
-        tabs.Should().Contain("Introduktion og reference");
-        tabs.Should().Contain("Oversigt (infografik)");
-        window.Title.Should().Contain("GEDCOM");
+            var tabs = Descendants<TabItem>(window).Select(tab => tab.Header as string).ToArray();
+            tabs.Should().Contain("Introduktion og reference");
+            tabs.Should().Contain("Oversigt (infografik)");
+            window.Title.Should().Contain("GEDCOM");
 
-        var infographic = Avalonia.Platform.AssetLoader.Open(
-            new Uri("avares://SlaegtsAssistent.App/Assets/Help/Guide_til_GEDCOM-filformatet.png"));
-        infographic.Length.Should().BeGreaterThan(0);
-        window.Close();
-    }
+            var infographic = Avalonia.Platform.AssetLoader.Open(
+                new Uri("avares://SlaegtsAssistent.App/Assets/Help/Guide_til_GEDCOM-filformatet.png"));
+            infographic.Length.Should().BeGreaterThan(0);
+            window.Close();
+            return Task.CompletedTask;
+        });
 
     [Fact]
-    public void UnsavedChangesDialog_ShouldExposeKeyboardChoicesAndReturnClickedDecision()
-    {
-        HeadlessTestApplication.EnsureInitialized();
-        var state = AvaloniaUnsavedChangesDialogService.CreateDialog();
-        var buttons = Descendants<Button>(state.Dialog).ToArray();
-        var save = buttons.Single(button => button.Content as string == "Gem");
-        var cancel = buttons.Single(button => button.Content as string == "Annullér");
+    public Task UnsavedChangesDialog_ShouldExposeKeyboardChoicesAndReturnClickedDecision() =>
+        HeadlessTestApplication.RunAsync(() =>
+        {
+            var state = AvaloniaUnsavedChangesDialogService.CreateDialog();
+            var buttons = Descendants<Button>(state.Dialog).ToArray();
+            var save = buttons.Single(button => button.Content as string == "Gem");
+            var cancel = buttons.Single(button => button.Content as string == "Annullér");
 
-        save.IsDefault.Should().BeTrue();
-        cancel.IsCancel.Should().BeTrue();
-        buttons.Should().OnlyContain(button => button.Focusable && button.IsTabStop);
+            save.IsDefault.Should().BeTrue();
+            cancel.IsCancel.Should().BeTrue();
+            buttons.Should().OnlyContain(button => button.Focusable && button.IsTabStop);
 
-        save.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            save.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
 
-        state.Decision.Should().Be(UnsavedChangesDecision.Gem);
-    }
+            state.Decision.Should().Be(UnsavedChangesDecision.Gem);
+            return Task.CompletedTask;
+        });
 
     private static IEnumerable<T> Descendants<T>(Control root) where T : Control
         => root.GetLogicalDescendants().OfType<T>();

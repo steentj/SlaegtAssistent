@@ -7,7 +7,7 @@
 - [x] Preview afspejler præcis de valgte feltbeslutninger.
 - [x] Fri tekst uden for markørerne bevares byte-for-byte.
 - [x] Afvisning og lukning ændrer intet vedvarende eller i en åben editor.
-- [x] Godkendt åben editor markeres som ugemt.
+- [x] Godkendt åben editor med brugerens egne rettelser markeres som ugemt; en ren åben editor skrives til disk og forbliver ren.
 - [x] Migrering er en særskilt, tydelig kandidat.
 - [x] `dotnet build` og `dotnet test` er grønne.
 - [ ] Manuel blandet konfliktløsning er gennemført.
@@ -16,7 +16,8 @@
 
 - **Dato:** 2026-08-13
 - **Målrettet Core-suite:** `BiographyConflictResolutionTests`, 6 tests bestået for skalare trevejsforskelle, stabile samlingshandlinger, individuelle beslutninger, årsager, preview og bytebevarelse.
-- **Målrettet App-forløb:** 2 tests bestået for reversibelt massevalg og for blandet accept/afvisning, som bevarer en brugerændret dokumentværdi, viser samlingsfelter, opdaterer baseline korrekt og markerer en åben editor som ugemt.
+- **Målrettet App-forløb:** 2 tests bestået for reversibelt massevalg og for blandet accept/afvisning, som bevarer en brugerændret dokumentværdi, viser samlingsfelter, opdaterer baseline korrekt og markerer en åben, brugerredigeret editor som ugemt.
+- **Målrettet App-forløb (ren editor):** 2 tests for, at en godkendt ændring til en ren åben editor skrives til disk uden ugemt-markering, og at en brugerredigeret åben editor forbliver ugemt uden at overskrive filen.
 - **Afvisning og migrering:** eksisterende regressionsforløb for lukning uden anvendelse, manglende baseline og ukendt baselineversion er bestået.
 - **Core-suite:** 98 tests bestået.
 - **App-suite:** 99 tests bestået.

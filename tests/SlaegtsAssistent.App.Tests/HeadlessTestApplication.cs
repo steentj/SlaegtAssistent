@@ -5,23 +5,18 @@ namespace SlaegtsAssistent.App.Tests;
 
 public static class HeadlessTestApplication
 {
-    private static readonly object SyncRoot = new();
+    private static readonly Lazy<HeadlessUnitTestSession> Session = new(
+        () => HeadlessUnitTestSession.StartNew(typeof(HeadlessTestApplication)),
+        LazyThreadSafetyMode.ExecutionAndPublication);
 
-    public static void EnsureInitialized()
-    {
-        if (Application.Current is not null)
+    // Kører koden på Avalonias UI-tråd, så vinduer og bindings opfører sig som i den rigtige app.
+    public static Task RunAsync(Func<Task> action) => Session.Value.Dispatch(
+        async () =>
         {
-            return;
-        }
-
-        lock (SyncRoot)
-        {
-            if (Application.Current is null)
-            {
-                BuildAvaloniaApp().SetupWithoutStarting();
-            }
-        }
-    }
+            await action();
+            return true;
+        },
+        CancellationToken.None);
 
     public static AppBuilder BuildAvaloniaApp() => AppBuilder
         .Configure<SlaegtsAssistent.App.App>()

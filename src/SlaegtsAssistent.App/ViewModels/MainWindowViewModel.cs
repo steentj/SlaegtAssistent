@@ -40,6 +40,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<GedcomDiagnosticViewModel> _allImportDiagnostics = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
     private FamilyTree? _familyTree;
+    private bool _isReplacingPeople;
     private CancellationTokenSource? _importCancellation;
 
     public MainWindowViewModel()
@@ -297,6 +298,10 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             SetImportPhase("Gennemførelse", 70);
+            // Kun editorer med brugerens egne ugemte rettelser holdes ugemte; rene editorer skrives som lukkede dokumenter.
+            var editorsWithUnsavedEdits = review.Changes
+                .Where(change => change.Editor is { IsDirty: true })
+                .ToHashSet();
             var workspaceState = await Task.Run(
                 () => CaptureImportState(outputFolder),
                 CancellationToken.None);
@@ -305,7 +310,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 await Task.Run(() =>
                 {
                     _markdownBiographyExportService.WriteBiographies(preflight.FamilyTree, outputFolder);
-                    foreach (var change in review.Changes.Where(change => change.Editor is null))
+                    foreach (var change in review.Changes.Where(change => !editorsWithUnsavedEdits.Contains(change)))
                     {
                         _markdownFileStore.Write(change.FilePath, change.Content);
                     }
@@ -336,7 +341,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
             foreach (var change in review.Changes.Where(change => change.Editor is not null))
             {
-                change.Editor!.ApplySerializedDocument(change.Content);
+                change.Editor!.ApplySerializedDocument(
+                    change.Content,
+                    markDirty: editorsWithUnsavedEdits.Contains(change));
             }
 
             SetImportPhase("Publicering", 90);
@@ -1149,6 +1156,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         NotifyStatusProperties();
 
+        if (value is null && _isReplacingPeople)
+        {
+            return;
+        }
+
         if (value is null)
         {
             Editor = null;
@@ -1287,18 +1299,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
         ReplacePeople(filteredPeople);
 
-        if (string.IsNullOrWhiteSpace(selectedRecordId) || !People.Any(person => person.RecordId == selectedRecordId))
-        {
-            SelectedPerson = People.FirstOrDefault();
-        }
+        // ListBox nulstiller SelectedItem, når People tømmes, så valget skal gendannes eksplicit.
+        SelectedPerson = string.IsNullOrWhiteSpace(selectedRecordId)
+            ? People.FirstOrDefault()
+            : People.FirstOrDefault(person => person.RecordId == selectedRecordId) ?? People.FirstOrDefault();
     }
 
     private void ReplacePeople(IEnumerable<PersonListItemViewModel> people)
     {
-        People.Clear();
-        foreach (var person in people)
+        _isReplacingPeople = true;
+        try
         {
-            People.Add(person);
+            People.Clear();
+            foreach (var person in people)
+            {
+                People.Add(person);
+            }
+        }
+        finally
+        {
+            _isReplacingPeople = false;
         }
     }
 
