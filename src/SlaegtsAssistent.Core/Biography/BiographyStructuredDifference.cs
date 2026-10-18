@@ -86,6 +86,7 @@ public sealed class BiographyStructuredDifferenceService
         AddScalar(result, "person.birthPlace", "Fødested", state.DocumentFacts.BirthPlace, approved.BirthPlace, imported.BirthPlace);
         AddScalar(result, "person.deathDate", "Dødsdato", state.DocumentFacts.DeathDate, approved.DeathDate, imported.DeathDate);
         AddScalar(result, "person.deathPlace", "Dødssted", state.DocumentFacts.DeathPlace, approved.DeathPlace, imported.DeathPlace);
+        AddScalar(result, "person.createdDate", "Oprettet dato", null, approved.CreatedDate, imported.CreatedDate);
     }
 
     private static void AddSubmitter(
@@ -274,6 +275,7 @@ public sealed class BiographySnapshotDecisionService
             BirthPlace = Pick("person.birthPlace", approved.Person.BirthPlace, imported.Person.BirthPlace),
             DeathDate = Pick("person.deathDate", approved.Person.DeathDate, imported.Person.DeathDate),
             DeathPlace = Pick("person.deathPlace", approved.Person.DeathPlace, imported.Person.DeathPlace),
+            CreatedDate = Pick("person.createdDate", approved.Person.CreatedDate, imported.Person.CreatedDate),
             Notes = SelectOrdered("person.notes", approved.Person.Notes, imported.Person.Notes),
             Events = SelectIdentifiedOrdered("person.events", approved.Person.Events, imported.Person.Events, item => item.Identity),
             Census = SelectIdentifiedOrdered("person.census", approved.Person.Census, imported.Person.Census, item => item.Identity),

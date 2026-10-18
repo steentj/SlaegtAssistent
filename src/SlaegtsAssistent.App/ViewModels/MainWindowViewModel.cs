@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IGedcomDifferenceDialogService _gedcomDifferenceDialogService;
     private readonly IMarkdownCheatSheetService _markdownCheatSheetService;
     private readonly ITemplateCheatSheetService _templateCheatSheetService;
+    private readonly IGedcomHelpService _gedcomHelpService;
     private readonly IPartialImportDialogService _partialImportDialogService;
     private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
@@ -72,7 +73,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IMarkdownCheatSheetService? markdownCheatSheetService = null,
         ITemplateCheatSheetService? templateCheatSheetService = null,
         IGedcomSnapshotStore? gedcomSnapshotStore = null,
-        IPartialImportDialogService? partialImportDialogService = null)
+        IPartialImportDialogService? partialImportDialogService = null,
+        IGedcomHelpService? gedcomHelpService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -89,6 +91,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _gedcomDifferenceDialogService = gedcomDifferenceDialogService ?? new NullGedcomDifferenceDialogService();
         _markdownCheatSheetService = markdownCheatSheetService ?? new NullMarkdownCheatSheetService();
         _templateCheatSheetService = templateCheatSheetService ?? new NullTemplateCheatSheetService();
+        _gedcomHelpService = gedcomHelpService ?? new NullGedcomHelpService();
         _partialImportDialogService = partialImportDialogService ?? new RejectingPartialImportDialogService();
 
         var settings = _applicationSettingsService.Load();
@@ -479,6 +482,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ShowTemplateCheatSheet()
     {
         _templateCheatSheetService.Show();
+    }
+
+    [RelayCommand]
+    private void ShowGedcomHelp()
+    {
+        _gedcomHelpService.Show();
     }
 
     public async Task<bool> ConfirmCloseAsync()

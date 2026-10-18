@@ -28,6 +28,8 @@ public sealed class Person
 
     public string? DeathPlace { get; set; }
 
+    public string? CreatedDate { get; set; }
+
     public IList<Person> Parents { get; } = new List<Person>();
 
     public IList<Person> Children { get; } = new List<Person>();

@@ -21,7 +21,8 @@ public class GedcomCompletenessTests
         tree.FindPerson("@I1@")!.Notes.Should().Equal("Brugerens første note\nBrugerens anden linje");
         tree.FindPerson("@I1@")!.Events.Single().Sources.Single().Note.Should().Be("Tydelig håndskrift");
         tree.FindFamily("@F1@")!.Sources.Single().Page.Should().Be("Familieside 7");
-        tree.Diagnostics.Should().ContainSingle(item => item.Tag == "_FLYT");
+        tree.FindFamily("@F1@")!.Events.Should().NotContain(item => item.Tag == "_FLYT");
+        tree.Diagnostics.Should().NotContain(item => item.Tag == "_FLYT");
     }
 
     [Fact]
@@ -67,11 +68,10 @@ public class GedcomCompletenessTests
             var family = tree.FindFamily("@F1@")!;
 
             person.Notes.Should().Equal("Første linje\nAnden linje med mellemrum");
-            person.Events.Select(item => item.Tag).Should().Equal("OCCU", "EMIG", "_FLYT");
+            person.Events.Select(item => item.Tag).Should().Equal("OCCU", "EMIG");
             family.Notes.Should().Equal("Familienote");
-            family.Events.Select(item => item.Tag).Should().Equal("DIV", "_SKIL");
-            tree.Diagnostics.Should().Contain(item => item.RecordId == "@I1@" && item.Tag == "_FLYT");
-            tree.Diagnostics.Should().Contain(item => item.RecordId == "@F1@" && item.Tag == "_SKIL");
+            family.Events.Select(item => item.Tag).Should().Equal("DIV");
+            tree.Diagnostics.Should().NotContain(item => item.Tag == "_FLYT" || item.Tag == "_SKIL");
             tree.Diagnostics.Should().NotContain(item =>
                 item.Tag == "FAMC"
                 || item.Tag == "FAMS"
@@ -393,6 +393,84 @@ public class GedcomCompletenessTests
         source.Date.Should().Be(date);
         source.Text.Should().Be(text);
         source.Note.Should().Be(note);
+    }
+
+    [Fact]
+    public void Load_CreaBliverOprettetDatoOgIkkeEnHaendelse()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 CREA
+            2 DATE 27 AUG 2025
+            3 TIME 10:30:00
+            1 BIRT
+            2 DATE 1900
+            0 @I2@ INDI
+            1 NAME Bent /Jensen/
+            0 @F1@ FAM
+            1 HUSB @I1@
+            1 CREA
+            2 DATE 28 AUG 2025
+            1 MARR
+            2 DATE 1920
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+
+            person.CreatedDate.Should().Be("27 AUG 2025");
+            person.Events.Select(item => item.Tag).Should().Equal("BIRT");
+            person.Events.Single().Date.Should().Be("1900");
+            tree.FindPerson("@I2@")!.CreatedDate.Should().BeNull();
+            tree.FindFamily("@F1@")!.Events.Select(item => item.Tag).Should().Equal("MARR");
+            tree.Diagnostics.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_PrivateTagsMedUnderscoreIndgaarIkkeSomHaendelser()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 _MYTAG Privat værdi
+            2 DATE 1930
+            1 OCCU Snedker
+            0 @F1@ FAM
+            1 HUSB @I1@
+            1 _SKIL Privat familiedata
+            2 PLAC Aarhus
+            1 DIV
+            2 DATE 1940
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.FindPerson("@I1@")!.Events.Select(item => item.Tag).Should().Equal("OCCU");
+            tree.FindFamily("@F1@")!.Events.Select(item => item.Tag).Should().Equal("DIV");
+            tree.Diagnostics.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static string CreateFixture(string content)

@@ -9,7 +9,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         "## Fakta\n" +
         "{{#if person.birthDate }}- **Født:** {{ person.birthDate }}{{#if person.birthPlace }} i {{ person.birthPlace }}{{/if}}\n{{/if}}" +
         "{{#if person.deathDate }}- **Død:** {{ person.deathDate }}{{#if person.deathPlace }} i {{ person.deathPlace }}{{/if}}\n{{/if}}" +
-        "{{#if person.parents }}- **Forældre:** {{ person.parentNames }}\n{{/if}}\n" +
+        "{{#if person.parents }}- **Forældre:** {{ person.parentNames }}\n{{/if}}" +
+        "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}\n" +
         "## Hændelser\n" +
         "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}\n{{/each}}\n" +
         "## Folketællinger\n" +

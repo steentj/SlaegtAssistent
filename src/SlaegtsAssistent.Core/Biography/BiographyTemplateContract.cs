@@ -7,7 +7,7 @@ public static class BiographyTemplateContract
     public static IReadOnlyList<string> RootScalarPaths { get; } =
     [
         "person.recordId", "person.fullName", "person.sex", "person.birthDate",
-        "person.birthPlace", "person.deathDate", "person.deathPlace", "person.parentNames",
+        "person.birthPlace", "person.deathDate", "person.deathPlace", "person.parentNames", "person.createdDate",
         "submitter.recordId", "submitter.name", "submitter.address", "submitter.phone",
         "submitter.email", "submitter.website", "submitter.language",
     ];
@@ -169,7 +169,7 @@ public static class BiographyTemplateContract
     private static readonly IReadOnlyDictionary<Context, IReadOnlyDictionary<string, Field>> Fields =
         new Dictionary<Context, IReadOnlyDictionary<string, Field>>
         {
-            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", ("parents", Collection(Context.Parent))),
+            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "createdDate", ("parents", Collection(Context.Parent))),
             [Context.Submitter] = ScalarFields("recordId", "name", "address", "phone", "email", "website", "language"),
             [Context.Parent] = ScalarFields("recordId", "fullName"),
             [Context.Event] = ScalarFields("tag", "category", "value", "date", "place", "type", "note", ("sources", Collection(Context.Source))),

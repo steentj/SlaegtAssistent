@@ -61,6 +61,26 @@ public sealed class AvaloniaHeadlessRegressionTests
     }
 
     [Fact]
+    public void GedcomHelpWindow_ShouldShowIntroductionAndLoadInfographic()
+    {
+        HeadlessTestApplication.EnsureInitialized();
+        var window = new GedcomHelpWindow
+        {
+            DataContext = new GedcomHelpViewModel(),
+        };
+
+        var tabs = Descendants<TabItem>(window).Select(tab => tab.Header as string).ToArray();
+        tabs.Should().Contain("Introduktion og reference");
+        tabs.Should().Contain("Oversigt (infografik)");
+        window.Title.Should().Contain("GEDCOM");
+
+        var infographic = Avalonia.Platform.AssetLoader.Open(
+            new Uri("avares://SlaegtsAssistent.App/Assets/Help/Guide_til_GEDCOM-filformatet.png"));
+        infographic.Length.Should().BeGreaterThan(0);
+        window.Close();
+    }
+
+    [Fact]
     public void UnsavedChangesDialog_ShouldExposeKeyboardChoicesAndReturnClickedDecision()
     {
         HeadlessTestApplication.EnsureInitialized();

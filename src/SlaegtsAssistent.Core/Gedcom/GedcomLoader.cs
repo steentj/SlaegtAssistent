@@ -25,13 +25,13 @@ public sealed class GedcomLoader : IGedcomLoader
 
     private static readonly HashSet<string> PersonStructureTags = new(StringComparer.Ordinal)
     {
-        "AFN", "ALIA", "ANCI", "ASSO", "CHAN", "DESI", "FAMC", "FAMS", "NAME", "OBJE",
+        "AFN", "ALIA", "ANCI", "ASSO", "CHAN", "CREA", "DESI", "FAMC", "FAMS", "NAME", "OBJE",
         "REFN", "RESN", "RFN", "RIN", "SEX", "SOUR", "SUBM", "UID", "_FSFTID", "_UID",
     };
 
     private static readonly HashSet<string> FamilyStructureTags = new(StringComparer.Ordinal)
     {
-        "CHAN", "CHIL", "HUSB", "NCHI", "OBJE", "REFN", "RESN", "RIN", "SOUR",
+        "CHAN", "CHIL", "CREA", "HUSB", "NCHI", "OBJE", "REFN", "RESN", "RIN", "SOUR",
         "SUBM", "WIFE",
     };
 
@@ -380,6 +380,7 @@ public sealed class GedcomLoader : IGedcomLoader
             currentSourceLevel = -1;
             currentMedia = null;
             currentSourceData = false;
+            person.InCreation = false;
 
             switch (tag)
             {
@@ -422,7 +423,15 @@ public sealed class GedcomLoader : IGedcomLoader
                     person.Media.Add(currentMedia);
                     break;
 
+                case "CREA":
+                    person.InCreation = true;
+                    break;
+
                 case var structureTag when PersonStructureTags.Contains(structureTag):
+                    break;
+
+                // Private tags (_TAG) er programspecifikke og er ikke hændelser.
+                case var privateTag when privateTag.StartsWith('_'):
                     break;
 
                 default:
@@ -467,6 +476,16 @@ public sealed class GedcomLoader : IGedcomLoader
 
         if (level != 2)
         {
+            return;
+        }
+
+        if (person.InCreation)
+        {
+            if (tag == "DATE")
+            {
+                person.CreatedDate ??= NormalizeToken(value);
+            }
+
             return;
         }
 
@@ -722,6 +741,10 @@ public sealed class GedcomLoader : IGedcomLoader
             case var structureTag when FamilyStructureTags.Contains(structureTag):
                 break;
 
+            // Private tags (_TAG) er programspecifikke og er ikke hændelser.
+            case var privateTag when privateTag.StartsWith('_'):
+                break;
+
             default:
                 currentEvent = new ParsedEvent(tag, NormalizeToken(value));
                 family.Events.Add(currentEvent);
@@ -810,6 +833,7 @@ public sealed class GedcomLoader : IGedcomLoader
             person.BirthPlace = parsedPerson.BirthPlace;
             person.DeathDate = parsedPerson.DeathDate;
             person.DeathPlace = parsedPerson.DeathPlace;
+            person.CreatedDate = parsedPerson.CreatedDate;
             person.Sources.Clear();
             person.Notes.Clear();
             person.Media.Clear();
@@ -1977,6 +2001,10 @@ public sealed class GedcomLoader : IGedcomLoader
         public string? DeathDate { get; set; }
 
         public string? DeathPlace { get; set; }
+
+        public string? CreatedDate { get; set; }
+
+        public bool InCreation { get; set; }
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
 

@@ -72,7 +72,7 @@ public sealed class Sprint04bTests
             2 DATE 01 JAN 1918
             2 PLAC Aarhus
             2 NOTE Værnepligtig
-            1 _CUSTOM Special hændelse
+            1 CUSTOM Special hændelse
             2 NOTE Ukendt tag
             0 TRLR
             """);
@@ -90,7 +90,7 @@ public sealed class Sprint04bTests
                     GedcomEventCategory.Other);
             person.Events[1].Type.Should().Be("Lægdsrulle");
             person.Events[2].Note.Should().Be("Ukendt tag");
-            tree.Diagnostics.Should().ContainSingle(diagnostic => diagnostic.Tag == "_CUSTOM");
+            tree.Diagnostics.Should().ContainSingle(diagnostic => diagnostic.Tag == "CUSTOM");
         }
         finally
         {

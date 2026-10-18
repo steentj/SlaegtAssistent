@@ -98,6 +98,7 @@ public sealed class BiographyTemplateRenderer
                 "deathPlace" => person.DeathPlace,
                 "parents" => person.Parents,
                 "parentNames" => person.ParentNames,
+                "createdDate" => person.CreatedDate,
                 _ => null,
             },
             PersonReferenceTemplateContext person => name switch

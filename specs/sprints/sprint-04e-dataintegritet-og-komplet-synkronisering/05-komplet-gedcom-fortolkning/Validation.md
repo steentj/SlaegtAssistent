@@ -27,7 +27,7 @@
 3. Kontrollér, at Anna Jensen og Jens Hansen vises, og at de tilhører samme familie.
 4. Kontrollér Annas fødsel, census og kilder samt familiens vielse i den genererede Markdown/preview.
 5. Kontrollér, at `FAMC`, `FAMS` og `CHAN` ikke vises som hændelser.
-6. Kontrollér, at den ukendte `_FLYT`-hændelse bevares og giver en synlig advarsel.
+6. Kontrollér, at den private `_FLYT`-tag ikke bliver til en hændelse eller advarsel (private tags medtages ikke, se Sprint 04F).
 7. Genimportér samme fil og kontrollér, at rækkefølge og indhold er uændret, og at fri brugertekst ikke ændres.
 
 ## Manuel godkendelse

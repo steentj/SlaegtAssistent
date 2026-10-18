@@ -24,6 +24,7 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
         "- `person.sex`\n" +
         "- `person.birthDate`, `person.birthPlace`\n" +
         "- `person.deathDate`, `person.deathPlace`\n" +
+        "- `person.createdDate` (oprettelsesdato fra GEDCOM-tagget `CREA`; udelad feltet for ikke at vise den)\n" +
         "- `person.parents`\n\n" +
         "### Afsender (`SUBM`)\n\n" +
         "- `submitter.recordId`\n" +

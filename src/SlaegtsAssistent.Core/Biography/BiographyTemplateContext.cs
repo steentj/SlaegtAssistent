@@ -154,7 +154,8 @@ public sealed class BiographyTemplateContext
                         personNames is not null && personNames.TryGetValue(recordId, out var name)
                             ? name
                             : recordId))
-                    .ToArray()),
+                    .ToArray(),
+                person.CreatedDate),
             submitter,
             events,
             familyEvents,
@@ -201,7 +202,8 @@ public sealed record PersonTemplateContext(
     string? BirthPlace,
     string? DeathDate,
     string? DeathPlace,
-    IReadOnlyList<PersonReferenceTemplateContext> Parents)
+    IReadOnlyList<PersonReferenceTemplateContext> Parents,
+    string? CreatedDate = null)
 {
     public string ParentNames => string.Join(", ", Parents
         .Select(parent => parent.FullName)
@@ -219,7 +221,8 @@ public sealed record PersonTemplateContext(
             person.DeathPlace,
             person.Parents
                 .Select(parent => new PersonReferenceTemplateContext(parent.RecordId, parent.FullName))
-                .ToArray());
+                .ToArray(),
+            person.CreatedDate);
     }
 }
 

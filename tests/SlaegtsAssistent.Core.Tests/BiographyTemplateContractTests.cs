@@ -76,6 +76,35 @@ public sealed class BiographyTemplateContractTests
     }
 
     [Fact]
+    public void CreatedDate_ShouldBeRenderedByDefaultTemplateAndCanBeOmittedByCustomTemplate()
+    {
+        var person = new Person("@I1@") { FullName = "Anna Jensen", CreatedDate = "27 AUG 2025" };
+        person.Events.Add(new GedcomEvent("BIRT") { Category = GedcomEventCategory.Birth, Date = "1900" });
+
+        var standard = new BiographyTemplateMarkdownGenerator().Generate(person);
+        var udenOprettetDato = new BiographyTemplateMarkdownGenerator("# {{ person.fullName }}\n").Generate(person);
+        var medOprettetDato = new BiographyTemplateMarkdownGenerator("Oprettet: {{ person.createdDate }}\n").Generate(person);
+        var utenCrea = new BiographyTemplateMarkdownGenerator().Generate(new Person("@I2@") { FullName = "Bent" });
+
+        standard.Should().Contain("**Oprettet dato:** 27 AUG 2025");
+        medOprettetDato.Should().Contain("Oprettet: 27 AUG 2025");
+        udenOprettetDato.Should().NotContain("Oprettet");
+        standard.Should().NotContain("CREA");
+        utenCrea.Should().NotContain("Oprettet dato");
+    }
+
+    [Fact]
+    public void CanonicalSnapshot_ShouldOnlySerializeCreatedDateWhenPresent()
+    {
+        var uden = CanonicalBiographySnapshot.Create(new Person("@I1@") { FullName = "Anna" });
+        var med = CanonicalBiographySnapshot.Create(new Person("@I1@") { FullName = "Anna", CreatedDate = "27 AUG 2025" });
+
+        uden.ToCanonicalJson().Should().NotContain("createdDate");
+        med.ToCanonicalJson().Should().Contain("\"createdDate\":\"27 AUG 2025\"");
+        med.ComputeFingerprint().Should().NotBe(uden.ComputeFingerprint());
+    }
+
+    [Fact]
     public void MediaResolver_ShouldResolveRelativePathFromGedcomFolderToDocumentFolder()
     {
         using var area = new TemporaryDirectory();

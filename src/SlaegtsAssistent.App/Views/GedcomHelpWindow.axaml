@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:wv="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.WebView"
+        x:Class="SlaegtsAssistent.App.Views.GedcomHelpWindow"
+        x:DataType="vm:GedcomHelpViewModel"
+        Width="1040"
+        Height="720"
+        MinWidth="760"
+        MinHeight="420"
+        Title="Hjælp – Introduktion til GEDCOM"
+        WindowStartupLocation="CenterOwner">
+    <TabControl Margin="16">
+        <TabItem Header="Introduktion og reference">
+            <Border Background="{DynamicResource AppPanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="8"
+                    Margin="0,12,0,0">
+                <wv:NativeWebView x:Name="PreviewWebView" />
+            </Border>
+        </TabItem>
+        <TabItem Header="Oversigt (infografik)">
+            <Border Background="{DynamicResource AppPanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="8"
+                    Margin="0,12,0,0">
+                <Image Source="avares://SlaegtsAssistent.App/Assets/Help/Guide_til_GEDCOM-filformatet.png"
+                       Stretch="Uniform"
+                       AutomationProperties.Name="Infografik: GEDCOM – slægtsforskningens digitale fællessprog" />
+            </Border>
+        </TabItem>
+    </TabControl>
+</Window>

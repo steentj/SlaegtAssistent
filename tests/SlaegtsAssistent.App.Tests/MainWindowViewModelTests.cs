@@ -2168,7 +2168,7 @@ public class MainWindowViewModelTests
             "0 @I1@ INDI",
             "1 NAME Anna /Jensen/",
             "ugyldig linje",
-            "1 _UKENDT Bevares",
+            "1 UKENDT Bevares",
             "0 @I2@ INDI",
             "1 NAME Bent /Jensen/",
             "0 TRLR");
@@ -2195,12 +2195,30 @@ public class MainWindowViewModelTests
             viewModel.SelectedImportDiagnostic = viewModel.ImportDiagnostics.Single();
             viewModel.SelectedPerson!.RecordId.Should().Be("@I1@");
             viewModel.SelectedDiagnosticSeverityFilter = "Advarsler";
-            viewModel.ImportDiagnostics.Should().ContainSingle(item => item.Message.Contains("_UKENDT"));
+            viewModel.ImportDiagnostics.Should().ContainSingle(item => item.Message.Contains("UKENDT"));
         }
         finally
         {
             Directory.Delete(outputFolder, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ShowGedcomHelpCommand_ShouldOpenGedcomHelp()
+    {
+        var helpService = new RecordingGedcomHelpService();
+        var viewModel = CreateViewModel(gedcomHelpService: helpService);
+
+        viewModel.ShowGedcomHelpCommand.Execute(null);
+
+        helpService.ShowCount.Should().Be(1);
+    }
+
+    private sealed class RecordingGedcomHelpService : IGedcomHelpService
+    {
+        public int ShowCount { get; private set; }
+
+        public void Show() => ShowCount++;
     }
 
     [Fact]
@@ -2271,7 +2289,8 @@ public class MainWindowViewModelTests
         IMarkdownDocumentCatalog? markdownDocumentCatalog = null,
         IGedcomDifferenceDialogService? gedcomDifferenceDialogService = null,
         IGedcomSnapshotStore? gedcomSnapshotStore = null,
-        IPartialImportDialogService? partialImportDialogService = null)
+        IPartialImportDialogService? partialImportDialogService = null,
+        IGedcomHelpService? gedcomHelpService = null)
     {
         return new MainWindowViewModel(
             gedcomLoader ?? new RecordingGedcomLoader(path => new GedcomLoader().Load(path)),
@@ -2287,7 +2306,8 @@ public class MainWindowViewModelTests
             markdownDocumentCatalog,
             gedcomDifferenceDialogService,
             gedcomSnapshotStore: gedcomSnapshotStore,
-            partialImportDialogService: partialImportDialogService);
+            partialImportDialogService: partialImportDialogService,
+            gedcomHelpService: gedcomHelpService);
     }
 
     private static TemporaryGedcomFile CreateTemporaryGedcomFile(params string[] lines)

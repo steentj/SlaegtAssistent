@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SlaegtsAssistent.Core.Domain;
 
 namespace SlaegtsAssistent.Core.Biography;
@@ -43,7 +44,8 @@ public sealed record CanonicalBiographySnapshot(
                 CreateEvents(person.Events),
                 CreateCensusList(person.Census),
                 SortSources(person.Sources),
-                CreateMediaList(person.Media)),
+                CreateMediaList(person.Media),
+                Normalize(person.CreatedDate)),
             SortRecordIds(person.Parents),
             SortRecordIds(person.Children),
             person.Families
@@ -235,7 +237,8 @@ public sealed record CanonicalPersonData(
     IReadOnlyList<CanonicalEventData> Events,
     IReadOnlyList<CanonicalCensusData> Census,
     IReadOnlyList<CanonicalSourceData> Sources,
-    IReadOnlyList<CanonicalMediaData> Media);
+    IReadOnlyList<CanonicalMediaData> Media,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CreatedDate = null);
 
 public sealed record CanonicalFamilyData(
     string RecordId,
