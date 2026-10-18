@@ -4,7 +4,7 @@ En privatlivsfokuseret desktop-applikation, der transformerer tørre slægtsdata
 
 ## 🎯 Mission
 
-**SlægtsAssistenten** hjælper slægtsforskere med at opdage og dokumentere historierne, der ligger skjult i slægtstræer. Den læser GEDCOM-filer og kombinerer dem med lokal AI, historiske kilder og handskriftgenkendelse til at skabe levende, detaljerede biografier – alt mens dine data forbliver private på din computer.
+**SlægtsAssistenten** hjælper slægtsforskere med at opdage og dokumentere historierne, der ligger skjult i slægtstræer. Den læser GEDCOM-filer og kombinerer dem med lokal AI, historiske kilder og håndskriftgenkendelse til at skabe levende, detaljerede biografier – alt mens dine data forbliver private på din computer.
 
 ### Hovedfunktioner
 
@@ -12,7 +12,7 @@ En privatlivsfokuseret desktop-applikation, der transformerer tørre slægtsdata
 - **Interaktivt slægtstræ**: Visualisér din slægt med et interaktivt, udforskeligt træ
 - **Lokal AI-berigelse**: Brug lokale sprogmodeller (LLM) til at generere historisk kontekst og biografiske detaljer
 - **Semantisk søgning (RAG)**: Berig automatisk biografier med relevant indhold fra din lokale samling af historiske PDF-bøger
-- **Handskriftgenkendelse (HTR)**: Transskribér og digitalisér scannede historiske dokumenter
+- **Håndskriftgenkendelse (HTR)**: Transskribér og digitalisér scannede historiske dokumenter
 - **Multi-format eksport**: Generer trykklare PDF'er, Word-dokumenter (.docx) og OpenOffice-filer (.odt)
 - **Privatlivsfokuseret**: Alle data forbliver lokale. Ingen skybaserede tjenester, ingen abonnementer, ingen sporing
 
@@ -100,7 +100,7 @@ Al behandling sker lokalt på din computer:
 
 ## 📝 Licens
 
-[Tilføj din licens her]
+Projektet er licenseret under MIT-licensen. Se [LICENSE](LICENSE) for licensens fulde tekst.
 
 ## 👤 Forfatter
 
@@ -108,4 +108,4 @@ Skabt for slægtsforskere, der værdsætter privatlivs- og detaljeret historisk 
 
 ---
 
-**Bemærk:** Dette projekt er under aktiv udvikling. Bidrag og feedback er velkomne!
+**Bemærk:** Dette projekt er under aktiv udvikling.
