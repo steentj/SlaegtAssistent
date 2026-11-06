@@ -58,10 +58,39 @@ SlaegtAssistent/
 
 ### Forudsætninger
 
-- **.NET 10.0** eller nyere
+- **.NET 10 SDK**: Den præcise version er angivet i `global.json`.
 - **Avalonia UI**-afhængigheder (inkluderet via NuGet)
 - **Ollama** installeret og kørende lokalt (til AI-funktioner)
 - Valgfrit: **Python 3.10+** (til avanceret eksport og handskriftgenkendelse)
+
+### .NET SDK på macOS
+
+Projektet og GitHub Actions bruger samme fastlåste SDK-version. Installér den
+lokalt i projektmappen med:
+
+```bash
+bash scripts/setup-dotnet.sh
+```
+
+Installationen kræver internetadgang og påvirker ikke Homebrews .NET. Når den er
+gennemført, kan du bruge dine sædvanlige `dotnet`-kommandoer; SDK'et vælges fra
+projektets `.dotnet`-mappe, også hvis Homebrew senere opdateres. Du skal først
+have en .NET 10-vært på din `PATH`, eksempelvis via Homebrew.
+
+Hvis projektets SDK-version ændres, skal scriptet køres igen. Kontrollér den
+valgte version med `dotnet --version` fra projektmappen. GitHub installerer
+automatisk versionen fra `global.json` på macOS, Windows og Linux.
+SDK-versionen er fastlåst, fordi Native AOT-afhængighederne også er låst;
+opdatering af SDK'et kræver derfor også opdatering af distributionslåsefilen.
+Efter ændring af `global.json` og kørsel af installationsscriptet kan låsefilen
+opdateres med:
+
+```bash
+dotnet restore src/SlaegtsAssistent.App/SlaegtsAssistent.App.csproj -p:DistributionBuild=true -p:RestoreLockedMode=false --force-evaluate
+```
+
+Gem både `global.json` og den opdaterede `packages.distribution.lock.json` i
+samme ændring, så GitHub tester dem sammen på alle tre platforme.
 
 ### Byg
 

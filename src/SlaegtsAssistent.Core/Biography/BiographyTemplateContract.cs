@@ -7,7 +7,7 @@ public static class BiographyTemplateContract
     public static IReadOnlyList<string> RootScalarPaths { get; } =
     [
         "person.recordId", "person.fullName", "person.sex", "person.birthDate",
-        "person.birthPlace", "person.deathDate", "person.deathPlace", "person.parentNames", "person.createdDate",
+        "person.birthPlace", "person.deathDate", "person.deathPlace", "person.parentNames", "person.childNames", "person.partnerNames", "person.createdDate",
         "submitter.recordId", "submitter.name", "submitter.address", "submitter.phone",
         "submitter.email", "submitter.website", "submitter.language",
     ];
@@ -24,7 +24,7 @@ public static class BiographyTemplateContract
     ];
 
     public static IReadOnlyList<string> PublicFieldPaths { get; } = RootScalarPaths
-        .Concat(["person.parents", "person.parents[].recordId", "person.parents[].fullName"])
+        .Concat(new[] { "parents", "children", "partners" }.SelectMany(relation => new[] { $"person.{relation}", $"person.{relation}[].recordId", $"person.{relation}[].fullName", $"person.{relation}[].link", $"person.{relation}[].plainName", $"person.{relation}[].documentPath" }))
         .Concat(EventCollectionPaths("events"))
         .Concat(EventCollectionPaths("familyEvents"))
         .Concat(EventCollectionPaths("allEvents"))
@@ -169,9 +169,9 @@ public static class BiographyTemplateContract
     private static readonly IReadOnlyDictionary<Context, IReadOnlyDictionary<string, Field>> Fields =
         new Dictionary<Context, IReadOnlyDictionary<string, Field>>
         {
-            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "createdDate", ("parents", Collection(Context.Parent))),
+            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "childNames", "partnerNames", "createdDate", ("parents", Collection(Context.Parent)), ("children", Collection(Context.Parent)), ("partners", Collection(Context.Parent))),
             [Context.Submitter] = ScalarFields("recordId", "name", "address", "phone", "email", "website", "language"),
-            [Context.Parent] = ScalarFields("recordId", "fullName"),
+            [Context.Parent] = ScalarFields("recordId", "fullName", "plainName", "link", "documentPath"),
             [Context.Event] = ScalarFields("tag", "category", "value", "date", "place", "type", "note", ("sources", Collection(Context.Source))),
             [Context.Census] = ScalarFields("date", "place", "note", ("sources", Collection(Context.Source))),
             [Context.Source] = ScalarFields("key", "recordId", "title", "author", "publication", "text", "repository", "page", "data", "date", "note"),

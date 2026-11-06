@@ -230,25 +230,15 @@ public partial class MainWindowViewModel : ViewModelBase
                 cancellationToken.ThrowIfCancellationRequested();
                 var documents = _markdownDocumentCatalog.Load(outputFolder);
                 var existingSnapshot = _gedcomSnapshotStore.Load(outputFolder);
-                var generatedBiographies = tree.People.ToDictionary(
-                    person => person.RecordId,
-                    person =>
+                var generatedBiographies = _markdownBiographyExportService.GenerateBiographies(tree, outputFolder, cancellationToken);
+                foreach (var content in generatedBiographies.Values)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (BiographyDocumentParser.Parse(content).Metadata is null)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var content = _markdownBiographyExportService.GenerateBiography(
-                            tree,
-                            person,
-                            outputFolder);
-                        var generatedDocument = BiographyDocumentParser.Parse(content);
-                        if (generatedDocument.Metadata is null)
-                        {
-                            throw new FormatException(
-                                $"Den genererede kandidat for '{person.RecordId}' mangler dokumentmetadata.");
-                        }
-
-                        return content;
-                    },
-                    StringComparer.Ordinal);
+                        throw new FormatException("Den genererede kandidat mangler dokumentmetadata.");
+                    }
+                }
                 var importReport = AddMediaDiagnostics(tree, outputFolder);
                 return new ImportPreflight(
                     tree,
@@ -588,6 +578,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var reviewItems = new List<GedcomDifferenceReviewItem>();
         var syncStatuses = new Dictionary<string, BiographySyncStatus>(StringComparer.Ordinal);
         var changes = new List<PlannedDocumentChange>();
+        var personLinks = BiographyPersonLinkFactory.Create(familyTree, outputFolder, documents);
 
         foreach (var person in familyTree.People)
         {
@@ -723,7 +714,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     structuredDifferences,
                     selectedChoices,
                     documentInfo.FilePath,
-                    outputFolder);
+                    outputFolder,
+                    personLinks);
             var defaultChoices = structuredDifferences.ToDictionary(
                 item => $"{documentInfo.FilePath}|{item.Path}",
                 _ => true,
@@ -817,7 +809,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IReadOnlyList<BiographyStructuredDifference> differences,
         IReadOnlyDictionary<string, bool> choices,
         string filePath,
-        string outputFolder)
+        string outputFolder,
+        BiographyPersonLinks personLinks)
     {
         bool IsSelected(string path) =>
             choices.TryGetValue($"{filePath}|{path}", out var selected) && selected;
@@ -859,7 +852,8 @@ public partial class MainWindowViewModel : ViewModelBase
             outputFolder,
             string.IsNullOrWhiteSpace(familyTree.SourceFilePath)
                 ? null
-                : Path.GetDirectoryName(familyTree.SourceFilePath)).Generate(
+                : Path.GetDirectoryName(familyTree.SourceFilePath),
+            personLinks).Generate(
                 selectedSnapshot,
                 importedSnapshot,
                 familyTree.People.ToDictionary(

@@ -3,6 +3,8 @@
 
 Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et funktionelt program.
 
+Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares, så eksisterende specifikationshenvisninger fortsat virker. Næste sprint er sprint 5 om personlinks; grafisk slægtstræ og eksport flyttes til sprint 6.
+
 ### Trin 1: Fundamentet (Uden AI)
 *   **Mål:** Læs data og tillad manuel redigering.
 *   **Opgaver:**
@@ -41,7 +43,7 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     *   Vis forskelle i strukturerede felter og lad brugeren vælge per felt, om GEDCOM-værdien skal anvendes.
     *   Bevar fri biografitekst og AI-tekst uændret ved synkronisering.
 
-### Trin 4.5: Skabelonbaserede persondokumenter og komplet GEDCOM-rendering SPRINT 4B
+### Trin 5: Skabelonbaserede persondokumenter og komplet GEDCOM-rendering SPRINT 4B
 *   **Mål:** Færdiggøre forbindelsen fra GEDCOM-elementer til Markdown og gøre persondokumenternes struktur og formattering brugerdefineret, før eksport og grafisk slægtstræ påbegyndes.
 *   **Forudsætning:** Trin 4 er færdigt.
 *   **Feature-rækkefølge:**
@@ -52,18 +54,18 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     5. Indstillinger og brugerflow for valg, nulstilling og forhåndsvisning af global skabelon.
 *   **Arbejdsform:** Hver feature udvikles testdrevet med Core- og/eller App-tests. Efter hver feature stoppes udviklingen, og featureens manuelle validering gennemføres, før næste feature må starte.
 
-### Trin 4.6: Hjælp og cheat sheets SPRINT 4C
+### Trin 6: Hjælp og cheat sheets SPRINT 4C
 *   **Mål:** Gøre Markdown-editoren og skabelonformatet selvforklarende uden at blokere brugerens arbejdsflade.
-*   **Forudsætning:** Trin 4.5 er færdigt, så cheat sheets kan beskrive det faktiske skabelonformat.
+*   **Forudsætning:** Trin 5 er færdigt, så cheat sheets kan beskrive det faktiske skabelonformat.
 *   **Feature-rækkefølge:**
     1. Ikke-modalt Markdown-cheat sheet med søgbar og læsbar reference.
     2. Ikke-modalt skabelon-cheat sheet med felter, betingelser, løkker og eksempler.
     3. Hjælp-menuintegration, vindueslivscyklus og samtidig brug af begge vinduer.
 *   **Arbejdsform:** Hver feature udvikles testdrevet med stop for manuel afprøvning efter featureens validering.
 
-### Trin 4.7: Stabil GEDCOM-synkronisering og arbejdsbord SPRINT 4D
+### Trin 7: Stabil GEDCOM-synkronisering og arbejdsbord SPRINT 4D
 *   **Mål:** Fjerne falske ændringsnotifikationer, bevare rå GEDCOM-data mellem sessioner, gøre arbejdsbordet justerbart og sikre, at skabelon- og GEDCOM-ændringer kan genrenderes uden at overskrive fri tekst.
-*   **Forudsætning:** Trin 4.5 og 4.6 er færdige.
+*   **Forudsætning:** Trin 5 og 6 er færdige.
 *   **Feature-rækkefølge:**
     1. Korrekt importstatus og synkroniseringsbaseline for nye, ændrede og uændrede personer.
     2. Lokal persistens af GEDCOM-fil, importmanifest og rå personsegmenter.
@@ -71,9 +73,9 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     4. Kandidatbaseret genrendering ved ændret skabelon eller GEDCOM-data.
 *   **Arbejdsform:** Hver feature udvikles testdrevet med Core- og/eller App-tests. Efter hver feature stoppes udviklingen, og featureens manuelle validering gennemføres, før næste feature må starte. Sprintet afsluttes først efter samlet manuel afprøvning af en genåbnet arbejdsmappe.
 
-### Trin 4.8: Dataintegritet og komplet synkronisering SPRINT 4E
+### Trin 8: Dataintegritet og komplet synkronisering SPRINT 4E
 *   **Mål:** Lukke de dokumenterede integritets-, fortolknings-, synkroniserings- og privatlivsproblemer fra helhedsreviewet af 11. august 2026, så brugerens dokumenter ikke beskadiges, skjules eller ændres uden et tydeligt og kontrolleret valg.
-*   **Forudsætning:** Trin 4.7 er implementeret. Trin 5 må ikke begynde, før trin 4.8 er godkendt samlet.
+*   **Forudsætning:** Trin 7 er implementeret. Trin 11 må ikke begynde, før trin 8 er godkendt samlet.
 *   **Feature-rækkefølge:**
     1. Atomisk dokumentlagring og gendannelse.
     2. Stabil dokumentidentitet og levende arbejdsområdekatalog.
@@ -88,29 +90,45 @@ Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et fu
     11. Samlet regressions-, platform- og distributionskvalitet.
 *   **Arbejdsform:** Hver feature gennemføres med en eksplicit rød-grøn-refaktorér-cyklus. Fejlende tests skrives før produktionskode. Hver feature leverer et komplet, manuelt testbart brugerflow og afsluttes med dokumenteret manuel godkendelse. Arbejdet stopper efter hver feature, og næste feature må ikke påbegyndes, før brugeren skriftligt har godkendt den foregående.
 
-### Trin 5: Grafisk Slægtstræ & Eksport SPRINT 5
+### Trin 9: GEDCOM-metadata og GEDCOM-hjælp SPRINT 4F
+*   **Mål:** Skelne oprettelsesmetadata fra hændelser og gøre GEDCOM-formatet forståeligt i appens hjælp.
+*   **Opgaver:** Fortolk `CREA` som oprettelsesdato, udelad private tags som hændelser og tilbyd en ikke-modal introduktion til GEDCOM.
+*   **Specifikation:** [Sprint 4F](sprints/sprint-04f-gedcom-metadata-og-gedcom-hjaelp/Plan.md).
+
+### Trin 10: Links mellem persondokumenter SPRINT 5 – næste sprint
+*   **Mål:** Alle strukturerede personomtaler i genererede Markdown-dokumenter linker til den pågældende persons dokument, når personen har et entydigt dokumentmål i arbejdsområdet eller oprettes i samme import.
+*   **Forudsætning:** Dokumentidentitet, kontrolleret synkronisering, skabelonrendering og GEDCOM-metadata fra trin 4–9 er implementeret.
+*   **Opgaver:**
+    *   Opløs dokumentmål efter GEDCOM-record-id og de faktiske filstier; bevar eksisterende filnavne ved navneændringer.
+    *   Render relative Markdown-links for forældre, børn, partnere og øvrige identificerede personreferencer i standardskabelonen og understøttede egne skabeloner.
+    *   Undgå forkerte links ved navnesammenfald, manglende dokumenter og dublerede dokumentidentiteter.
+    *   Tilbyd opdatering af eksisterende genererede sektioner gennem kandidatgodkendelse; bevar fri tekst og afviste ændringer.
+    *   Dokumentér skabelonfelter og verificér import, genåbning, genrendering og sikker forhåndsvisning.
+*   **Specifikation:** [Udførlig implementeringsplan](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Plan.md), [krav](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Requirements.md) og [validering](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Validation.md).
+
+### Trin 11: Grafisk Slægtstræ & Eksport SPRINT 6
 *   **Mål:** Opsætte output fra applikationen
-*   **Forudsætning:** Trin 4.5, 4.6 og 4.7 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter med dokumenteret synkronisering.
+*   **Forudsætning:** Trin 5–10 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter med dokumenteret synkronisering.
 *   **Opgaver:**
     *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
     *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.
     *   Implementering af udskriftsfunktion samt eksport af slægtstræ (SVG/PNG) og biografier (PDF/DOCX/ODT) via lokal Python/Pandoc-sidecar.
 
-### Trin 6: Den Lokale AI-Assistent
+### Trin 12: Den Lokale AI-Assistent SPRINT 7
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 7: Lokale Bøger som Sandhed (RAG)
+### Trin 13: Lokale Bøger som Sandhed (RAG) SPRINT 8
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 8: Transkriberings-modulet (HTR)
+### Trin 14: Transkriberings-modulet (HTR) SPRINT 9
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.

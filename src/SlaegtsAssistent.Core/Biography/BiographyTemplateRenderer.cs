@@ -97,14 +97,21 @@ public sealed class BiographyTemplateRenderer
                 "deathDate" => person.DeathDate,
                 "deathPlace" => person.DeathPlace,
                 "parents" => person.Parents,
-                "parentNames" => person.ParentNames,
+                "parentNames" => RenderReferences(person.Parents),
+                "childNames" => RenderReferences(person.Children),
+                "partnerNames" => RenderReferences(person.Partners),
+                "children" => person.Children,
+                "partners" => person.Partners,
                 "createdDate" => person.CreatedDate,
                 _ => null,
             },
             PersonReferenceTemplateContext person => name switch
             {
                 "recordId" => person.RecordId,
-                "fullName" => person.FullName,
+                "fullName" => RenderReference(person),
+                "plainName" => person.FullName,
+                "link" => RenderReference(person),
+                "documentPath" => person.DocumentPath,
                 _ => null,
             },
             EventTemplateContext @event => name switch
@@ -186,6 +193,7 @@ public sealed class BiographyTemplateRenderer
         return value switch
         {
             null => false,
+            PersonLinkMarkdown markdown => !string.IsNullOrWhiteSpace(markdown.Text),
             string text => !string.IsNullOrWhiteSpace(text),
             IEnumerable values => values.Cast<object?>().Any(),
             bool boolean => boolean,
@@ -193,8 +201,22 @@ public sealed class BiographyTemplateRenderer
         };
     }
 
+    private static PersonLinkMarkdown RenderReferences(IEnumerable<PersonReferenceTemplateContext> people) =>
+        new(string.Join(", ", people.Select(person => RenderReference(person).Text)));
+
+    private static PersonLinkMarkdown RenderReference(PersonReferenceTemplateContext person)
+    {
+        var name = EscapeMarkdown(string.IsNullOrWhiteSpace(person.FullName) ? person.RecordId : person.FullName);
+        return new PersonLinkMarkdown(person.DocumentPath is null ? name : $"[{name}]({person.DocumentPath})");
+    }
+
     private static string EscapeMarkdown(object? value)
     {
+        if (value is PersonLinkMarkdown markdown)
+        {
+            return markdown.Text;
+        }
+
         if (value is null)
         {
             return string.Empty;

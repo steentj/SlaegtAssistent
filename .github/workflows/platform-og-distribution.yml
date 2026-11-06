@@ -40,6 +40,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Vis valgt .NET SDK
+        run: dotnet --version
+
       - name: Kontrollér runnerarkitektur
         shell: bash
         run: |

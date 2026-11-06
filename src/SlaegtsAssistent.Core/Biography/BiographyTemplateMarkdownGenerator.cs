@@ -10,6 +10,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         "{{#if person.birthDate }}- **Født:** {{ person.birthDate }}{{#if person.birthPlace }} i {{ person.birthPlace }}{{/if}}\n{{/if}}" +
         "{{#if person.deathDate }}- **Død:** {{ person.deathDate }}{{#if person.deathPlace }} i {{ person.deathPlace }}{{/if}}\n{{/if}}" +
         "{{#if person.parents }}- **Forældre:** {{ person.parentNames }}\n{{/if}}" +
+        "{{#if person.children }}- **Børn:** {{ person.childNames }}\n{{/if}}" +
+        "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}" +
         "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}\n" +
         "## Hændelser\n" +
         "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}\n{{/each}}\n" +
@@ -28,18 +30,21 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
     private readonly string? _mediaBaseDirectory;
     private readonly string? _gedcomSourceDirectory;
     private readonly string _templateHash;
+    private readonly BiographyPersonLinks? _personLinks;
 
     public BiographyTemplateMarkdownGenerator(
         string? template = null,
         Submitter? submitter = null,
         string? mediaBaseDirectory = null,
-        string? gedcomSourceDirectory = null)
+        string? gedcomSourceDirectory = null,
+        BiographyPersonLinks? personLinks = null)
     {
         _template = new BiographyTemplateLoader().Parse(template ?? DefaultTemplate);
         _renderer = new BiographyTemplateRenderer();
         _submitter = submitter;
         _mediaBaseDirectory = mediaBaseDirectory;
         _gedcomSourceDirectory = gedcomSourceDirectory;
+        _personLinks = personLinks;
         _templateHash = BiographyTemplateIdentity.ComputeHash(_template.Source);
     }
 
@@ -51,7 +56,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
             person,
             _submitter,
             _mediaBaseDirectory,
-            _gedcomSourceDirectory);
+            _gedcomSourceDirectory,
+            _personLinks);
         var body = _renderer.Render(_template, context);
         var facts = BiographyFactsSnapshot.FromPerson(person);
         var canonicalSnapshot = CanonicalBiographySnapshot.Create(person, _submitter);
@@ -82,7 +88,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
             approvedSnapshot,
             _mediaBaseDirectory,
             personNames,
-            _gedcomSourceDirectory);
+            _gedcomSourceDirectory,
+            _personLinks);
         var body = _renderer.Render(_template, context);
         var facts = new BiographyFactsSnapshot(
             person.FullName,

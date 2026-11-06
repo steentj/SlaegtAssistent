@@ -1,7 +1,9 @@
 {
   "sdk": {
-    "version": "10.0.402",
+    "version": "10.0.403",
     "rollForward": "disable",
-    "allowPrerelease": false
+    "allowPrerelease": false,
+    "paths": [".dotnet", "$host$"],
+    "errorMessage": "Projektets .NET SDK mangler. På macOS eller Linux: kør bash scripts/setup-dotnet.sh fra projektmappen."
   }
 }

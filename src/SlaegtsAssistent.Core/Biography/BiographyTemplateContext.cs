@@ -43,7 +43,8 @@ public sealed class BiographyTemplateContext
         Person person,
         Submitter? submitter = null,
         string? mediaBaseDirectory = null,
-        string? gedcomSourceDirectory = null)
+        string? gedcomSourceDirectory = null,
+        BiographyPersonLinks? personLinks = null)
     {
         ArgumentNullException.ThrowIfNull(person);
 
@@ -72,7 +73,7 @@ public sealed class BiographyTemplateContext
             .ToArray();
 
         return new BiographyTemplateContext(
-            PersonTemplateContext.FromPerson(person),
+            PersonTemplateContext.FromPerson(person, personLinks),
             submitter is null ? null : SubmitterTemplateContext.FromSubmitter(submitter),
             events,
             familyEvents,
@@ -85,7 +86,8 @@ public sealed class BiographyTemplateContext
         CanonicalBiographySnapshot snapshot,
         string? mediaBaseDirectory = null,
         IReadOnlyDictionary<string, string?>? personNames = null,
-        string? gedcomSourceDirectory = null)
+        string? gedcomSourceDirectory = null,
+        BiographyPersonLinks? personLinks = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -155,13 +157,25 @@ public sealed class BiographyTemplateContext
                             ? name
                             : recordId))
                     .ToArray(),
-                person.CreatedDate),
+                person.CreatedDate)
+            {
+                Children = References(snapshot.ChildRecordIds),
+                Partners = References(snapshot.Families
+                    .Where(family => family.HusbandRecordId == person.RecordId || family.WifeRecordId == person.RecordId)
+                    .SelectMany(family => new[] { family.HusbandRecordId, family.WifeRecordId })
+                    .OfType<string>().Where(id => id != person.RecordId)),
+            }.WithLinks(personLinks),
             submitter,
             events,
             familyEvents,
             census,
             sources,
             media);
+
+        PersonReferenceTemplateContext[] References(IEnumerable<string> ids) => ids
+            .Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal)
+            .Select(id => new PersonReferenceTemplateContext(id,
+                personNames?.GetValueOrDefault(id) ?? id)).ToArray();
 
         static EventTemplateContext ToEvent(CanonicalEventData item)
         {
@@ -209,7 +223,19 @@ public sealed record PersonTemplateContext(
         .Select(parent => parent.FullName)
         .Where(name => !string.IsNullOrWhiteSpace(name)));
 
-    public static PersonTemplateContext FromPerson(Person person)
+    public IReadOnlyList<PersonReferenceTemplateContext> Children { get; init; } = [];
+    public IReadOnlyList<PersonReferenceTemplateContext> Partners { get; init; } = [];
+
+    public PersonTemplateContext WithLinks(BiographyPersonLinks? links)
+    {
+        IReadOnlyList<PersonReferenceTemplateContext> Link(IReadOnlyList<PersonReferenceTemplateContext> people) => people
+            .DistinctBy(item => item.RecordId, StringComparer.Ordinal)
+            .OrderBy(item => item.RecordId, StringComparer.Ordinal)
+            .Select(item => item with { DocumentPath = links?.GetRelativePath(RecordId, item.RecordId) }).ToArray();
+        return this with { Parents = Link(Parents), Children = Link(Children), Partners = Link(Partners) };
+    }
+
+    public static PersonTemplateContext FromPerson(Person person, BiographyPersonLinks? personLinks = null)
     {
         return new PersonTemplateContext(
             person.RecordId,
@@ -222,11 +248,22 @@ public sealed record PersonTemplateContext(
             person.Parents
                 .Select(parent => new PersonReferenceTemplateContext(parent.RecordId, parent.FullName))
                 .ToArray(),
-            person.CreatedDate);
+            person.CreatedDate)
+        {
+            Children = person.Children.Select(child => new PersonReferenceTemplateContext(child.RecordId, child.FullName)).ToArray(),
+            Partners = person.Families
+                .Where(family => family.Husband?.RecordId == person.RecordId || family.Wife?.RecordId == person.RecordId)
+                .SelectMany(family => new[] { family.Husband, family.Wife }).OfType<Person>()
+                .Where(partner => partner.RecordId != person.RecordId)
+                .Select(partner => new PersonReferenceTemplateContext(partner.RecordId, partner.FullName)).ToArray(),
+        }.WithLinks(personLinks);
     }
 }
 
-public sealed record PersonReferenceTemplateContext(string RecordId, string? FullName);
+public sealed record PersonReferenceTemplateContext(string RecordId, string? FullName)
+{
+    public string? DocumentPath { get; init; }
+}
 
 public sealed record EventTemplateContext(
     string Tag,

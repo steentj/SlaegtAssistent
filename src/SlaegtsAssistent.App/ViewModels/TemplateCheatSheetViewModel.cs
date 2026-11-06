@@ -25,7 +25,13 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
         "- `person.birthDate`, `person.birthPlace`\n" +
         "- `person.deathDate`, `person.deathPlace`\n" +
         "- `person.createdDate` (oprettelsesdato fra GEDCOM-tagget `CREA`; udelad feltet for ikke at vise den)\n" +
-        "- `person.parents`\n\n" +
+        "- `person.parents`, `person.children`, `person.partners`\n" +
+        "- `person.parentNames`, `person.childNames`, `person.partnerNames` viser navnelister med dokumentlinks.\n\n" +
+        "I relationsløkker giver `fullName` og `link` et sikkert relativt personlink, når dokumentmålet er entydigt. " +
+        "`plainName` giver navnet uden link, og `documentPath` giver den relative URI. " +
+        "Hovedpersonens `person.fullName` er altid almindelig tekst. " +
+        "Uden dokumentmål vises navnet som tekst. Navne i fri prosa og noter omskrives ikke. " +
+        "Appens private preview åbner ikke lokale links; dokumentlinks kan bruges i en lokal Markdown-læser.\n\n" +
         "### Afsender (`SUBM`)\n\n" +
         "- `submitter.recordId`\n" +
         "- `submitter.name`, `submitter.address`\n" +

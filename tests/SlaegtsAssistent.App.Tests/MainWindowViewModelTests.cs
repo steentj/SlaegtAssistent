@@ -10,6 +10,62 @@ namespace SlaegtsAssistent.App.Tests;
 
 public class MainWindowViewModelTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PersonLinks_RequireCandidateApprovalAndPreserveFreeText(bool approve)
+    {
+        using var file = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 SOUR Test", "1 GEDC", "2 VERS 5.5.1", "1 CHAR UTF-8",
+            "0 @I1@ INDI", "1 NAME Far", "0 @I2@ INDI", "1 NAME Barn",
+            "0 @F1@ FAM", "1 HUSB @I1@", "1 CHIL @I2@", "0 TRLR");
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var tree = new GedcomLoader().Load(file.Path);
+            var original = new Dictionary<string, string>();
+            foreach (var person in tree.People)
+            {
+                var path = Path.Combine(folder, BiographyFileNameGenerator.Generate(person));
+                original[path] = new BiographyTemplateMarkdownGenerator().Generate(person)
+                    .Replace("_Skriv den fulde livshistorie her._", "Min egen tekst om Far.", StringComparison.Ordinal);
+                File.WriteAllText(path, original[path]);
+            }
+
+            var settings = new RecordingApplicationSettingsService(new AppSettings { DefaultMarkdownOutputFolder = folder });
+            var dialog = new ChoosingGedcomDifferenceDialogService(approve);
+            var viewModel = CreateViewModel(
+                gedcomFilePickerService: new SequencedGedcomFilePickerService([file.Path, file.Path]),
+                settingsService: settings,
+                markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+                markdownFileStore: new FileSystemMarkdownFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                gedcomDifferenceDialogService: dialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            dialog.LastDifferences.Should().NotBeEmpty();
+            foreach (var entry in original)
+            {
+                var content = File.ReadAllText(entry.Key);
+                content.Should().Contain("Min egen tekst om Far.");
+                if (!approve) content.Should().Be(entry.Value);
+            }
+
+            if (approve)
+            {
+                var childPath = Path.Combine(folder, BiographyFileNameGenerator.Generate(tree.FindPerson("@I2@")!));
+                File.ReadAllText(childPath).Should().Contain("**Forældre:** [Far](");
+                await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+                viewModel.People.Should().OnlyContain(person => person.SyncStatus == BiographySyncStatus.Uændret);
+            }
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
     [Fact]
     public void Constructor_ShouldStartWithEmptyPeopleAndNoSelection()
     {
