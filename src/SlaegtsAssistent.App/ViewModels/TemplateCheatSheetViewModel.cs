@@ -31,7 +31,7 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
         "`plainName` giver navnet uden link, og `documentPath` giver den relative URI. " +
         "Hovedpersonens `person.fullName` er altid almindelig tekst. " +
         "Uden dokumentmål vises navnet som tekst. Navne i fri prosa og noter omskrives ikke. " +
-        "Appens private preview åbner ikke lokale links; dokumentlinks kan bruges i en lokal Markdown-læser.\n\n" +
+        "Previewets personnavne med ↗ og editorens personknapper åbner persondokumentet i appen. Markøren gemmes ikke i Markdown. Andre lokale links er fortsat blokeret.\n\n" +
         "### Afsender (`SUBM`)\n\n" +
         "- `submitter.recordId`\n" +
         "- `submitter.name`, `submitter.address`\n" +

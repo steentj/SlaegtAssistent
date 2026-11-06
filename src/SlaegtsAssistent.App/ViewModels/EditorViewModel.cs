@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SlaegtsAssistent.App.Services;
@@ -17,15 +18,21 @@ public partial class EditorViewModel : ViewModelBase
     private readonly IReadOnlyCollection<string> _allowedPreviewRoots;
     private string? _cachedPreviewSource;
     private SafeMarkdownPreviewResult? _cachedPreview;
+    private readonly Func<string, PersonDocumentLink?>? _resolvePersonLink;
+    private readonly Action<PersonDocumentLink>? _openPersonLink;
 
     public EditorViewModel(
         string filePath,
         IMarkdownFileStore markdownFileStore,
-        IReadOnlyCollection<string>? allowedPreviewRoots = null)
+        IReadOnlyCollection<string>? allowedPreviewRoots = null,
+        Func<string, PersonDocumentLink?>? resolvePersonLink = null,
+        Action<PersonDocumentLink>? openPersonLink = null)
     {
         _filePath = filePath;
         _markdownFileStore = markdownFileStore;
         _allowedPreviewRoots = allowedPreviewRoots ?? [];
+        _resolvePersonLink = resolvePersonLink;
+        _openPersonLink = openPersonLink;
     }
 
     [ObservableProperty]
@@ -53,6 +60,27 @@ public partial class EditorViewModel : ViewModelBase
     public string PreviewSecurityMessage => string.Join(" ", CreatePreview().Diagnostics);
 
     public bool HasPreviewSecurityMessage => CreatePreview().Diagnostics.Count > 0;
+
+    public IReadOnlyList<PersonNavigationItem> PersonLinks => CreatePreview().PersonLinks
+        .Select(link => new PersonNavigationItem(link, () => _openPersonLink?.Invoke(link))).ToArray();
+
+    public bool HasPersonLinks => CreatePreview().PersonLinks.Count > 0;
+
+    public bool TryNavigateToPerson(Uri destination)
+    {
+        var link = CreatePreview().PersonLinks.FirstOrDefault(item => item.NavigationUri == destination);
+        if (link is null || _openPersonLink is null) return false;
+        _openPersonLink(link);
+        return true;
+    }
+
+    public void RefreshPersonLinks()
+    {
+        _cachedPreview = null;
+        OnPropertyChanged(nameof(PersonLinks));
+        OnPropertyChanged(nameof(HasPersonLinks));
+        OnPropertyChanged(nameof(PreviewHtmlDocument));
+    }
 
     public bool IsWebPreviewSelected
     {
@@ -137,6 +165,8 @@ public partial class EditorViewModel : ViewModelBase
     {
         _cachedPreviewSource = null;
         _cachedPreview = null;
+        OnPropertyChanged(nameof(PersonLinks));
+        OnPropertyChanged(nameof(HasPersonLinks));
         OnPropertyChanged(nameof(PreviewHtml));
         OnPropertyChanged(nameof(PreviewWebUri));
         OnPropertyChanged(nameof(PreviewHtmlDocument));
@@ -165,7 +195,21 @@ public partial class EditorViewModel : ViewModelBase
         }
 
         _cachedPreviewSource = source;
-        _cachedPreview = _previewService.Render(source, _filePath, _allowedPreviewRoots);
+        _cachedPreview = _previewService.Render(source, _filePath, _allowedPreviewRoots, _resolvePersonLink);
         return _cachedPreview;
     }
+}
+
+public sealed class PersonNavigationItem
+{
+    public PersonNavigationItem(PersonDocumentLink link, Action open)
+    {
+        Label = link.DisplayName + " ↗";
+        ToolTip = "Åbn " + link.DisplayName + " i editoren\n" + link.FilePath;
+        OpenCommand = new RelayCommand(open);
+    }
+
+    public string Label { get; }
+    public string ToolTip { get; }
+    public IRelayCommand OpenCommand { get; }
 }

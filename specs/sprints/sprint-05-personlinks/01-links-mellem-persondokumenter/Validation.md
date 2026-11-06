@@ -35,7 +35,7 @@ Kommandoerne blev kørt fra `/private/tmp` med installeret SDK 10.0.403. Projekt
 
 ### Afgrænsning og manuel status
 - Manuel GUI-afprøvning er ikke udført; ovenstående manuelle scenarier afventer.
-- Links er portable Markdown-dokumentlinks. Den eksisterende private preview fjerner lokale href-mål og understøtter derfor ikke intern personnavigation. Previewpolitikken er ikke ændret.
+- Ved den oprindelige implementering var links kun portable Markdown-dokumentlinks. Denne begrænsning er efterfølgende ophævet for entydige personmål i [personnavigation](../02-personnavigation/Validation.md); andre lokale links er fortsat blokeret.
 - Strukturerede personreferencer linkes efter record-id. Navne i fri prosa og noter omskrives ikke ved navnesøgning.
 - Arbejdsområdets eksisterende katalog søger fortsat i den valgte mappe, ikke rekursivt. Core-opslaget understøtter relative stier mellem undermapper, men dette indfører ikke et nyt rekursivt dokumentkatalog.
 - Eksisterende egne skabeloners relationsfelter `fullName` og navnelister får links automatisk. Skabeloner, der selv bygger Markdown-links, skal bruge `plainName` som linktekst for at undgå indlejrede links.

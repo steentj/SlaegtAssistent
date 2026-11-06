@@ -13,7 +13,10 @@ public sealed record SafeMarkdownPreviewResult(
     string HtmlDocument,
     IReadOnlyList<string> Diagnostics,
     IReadOnlyList<Uri> ExternalLinks,
-    int NetworkRequestAttempts);
+    int NetworkRequestAttempts)
+{
+    public IReadOnlyList<PersonDocumentLink> PersonLinks { get; init; } = [];
+}
 
 public sealed class SafeMarkdownPreviewService
 {
@@ -54,7 +57,8 @@ public sealed class SafeMarkdownPreviewService
     public SafeMarkdownPreviewResult Render(
         string markdown,
         string documentPath,
-        IReadOnlyCollection<string>? allowedLocalRoots = null)
+        IReadOnlyCollection<string>? allowedLocalRoots = null,
+        Func<string, PersonDocumentLink?>? resolvePersonLink = null)
     {
         ArgumentNullException.ThrowIfNull(markdown);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentPath);
@@ -69,6 +73,7 @@ public sealed class SafeMarkdownPreviewService
             .ToArray();
         var diagnostics = new List<string>();
         var externalLinks = new List<Uri>();
+        var personLinks = new List<PersonDocumentLink>();
         if (RawHtmlRegex.IsMatch(markdown))
         {
             diagnostics.Add("Rå HTML vises som tekst og udføres ikke i previewet.");
@@ -81,7 +86,7 @@ public sealed class SafeMarkdownPreviewService
             documentDirectory,
             roots,
             diagnostics));
-        html = LinkRegex.Replace(html, match => ResolveLink(match, externalLinks, diagnostics));
+        html = LinkRegex.Replace(html, match => ResolveLink(match, externalLinks, diagnostics, resolvePersonLink, personLinks));
 
         if (diagnostics.Count > 0)
         {
@@ -97,7 +102,10 @@ public sealed class SafeMarkdownPreviewService
             CreateDocument(html),
             diagnostics.Distinct(StringComparer.Ordinal).ToArray(),
             externalLinks.DistinctBy(uri => uri.AbsoluteUri, StringComparer.Ordinal).ToArray(),
-            NetworkRequestAttempts: 0);
+            NetworkRequestAttempts: 0)
+        {
+            PersonLinks = personLinks.DistinctBy(link => link.RecordId).ToArray(),
+        };
     }
 
     public SafeMarkdownPreviewResult RenderHelp(string markdown)
@@ -199,7 +207,9 @@ public sealed class SafeMarkdownPreviewService
     private static string ResolveLink(
         Match match,
         ICollection<Uri> externalLinks,
-        ICollection<string> diagnostics)
+        ICollection<string> diagnostics,
+        Func<string, PersonDocumentLink?>? resolvePersonLink,
+        ICollection<PersonDocumentLink> personLinks)
     {
         var href = WebUtility.HtmlDecode(match.Groups["href"].Value);
         if (href.StartsWith('#'))
@@ -212,6 +222,13 @@ public sealed class SafeMarkdownPreviewService
         {
             externalLinks.Add(uri);
             return match.Value[..^1] + " data-preview-external=\"true\" rel=\"noreferrer noopener\">";
+        }
+
+        if (resolvePersonLink?.Invoke(href) is { } personLink)
+        {
+            personLinks.Add(personLink);
+            return $"<a href=\"{WebUtility.HtmlEncode(personLink.NavigationUri.AbsoluteUri)}\" " +
+                   $"class=\"person-link\" title=\"{WebUtility.HtmlEncode("Åbn " + personLink.DisplayName + " i editoren")}\">";
         }
 
         diagnostics.Add("Et link med et lokalt, aktivt eller ikke-understøttet URL-skema blev blokeret.");
@@ -237,6 +254,7 @@ public sealed class SafeMarkdownPreviewService
         "table{border-collapse:collapse;margin:12px 0;}th,td{border:1px solid #9aaeb5;padding:6px 10px;text-align:left;}" +
         "blockquote{border-left:4px solid #6e9eaa;margin-left:0;padding-left:12px;color:#4d626a;}" +
         ".preview-warning{display:block;margin:8px 0;padding:8px 10px;border-left:4px solid #B7791F;background:#FFF8E6;color:#6B4E16;}" +
+        "a.person-link::after{content:\" ↗\";}a.person-link:focus{outline:2px solid #174a5b;outline-offset:3px;}" +
         "img{max-width:100%;height:auto;}</style></head><body>" + html + "</body></html>";
 
     private static bool IsWithin(string path, string root)

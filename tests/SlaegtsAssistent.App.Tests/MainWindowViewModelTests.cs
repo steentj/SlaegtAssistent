@@ -10,6 +10,57 @@ namespace SlaegtsAssistent.App.Tests;
 
 public class MainWindowViewModelTests
 {
+    [Fact]
+    public void PersonNavigation_SwitchesEditorPreservesUnsavedTextAndRejectsStaleTargets()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var first = new Person("@I1@") { FullName = "Anna" };
+            var second = new Person("@I2@") { FullName = "Bo" };
+            var generator = new BiographyTemplateMarkdownGenerator();
+            var firstPath = Path.Combine(folder, "anna.md");
+            var secondPath = Path.Combine(folder, "bo.md");
+            File.WriteAllText(firstPath, generator.Generate(first).Replace("_Skriv den fulde livshistorie her._", "[Bo](bo.md)"));
+            File.WriteAllText(secondPath, generator.Generate(second).Replace("_Skriv den fulde livshistorie her._", "[Anna](anna.md)"));
+            var viewModel = CreateViewModel(
+                settingsService: new RecordingApplicationSettingsService(new AppSettings { DefaultMarkdownOutputFolder = folder }),
+                markdownFileStore: new FileSystemMarkdownFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog());
+            viewModel.SelectedPerson = viewModel.People.Single(person => person.RecordId == first.RecordId);
+            var firstEditor = viewModel.Editor!;
+            firstEditor.IsDirty.Should().BeFalse();
+            firstEditor.PersonLinks.Should().ContainSingle().Which.Label.Should().Be("Bo ↗");
+            firstEditor.MarkdownText += "\nAnnas ugemte tekst.";
+            viewModel.PersonFilterText = "Anna";
+            firstEditor.PersonLinks.Single().OpenCommand.Execute(null);
+            viewModel.SelectedPerson!.RecordId.Should().Be(second.RecordId);
+            viewModel.PersonFilterText.Should().BeEmpty();
+            var secondEditor = viewModel.Editor!;
+            secondEditor.MarkdownText += "\nBos ugemte tekst.";
+            secondEditor.TryNavigateToPerson(new PersonDocumentLink(first.RecordId, "Anna", firstPath).NavigationUri).Should().BeTrue();
+            viewModel.Editor.Should().BeSameAs(firstEditor);
+            viewModel.Editor!.MarkdownText.Should().Contain("Annas ugemte tekst.");
+            viewModel.Editor.IsDirty.Should().BeTrue();
+            firstEditor.TryNavigateToPerson(new Uri("slaegt-person://open/ukendt")).Should().BeFalse();
+            firstEditor.PersonLinks.Single().OpenCommand.Execute(null);
+            viewModel.Editor.Should().BeSameAs(secondEditor);
+            secondEditor.MarkdownText.Should().Contain("Bos ugemte tekst.");
+            secondEditor.IsDirty.Should().BeTrue();
+            var staleLink = secondEditor.PersonLinks.Single();
+            File.Delete(firstPath);
+            staleLink.OpenCommand.Execute(null);
+            viewModel.Editor.Should().BeSameAs(secondEditor);
+            viewModel.ErrorMessage.Should().Contain("ikke åbnes");
+            File.ReadAllText(secondPath).Should().NotContain("↗").And.NotContain("ugemte");
+            secondEditor.SaveCommand.Execute(null);
+            File.ReadAllText(secondPath).Should().Contain("Bos ugemte tekst.")
+                .And.NotContain("↗").And.NotContain("slaegt-person:");
+        }
+        finally { Directory.Delete(folder, true); }
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

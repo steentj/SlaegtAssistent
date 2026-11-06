@@ -10,7 +10,7 @@ namespace SlaegtsAssistent.App.Services;
 
 public static class SafePreviewWebViewController
 {
-    public static void Attach(NativeWebView webView, Window owner)
+    public static void Attach(NativeWebView webView, Window owner, Func<Uri, bool>? navigateToPerson = null)
     {
         ArgumentNullException.ThrowIfNull(webView);
         ArgumentNullException.ThrowIfNull(owner);
@@ -19,6 +19,13 @@ public static class SafePreviewWebViewController
         {
             if (eventArgs.Request is null)
             {
+                return;
+            }
+
+            if (eventArgs.Request.Scheme == "slaegt-person")
+            {
+                eventArgs.Cancel = true;
+                navigateToPerson?.Invoke(eventArgs.Request);
                 return;
             }
 
@@ -44,6 +51,12 @@ public static class SafePreviewWebViewController
             eventArgs.Handled = true;
             if (eventArgs.Request is null)
             {
+                return;
+            }
+
+            if (eventArgs.Request.Scheme == "slaegt-person")
+            {
+                navigateToPerson?.Invoke(eventArgs.Request);
                 return;
             }
 

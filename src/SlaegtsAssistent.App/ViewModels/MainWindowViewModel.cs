@@ -1192,7 +1192,9 @@ public partial class MainWindowViewModel : ViewModelBase
             editor = new EditorViewModel(
                 value.MarkdownFilePath,
                 _markdownFileStore,
-                allowedPreviewRoots);
+                allowedPreviewRoots,
+                href => PersonDocumentNavigation.Resolve(href, value.MarkdownFilePath, _allPeople),
+                OpenPersonDocument);
             editor.PropertyChanged += EditorOnPropertyChanged;
 
             try
@@ -1216,9 +1218,27 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
+        editor.RefreshPersonLinks();
         Editor = editor;
         ErrorMessage = null;
         UpdateDirtyState();
+    }
+
+    private void OpenPersonDocument(PersonDocumentLink link)
+    {
+        if (IsImporting) return;
+        var target = _allPeople.FirstOrDefault(person => person.RecordId == link.RecordId &&
+            string.Equals(person.MarkdownFilePath, link.FilePath,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+        if (target is null || target.HasDocumentDiagnostic || target.SyncStatus == BiographySyncStatus.Tvetydig ||
+            _allPeople.Count(person => person.RecordId == link.RecordId) != 1 || !File.Exists(link.FilePath))
+        {
+            ErrorMessage = "Personens dokument kan ikke åbnes. Det mangler eller er ikke længere entydigt i arbejdsområdet.";
+            return;
+        }
+
+        PersonFilterText = string.Empty;
+        SelectedPerson = target;
     }
 
     private static PersonListItemViewModel CreatePersonListItem(

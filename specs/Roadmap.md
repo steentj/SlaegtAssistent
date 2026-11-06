@@ -104,6 +104,7 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
     *   Undgå forkerte links ved navnesammenfald, manglende dokumenter og dublerede dokumentidentiteter.
     *   Tilbyd opdatering af eksisterende genererede sektioner gennem kandidatgodkendelse; bevar fri tekst og afviste ændringer.
     *   Dokumentér skabelonfelter og verificér import, genåbning, genrendering og sikker forhåndsvisning.
+    *   Åbn refererede persondokumenter fra previewets navne med ↗ og editorens personknapper; bevar ugemte tekster og gem ingen UI-markører i dokumentet. [Plan for personnavigation](sprints/sprint-05-personlinks/02-personnavigation/Plan.md).
 *   **Specifikation:** [Udførlig implementeringsplan](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Plan.md), [krav](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Requirements.md) og [validering](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Validation.md).
 
 ### Trin 11: Grafisk Slægtstræ & Eksport SPRINT 6

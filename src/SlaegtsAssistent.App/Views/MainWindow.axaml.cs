@@ -16,7 +16,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        SafePreviewWebViewController.Attach(PreviewWebView, this);
+        SafePreviewWebViewController.Attach(PreviewWebView, this, destination =>
+            (DataContext as MainWindowViewModel)?.Editor?.TryNavigateToPerson(destination) == true);
         DataContextChanged += HandleDataContextChanged;
         PreviewWebView.AdapterCreated += (_, _) =>
         {
