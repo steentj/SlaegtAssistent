@@ -3,7 +3,7 @@
 
 Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et funktionelt program.
 
-Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares, så eksisterende specifikationshenvisninger fortsat virker. Næste sprint er sprint 5 om personlinks; grafisk slægtstræ og eksport flyttes til sprint 6.
+Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares, så eksisterende specifikationshenvisninger fortsat virker. Personlinks er gennemført som sprint 5. Næste sprint er sprint 6 om brugervenlig skabelonredigering; grafisk slægtstræ og eksport flyttes til sprint 7.
 
 ### Trin 1: Fundamentet (Uden AI)
 *   **Mål:** Læs data og tillad manuel redigering.
@@ -95,7 +95,7 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Opgaver:** Fortolk `CREA` som oprettelsesdato, udelad private tags som hændelser og tilbyd en ikke-modal introduktion til GEDCOM.
 *   **Specifikation:** [Sprint 4F](sprints/sprint-04f-gedcom-metadata-og-gedcom-hjaelp/Plan.md).
 
-### Trin 10: Links mellem persondokumenter SPRINT 5 – næste sprint
+### Trin 10: Links mellem persondokumenter SPRINT 5
 *   **Mål:** Alle strukturerede personomtaler i genererede Markdown-dokumenter linker til den pågældende persons dokument, når personen har et entydigt dokumentmål i arbejdsområdet eller oprettes i samme import.
 *   **Forudsætning:** Dokumentidentitet, kontrolleret synkronisering, skabelonrendering og GEDCOM-metadata fra trin 4–9 er implementeret.
 *   **Opgaver:**
@@ -107,29 +107,42 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
     *   Åbn refererede persondokumenter fra previewets navne med ↗ og editorens personknapper; bevar ugemte tekster og gem ingen UI-markører i dokumentet. [Plan for personnavigation](sprints/sprint-05-personlinks/02-personnavigation/Plan.md).
 *   **Specifikation:** [Udførlig implementeringsplan](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Plan.md), [krav](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Requirements.md) og [validering](sprints/sprint-05-personlinks/01-links-mellem-persondokumenter/Validation.md).
 
-### Trin 11: Grafisk Slægtstræ & Eksport SPRINT 6
+### Trin 11: Brugervenlig skabelonredigering SPRINT 6 – næste sprint
+*   **Mål:** En uerfaren it-bruger skal kunne tilpasse persondokumentets opbygning uden at skrive skabelonsyntaks og straks kunne se resultatet i et realistisk eksempeldokument.
+*   **Forudsætning:** Den validerede skabelonkontrakt, sikker Markdown-preview og personlinks fra trin 8–10 er implementeret.
+*   **Beslutning:** En guidet blokeditor med danske betegnelser bliver den fremadrettede skabelonkontrakt. Den eksisterende renderer kan genbruges som intern implementeringsdetalje, men sprintet stiller ikke krav om bagudkompatibilitet med tidligere håndskrevne skabeloner.
+*   **Feature-rækkefølge:**
+    1. Definér en UI-uafhængig, versioneret editormodel og deterministisk dokumentgenerering.
+    2. Byg en guidet blokeditor, hvor sektioner kan tilføjes, skjules, konfigureres og flyttes uden kendskab til feltnavne.
+    3. Tilføj live preview med indbyggede eksempeldata og mulighed for at vælge en faktisk indlæst person.
+    4. Implementér sikker lagring, genåbning, annullering, nulstilling og tydelig håndtering af det tidligere format uden krav om konvertering.
+    5. Afslut med tilgængelighed, kontekstuel hjælp, brugertest med uerfarne it-brugere og fuld regression af import og genrendering.
+*   **Succeskriterium:** En førstegangsbruger kan på højst fem minutter ændre sektionsrækkefølge, skjule en sektion, vælge liste eller tabel og gemme en gyldig skabelon uden at se eller skrive `{{ ... }}`.
+*   **Specifikation:** [Analyse og beslutning](sprints/sprint-06-brugervenlig-skabelonredigering/Analyse.md), [udførlig implementeringsplan](sprints/sprint-06-brugervenlig-skabelonredigering/Plan.md), [krav](sprints/sprint-06-brugervenlig-skabelonredigering/Requirements.md) og [validering](sprints/sprint-06-brugervenlig-skabelonredigering/Validation.md).
+
+### Trin 12: Grafisk Slægtstræ & Eksport SPRINT 7
 *   **Mål:** Opsætte output fra applikationen
-*   **Forudsætning:** Trin 5–10 er færdige, så eksporten arbejder på stabile, skabelonbaserede persondokumenter med dokumenteret synkronisering.
+*   **Forudsætning:** Trin 5–11 er færdige, så eksporten arbejder på stabile, brugervenligt konfigurerede persondokumenter med dokumenteret synkronisering.
 *   **Opgaver:**
     *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
     *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.
     *   Implementering af udskriftsfunktion samt eksport af slægtstræ (SVG/PNG) og biografier (PDF/DOCX/ODT) via lokal Python/Pandoc-sidecar.
 
-### Trin 12: Den Lokale AI-Assistent SPRINT 7
+### Trin 13: Den Lokale AI-Assistent SPRINT 8
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 13: Lokale Bøger som Sandhed (RAG) SPRINT 8
+### Trin 14: Lokale Bøger som Sandhed (RAG) SPRINT 9
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 14: Transkriberings-modulet (HTR) SPRINT 9
+### Trin 15: Transkriberings-modulet (HTR) SPRINT 10
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.
