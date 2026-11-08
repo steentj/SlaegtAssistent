@@ -8,8 +8,222 @@ using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Tests;
 
-public class MainWindowViewModelTests
+public partial class MainWindowViewModelTests
 {
+    [Fact]
+    public async Task ApplyTemplate_ShouldRollBackEarlierWritesWhenLaterWriteFails()
+    {
+        using var gedcom = CreateTwoPersonGedcomFile();
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var settings = new RecordingApplicationSettingsService(new AppSettings { DefaultMarkdownOutputFolder = folder });
+            new MarkdownBiographyExportService(settings).WriteBiographies(new GedcomLoader().Load(gedcom.Path), folder);
+            var original = SnapshotFiles(folder);
+            var viewModel = CreateViewModel(settingsService: settings,
+                markdownFileStore: new FailingSecondWriteFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                gedcomDifferenceDialogService: new ChoosingGedcomDifferenceDialogService(true));
+            var templatePath = Path.Combine(folder, "ny.slaegtskabelon");
+            var model = BiographyTemplateEditorModel.CreateDefault();
+            new TemplateEditorStorageService().Save(templatePath, new(model.Version, model.Blocks.Select(block =>
+                block.Type == BiographyTemplateBlockType.Facts ? block with { Heading = "Mine fakta" } : block).ToArray()));
+            viewModel.GlobalBiographyTemplatePath = templatePath;
+
+            await viewModel.ApplyBiographyTemplateCommand.ExecuteAsync(null);
+
+            viewModel.ErrorMessage.Should().Contain("Simuleret skrivefejl");
+            viewModel.IsImporting.Should().BeFalse();
+            foreach (var entry in original)
+            {
+                File.ReadAllBytes(Path.Combine(folder, entry.Key)).Should().Equal(entry.Value);
+            }
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public async Task ApplyTemplate_ShouldWorkAfterRestartWithoutGedcomAndPreserveBaseline(bool? approve)
+    {
+        using var gedcom = CreateTwoPersonGedcomFile();
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var templatePath = Path.Combine(folder, "person.slaegtskabelon");
+            var settings = new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = folder,
+                GlobalBiographyTemplatePath = templatePath,
+            });
+            var model = BiographyTemplateEditorModel.CreateDefault();
+            var storage = new TemplateEditorStorageService();
+            storage.Save(templatePath, model);
+            var tree = new GedcomLoader().Load(gedcom.Path);
+            new MarkdownBiographyExportService(settings).WriteBiographies(tree, folder);
+            foreach (var documentPath in Directory.GetFiles(folder, "*.md"))
+            {
+                File.AppendAllText(documentPath, "\nMin egen tekst.\n");
+            }
+            var snapshotStore = new FileSystemGedcomSnapshotStore();
+            snapshotStore.Save(folder, gedcom.Path, tree);
+            var original = SnapshotFiles(folder);
+            storage.Save(templatePath, new(model.Version, model.Blocks.Select(block =>
+                block.Type == BiographyTemplateBlockType.Facts ? block with { Heading = "Mine fakta" } : block).ToArray()));
+            File.Delete(gedcom.Path);
+            var loader = new RecordingGedcomLoader(_ => throw new InvalidOperationException("GEDCOM må ikke genindlæses."));
+            var dialog = approve.HasValue ? new ChoosingGedcomDifferenceDialogService(approve.Value) : null;
+            var viewModel = CreateViewModel(
+                gedcomLoader: loader,
+                settingsService: settings,
+                markdownFileStore: new FileSystemMarkdownFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                gedcomDifferenceDialogService: (IGedcomDifferenceDialogService?)dialog ?? new RecordingGedcomDifferenceDialogService());
+
+            viewModel.ApplyBiographyTemplateCommand.CanExecute(null).Should().BeTrue();
+            await viewModel.ApplyBiographyTemplateCommand.ExecuteAsync(null);
+
+            loader.Calls.Should().Be(0);
+            viewModel.ErrorMessage.Should().BeNull();
+            foreach (var entry in original)
+            {
+                var entryPath = Path.Combine(folder, entry.Key);
+                if (entry.Key.EndsWith(".md", StringComparison.Ordinal) && approve == true)
+                {
+                    var previous = BiographyDocumentParser.Parse(System.Text.Encoding.UTF8.GetString(entry.Value));
+                    var current = BiographyDocumentParser.Parse(File.ReadAllText(entryPath));
+                    current.Body.Should().Contain("## Mine fakta").And.Contain("Min egen tekst.");
+                    current.Metadata!.SyncBaseline.Should().BeEquivalentTo(previous.Metadata!.SyncBaseline);
+                    current.Metadata.GedcomBaselineHash.Should().Be(previous.Metadata.GedcomBaselineHash);
+                }
+                else if (entryPath != templatePath)
+                {
+                    File.ReadAllBytes(entryPath).Should().Equal(entry.Value);
+                }
+            }
+            if (approve == true)
+            {
+                await viewModel.ApplyBiographyTemplateCommand.ExecuteAsync(null);
+                viewModel.ImportPhaseText.Should().Be("Skabelonen er allerede anvendt");
+            }
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyTemplate_ShouldKeepUnsavedEditorTextUnsavedAndNotWriteItToDisk()
+    {
+        using var gedcom = CreateTwoPersonGedcomFile();
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var settings = new RecordingApplicationSettingsService(new AppSettings { DefaultMarkdownOutputFolder = folder });
+            var tree = new GedcomLoader().Load(gedcom.Path);
+            new MarkdownBiographyExportService(settings).WriteBiographies(tree, folder);
+            var viewModel = CreateViewModel(settingsService: settings,
+                markdownFileStore: new FileSystemMarkdownFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                gedcomDifferenceDialogService: new ChoosingGedcomDifferenceDialogService(true));
+            viewModel.SelectedPerson = viewModel.People.First();
+            var editor = viewModel.Editor!;
+            editor.MarkdownText += "\nUgemt og uerstattelig tekst.";
+            var path = viewModel.SelectedPerson!.MarkdownFilePath;
+            var original = File.ReadAllBytes(path);
+            var templatePath = Path.Combine(folder, "ny.slaegtskabelon");
+            var model = BiographyTemplateEditorModel.CreateDefault();
+            new TemplateEditorStorageService().Save(templatePath, new(model.Version, model.Blocks.Select(block =>
+                block.Type == BiographyTemplateBlockType.Facts ? block with { Heading = "Mine fakta" } : block).ToArray()));
+            viewModel.GlobalBiographyTemplatePath = templatePath;
+
+            await viewModel.ApplyBiographyTemplateCommand.ExecuteAsync(null);
+
+            viewModel.ErrorMessage.Should().BeNull();
+            viewModel.Editor.Should().BeSameAs(editor);
+            editor.MarkdownText.Should().Contain("## Mine fakta").And.Contain("Ugemt og uerstattelig tekst.");
+            editor.IsDirty.Should().BeTrue();
+            File.ReadAllBytes(path).Should().Equal(original);
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SavedEditorModel_ShouldRequireCandidateApprovalAndPreserveFreeText(bool approve)
+    {
+        using var gedcom = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME Anna /Jensen/", "0 TRLR");
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var path = Path.Combine(folder, "skabelon.json");
+            var model = BiographyTemplateEditorModel.CreateDefault();
+            var storage = new TemplateEditorStorageService();
+            storage.Save(path, model);
+            var settings = new RecordingApplicationSettingsService(new AppSettings
+            {
+                DefaultMarkdownOutputFolder = folder,
+                GlobalBiographyTemplatePath = path,
+            });
+            var tree = new GedcomLoader().Load(gedcom.Path);
+            var export = new MarkdownBiographyExportService(settings);
+            export.WriteBiographies(tree, folder);
+            var documentPath = Path.Combine(folder, BiographyFileNameGenerator.Generate(tree.People.Single()));
+            var original = File.ReadAllText(documentPath).Replace(
+                "_Skriv den fulde livshistorie her._", "Min egen uerstattelige biografitekst.");
+            File.WriteAllText(documentPath, original);
+
+            storage.Save(path, new BiographyTemplateEditorModel(model.Version,
+                model.Blocks.Select(block => block.Type == BiographyTemplateBlockType.Facts
+                    ? block with { Heading = "Mine fakta" } : block).ToArray()));
+            File.ReadAllText(documentPath).Should().Be(original);
+            var dialog = new ChoosingGedcomDifferenceDialogService(approve);
+            var viewModel = CreateViewModel(
+                gedcomFilePickerService: new FakeGedcomFilePickerService(gedcom.Path),
+                settingsService: settings,
+                markdownBiographyExportService: export,
+                markdownFileStore: new FileSystemMarkdownFileStore(),
+                markdownDocumentCatalog: new FileSystemMarkdownDocumentCatalog(),
+                gedcomDifferenceDialogService: dialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            dialog.LastDifferences.Should().Contain(item => item.StructuredDifference != null &&
+                item.StructuredDifference.Causes.HasFlag(BiographyDifferenceCause.Template));
+            var current = File.ReadAllText(documentPath);
+            current.Should().Contain("Min egen uerstattelige biografitekst.");
+            if (approve)
+            {
+                viewModel.ErrorMessage.Should().BeNull();
+                current.Should().Contain("## Mine fakta");
+            }
+            else
+            {
+                viewModel.ErrorMessage.Should().Contain("uændrede");
+                current.Should().Be(original);
+            }
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
     [Fact]
     public void PersonNavigation_SwitchesEditorPreservesUnsavedTextAndRejectsStaleTargets()
     {
@@ -1811,9 +2025,9 @@ public class MainWindowViewModelTests
             await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
             viewModel.ImportPhaseText.Should().Be("Fejl");
-            viewModel.ErrorMessage.Should().Contain("Ukendt skabelonfelt");
+            viewModel.ErrorMessage.Should().Contain("tidligere skabelonformat");
             viewModel.ErrorMessage.Should().Contain(templatePath);
-            viewModel.ErrorMessage.Should().Contain("linje 2, kolonne 1");
+            viewModel.ErrorMessage.Should().Contain("standardskabelonen");
             Directory.Exists(outputFolder).Should().BeFalse();
         }
         finally
@@ -3025,6 +3239,20 @@ public class MainWindowViewModelTests
         public void Write(string path, string content)
         {
             throw new IOException("Simuleret skrivefejl.");
+        }
+    }
+
+    private sealed class FailingSecondWriteFileStore : IMarkdownFileStore
+    {
+        private int _writes;
+        public string Read(string path) => File.ReadAllText(path);
+        public void Write(string path, string content)
+        {
+            if (++_writes == 2)
+            {
+                throw new IOException("Simuleret skrivefejl.");
+            }
+            new FileSystemMarkdownFileStore().Write(path, content);
         }
     }
 

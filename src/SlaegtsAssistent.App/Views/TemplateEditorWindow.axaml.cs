@@ -33,12 +33,15 @@ public partial class TemplateEditorWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= HandleViewModelPropertyChanged;
+            _viewModel.CloseRequested -= HandleCloseRequested;
+            _viewModel.StopPreview();
         }
 
         _viewModel = DataContext as TemplateEditorViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
+            _viewModel.CloseRequested += HandleCloseRequested;
         }
 
         RefreshPreview();
@@ -69,6 +72,8 @@ public partial class TemplateEditorWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= HandleViewModelPropertyChanged;
+            _viewModel.CloseRequested -= HandleCloseRequested;
+            _viewModel.StopPreview();
         }
 
         Application.Current?.ActualThemeVariantChanged -= HandleThemeVariantChanged;
@@ -78,7 +83,6 @@ public partial class TemplateEditorWindow : Window
         : this()
     {
         DataContext = viewModel;
-        viewModel.CloseRequested += HandleCloseRequested;
     }
 
     private void HandleCloseRequested(object? sender, BiographyTemplateEditorModel? result)

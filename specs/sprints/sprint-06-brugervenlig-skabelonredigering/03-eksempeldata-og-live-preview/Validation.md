@@ -21,3 +21,4 @@
 - Samlet build: bestået med 0 warnings og 0 errors.
 - Samlet regression: 296 af 296 tests bestået.
 - Manuel sammenligning af webpreview og hovedvinduets preview afventer brugerens godkendelse.
+- Kontrol før trin 4 den 8. november 2026: 35 målrettede Core-, editor- og sikkerhedstests bestod. Den manuelle godkendelse er fortsat åben. Åbning fra Indstillinger og overførsel af alle indlæste personer er efterfølgende koblet på i trin 4.

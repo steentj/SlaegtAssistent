@@ -7,25 +7,28 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class TemplateCheatSheetViewModelTests
 {
     [Fact]
-    public void Content_DocumentsTheSupportedTemplateContract()
+    public void Content_ExplainsGuidedEditingAndSafeApplicationWithoutSyntax()
     {
         var viewModel = new TemplateCheatSheetViewModel();
 
-        viewModel.FilteredContent.Should().Contain("person.fullName");
-        viewModel.FilteredContent.Should().Contain("familyEvents");
-        viewModel.FilteredContent.Should().Contain("submitter.name");
-        viewModel.FilteredContent.Should().Contain("{{#each allEvents}}");
-        viewModel.PreviewHtml.Should().Contain("<table");
+        viewModel.FilteredContent.Should().Contain("Brug kladde");
+        viewModel.FilteredContent.Should().Contain("Anvend skabelon");
+        viewModel.FilteredContent.Should().Contain("uden at genindlæse GEDCOM");
+        viewModel.FilteredContent.Should().Contain("Annuller");
+        viewModel.FilteredContent.Should().NotContain("{{");
+        viewModel.FilteredContent.Should().NotContain("person.");
+        viewModel.PreviewHtml.Should().Contain("<h2");
     }
 
     [Fact]
-    public void Content_ShouldMatchEveryFieldInVersionedContract()
+    public void Content_ShouldIncludeHelpAndExampleForEveryBlock()
     {
-        TemplateCheatSheetViewModel.Content.Should().Contain(
-            $"feltkontrakt version {BiographyTemplateContract.CurrentVersion}");
-        foreach (var path in BiographyTemplateContract.PublicFieldPaths)
+        foreach (var block in BiographyTemplateEditorCatalog.Blocks)
         {
-            TemplateCheatSheetViewModel.ContractFieldList.Should().Contain($"`{path}`");
+            block.Help.Should().NotBeNullOrWhiteSpace();
+            block.Example.Should().NotBeNullOrWhiteSpace();
+            TemplateCheatSheetViewModel.Content.Should().Contain(block.Help);
+            TemplateCheatSheetViewModel.Content.Should().Contain(block.Example);
         }
     }
 
@@ -34,10 +37,11 @@ public sealed class TemplateCheatSheetViewModelTests
     {
         var viewModel = new TemplateCheatSheetViewModel
         {
-            SearchText = "SUBM",
+            SearchText = "afsender",
         };
 
         viewModel.FilteredContent.Should().Contain("Afsender");
-        viewModel.FilteredContent.Should().NotContain("Tabel-eksempel");
+        viewModel.FilteredContent.Should().Contain("Eksempel:");
+        viewModel.FilteredContent.Should().NotContain("## Hændelser");
     }
 }

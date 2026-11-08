@@ -15,12 +15,14 @@ public class AvaloniaGedcomFilePickerServiceTests
     }
 
     [Fact]
-    public void CreateOpenOptions_ShouldNotApplyFileTypeFilter()
+    public void CreateOpenOptions_ShouldExplicitlyAllowAllFilesAfterAnotherPicker()
     {
         var options = AvaloniaGedcomFilePickerService.CreateOpenOptions(null);
 
         options.Title.Should().Be("Vælg GEDCOM-fil");
         options.AllowMultiple.Should().BeFalse();
-        options.FileTypeFilter.Should().BeNull();
+        options.FileTypeFilter.Should().ContainSingle();
+        options.FileTypeFilter![0].Patterns.Should().Contain("*");
+        options.FileTypeFilter[0].AppleUniformTypeIdentifiers.Should().Contain("public.item");
     }
 }

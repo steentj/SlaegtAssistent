@@ -2,6 +2,7 @@ using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.Core.Domain;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Tests;
 
@@ -11,7 +12,7 @@ public sealed class SettingsWindowViewModelTests
     public void Save_PersistsTemplatePathAndCancelDoesNotProduceSettings()
     {
         var templatePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.md");
-        File.WriteAllText(templatePath, "# {{ person.fullName }}\n");
+        new TemplateEditorStorageService().Save(templatePath, BiographyTemplateEditorModel.CreateDefault());
         var viewModel = new SettingsWindowViewModel(
             new AppSettings { GlobalBiographyTemplatePath = $" {templatePath} " },
             new StubFolderPickerService());

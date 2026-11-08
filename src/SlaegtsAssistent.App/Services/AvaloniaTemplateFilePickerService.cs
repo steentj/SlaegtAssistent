@@ -35,13 +35,37 @@ public sealed class AvaloniaTemplateFilePickerService : ITemplateFilePickerServi
             SuggestedStartLocation = suggestedStartLocation,
             FileTypeFilter =
             [
-                new FilePickerFileType("Markdown- og tekstskabeloner")
+                new FilePickerFileType("Persondokumentskabeloner")
                 {
-                    Patterns = ["*.md", "*.txt"],
+                    Patterns = ["*.slaegtskabelon", "*.json", "*.md", "*.txt"],
                 },
             ],
         });
 
         return files.Count == 0 ? null : files[0].Path.LocalPath;
+    }
+
+    public async Task<string?> PickTemplateSaveFileAsync(string? suggestedPath)
+    {
+        var window = AvaloniaPickerWindowResolver.Resolve(_applicationLifetime);
+        if (window is null)
+        {
+            return null;
+        }
+
+        var directory = Path.GetDirectoryName(suggestedPath);
+        var folder = !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory)
+            ? await window.StorageProvider.TryGetFolderFromPathAsync(directory)
+            : null;
+        var file = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Gem persondokumentskabelon som",
+            SuggestedFileName = Path.GetFileName(suggestedPath) is { Length: > 0 } name ? name : "personskabelon.slaegtskabelon",
+            SuggestedStartLocation = folder,
+            DefaultExtension = "slaegtskabelon",
+            ShowOverwritePrompt = true,
+            FileTypeChoices = [new FilePickerFileType("Skabelonmodel") { Patterns = ["*.slaegtskabelon"] }],
+        });
+        return file?.Path.LocalPath;
     }
 }

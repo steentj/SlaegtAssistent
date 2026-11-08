@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:automation="using:Avalonia.Automation"
         x:Class="SlaegtsAssistent.App.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Width="700"
@@ -10,47 +11,62 @@
         CanResize="True"
         Title="Indstillinger"
         WindowStartupLocation="CenterOwner">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
+    <Grid Margin="16" RowDefinitions="*,Auto" RowSpacing="12">
+        <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Standardmappe for GEDCOM-filer (input)" FontWeight="SemiBold" />
-        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding DefaultGedcomInputFolder, Mode=TwoWay}" />
-        <Button Grid.Row="1" Grid.Column="1" Content="Vælg…" Command="{Binding SelectGedcomInputFolderCommand}" MinWidth="90" />
+        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding DefaultGedcomInputFolder, Mode=TwoWay}" automation:AutomationProperties.Name="Standardmappe for GEDCOM-filer" />
+        <Button Grid.Row="1" Grid.Column="1" Content="Vælg…" Command="{Binding SelectGedcomInputFolderCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg GEDCOM-mappe" />
 
         <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="Standardmappe for Markdown-filer (output)" FontWeight="SemiBold" VerticalAlignment="Top" />
         <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,24,0,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBox Grid.Column="0" Text="{Binding DefaultMarkdownOutputFolder, Mode=TwoWay}" />
-            <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectMarkdownOutputFolderCommand}" MinWidth="90" />
+            <TextBox Grid.Column="0" Text="{Binding DefaultMarkdownOutputFolder, Mode=TwoWay}" automation:AutomationProperties.Name="Standardmappe for persondokumenter" />
+            <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectMarkdownOutputFolderCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg dokumentmappe" />
         </Grid>
 
         <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="Global persondokumentskabelon" FontWeight="SemiBold" />
         <Grid Grid.Row="5" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBox Grid.Column="0" Text="{Binding GlobalBiographyTemplatePath, Mode=TwoWay}" />
-            <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectBiographyTemplateCommand}" MinWidth="90" />
+            <TextBox Grid.Column="0" Text="{Binding GlobalBiographyTemplatePath, Mode=TwoWay}" automation:AutomationProperties.Name="Fil med persondokumentskabelon" />
+            <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectBiographyTemplateCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg persondokumentskabelon" />
         </Grid>
-        <Button Grid.Row="6" Grid.ColumnSpan="2"
-                Content="Nulstil til standardskabelon"
-                Command="{Binding ResetBiographyTemplateCommand}"
-                HorizontalAlignment="Left" />
+        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Spacing="6">
+            <Button Content="Rediger skabelon…" Command="{Binding EditBiographyTemplateCommand}" HorizontalAlignment="Left" />
+            <TextBlock Text="Editoren starter med standarden, hvis den valgte fil ikke understøttes." TextWrapping="Wrap" />
+            <TextBlock Text="{Binding TemplateStatusMessage}" TextWrapping="Wrap" />
+            <Button Content="Nulstil til standardskabelon"
+                    Command="{Binding ResetBiographyTemplateCommand}"
+                    HorizontalAlignment="Left" />
+        </StackPanel>
 
         <TextBlock Grid.Row="7" Grid.ColumnSpan="2" Text="Tema" FontWeight="SemiBold" />
         <ComboBox Grid.Row="8" Grid.ColumnSpan="2"
+                  automation:AutomationProperties.Name="Appens tema"
                   ItemsSource="{Binding ThemeOptions}"
                   SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
 
-        <StackPanel Grid.Row="9" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
-            <Button Content="Forhåndsvis" Command="{Binding PreviewBiographyTemplateCommand}" MinWidth="100" />
-            <Button Content="Annuller" Command="{Binding CancelCommand}" MinWidth="90" />
-            <Button Content="Gem" Command="{Binding SaveCommand}" MinWidth="90" />
-        </StackPanel>
         <TextBlock Grid.Row="10" Grid.ColumnSpan="2"
                    Text="{Binding TemplateErrorMessage}"
-                   Foreground="DarkRed"
+                   automation:AutomationProperties.Name="Fejl i persondokumentskabelonen"
+                   Foreground="{DynamicResource AppDangerBrush}"
                    TextWrapping="Wrap" />
         <TextBox Grid.Row="11" Grid.ColumnSpan="2"
+                 automation:AutomationProperties.Name="Skabelonstatus og forhåndsvisning"
+                 Height="140"
                  Text="{Binding PreviewText}"
                  IsReadOnly="True"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
                  VerticalContentAlignment="Top"
                  ScrollViewer.VerticalScrollBarVisibility="Auto" />
+    </Grid>
+        </ScrollViewer>
+        <StackPanel Grid.Row="1" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Forhåndsvis" Command="{Binding PreviewBiographyTemplateCommand}" MinWidth="100" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Annuller" Command="{Binding CancelCommand}" IsCancel="True" MinWidth="90" />
+            <Button Content="Gem" Command="{Binding SaveCommand}" IsDefault="True" MinWidth="90" />
+            <Button Content="Gem som…" Command="{Binding SaveAsCommand}" MinWidth="90" />
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Window>

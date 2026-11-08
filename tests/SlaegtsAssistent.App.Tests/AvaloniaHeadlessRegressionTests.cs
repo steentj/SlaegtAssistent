@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
+using Avalonia.Headless;
+using Avalonia.Threading;
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
@@ -10,6 +12,36 @@ namespace SlaegtsAssistent.App.Tests;
 
 public sealed class AvaloniaHeadlessRegressionTests
 {
+    [Fact]
+    public Task TemplateHeading_ShouldKeepKeyboardFocusAndCaretWhileTyping() =>
+        HeadlessTestApplication.RunAsync(() =>
+        {
+            var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
+            viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+            var window = new TemplateEditorWindow(viewModel);
+            try
+            {
+                window.Show();
+                var heading = window.FindControl<TextBox>("HeadingTextBox")!;
+                heading.Focus();
+                heading.SelectAll();
+                foreach (var text in new[] { "M", "i", "n", "e", " ", "f", "a", "k", "t", "a" })
+                {
+                    window.KeyTextInput(text);
+                    Dispatcher.UIThread.RunJobs();
+                    heading.IsFocused.Should().BeTrue();
+                    heading.CaretIndex.Should().Be(heading.Text!.Length);
+                }
+                heading.Text.Should().Be("Mine fakta");
+                viewModel.SelectedBlockHeading.Should().Be("Mine fakta");
+            }
+            finally
+            {
+                window.Close();
+            }
+            return Task.CompletedTask;
+        });
+
     [Fact]
     public Task MainWindow_ShouldLoadCriticalBindingsAndMinimumLayoutWithoutRenderer() =>
         HeadlessTestApplication.RunAsync(() =>
@@ -24,6 +56,8 @@ public sealed class AvaloniaHeadlessRegressionTests
             window.MinHeight.Should().Be(600);
             window.FindControl<NativeWebView>("PreviewWebView").Should().NotBeNull();
             window.DataContext.Should().BeSameAs(viewModel);
+            Descendants<Button>(window).Should().Contain(button =>
+                button.Content as string == "Anvend skabelon" && button.Command == viewModel.ApplyBiographyTemplateCommand);
             return Task.CompletedTask;
         });
 
@@ -39,6 +73,10 @@ public sealed class AvaloniaHeadlessRegressionTests
 
             buttons.Should().Contain(button => button.Content as string == "Gem" && button.Focusable);
             buttons.Should().Contain(button => button.Content as string == "Annuller" && button.Focusable);
+            buttons.Should().Contain(button => button.Content as string == "Rediger skabelon…" && button.Focusable);
+            buttons.Should().Contain(button => button.Content as string == "Gem som…" && button.Focusable);
+            buttons.Where(button => button.Content as string is "Gem" or "Gem som…" or "Annuller")
+                .Should().OnlyContain(button => !button.GetLogicalAncestors().OfType<ScrollViewer>().Any());
             buttons.Should().OnlyContain(button => button.Command != null);
             return Task.CompletedTask;
         });
@@ -63,13 +101,40 @@ public sealed class AvaloniaHeadlessRegressionTests
             Descendants<TabItem>(window).Select(item => item.Header as string)
                 .Should().Contain(["Indstillinger", "Forhåndsvisning"]);
             window.FindControl<TextBlock>("EditorErrorText").Should().NotBeNull();
-            buttons.Should().Contain(button => button.Content as string == "Gem" && button.IsDefault);
+            buttons.Should().Contain(button => button.Content as string == "Brug kladde" && button.IsDefault);
             buttons.Should().Contain(button => button.Content as string == "Annuller" && button.IsCancel);
             buttons.Should().Contain(button => button.Content as string == "Nulstil" && button.Focusable);
             window.KeyBindings.Should().HaveCountGreaterThanOrEqualTo(6);
             visibleText.Should().NotContain("{{");
             visibleText.Should().NotContain("#each");
             visibleText.Should().NotContain("person.");
+            return Task.CompletedTask;
+        });
+
+    [Fact]
+    public Task TemplateHelpWindow_ShouldOnlyShowFormattedHelpAndSearch() =>
+        HeadlessTestApplication.RunAsync(() =>
+        {
+            var window = new TemplateCheatSheetWindow
+            {
+                DataContext = new TemplateCheatSheetViewModel(),
+            };
+            try
+            {
+                var search = window.FindControl<TextBox>("SearchBox")!;
+                Descendants<TextBox>(window).Should().ContainSingle().Which.Should().BeSameAs(search);
+                search.Focusable.Should().BeTrue();
+                var preview = window.FindControl<NativeWebView>("PreviewWebView")!;
+                preview.Should().NotBeNull();
+                var panel = preview.Parent.Should().BeOfType<Border>().Subject;
+                Grid.GetRow(panel).Should().Be(1);
+                var layout = panel.Parent.Should().BeOfType<Grid>().Subject;
+                layout.ColumnDefinitions.Should().BeEmpty();
+            }
+            finally
+            {
+                window.Close();
+            }
             return Task.CompletedTask;
         });
 

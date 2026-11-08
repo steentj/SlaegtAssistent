@@ -167,7 +167,7 @@ public sealed class BiographyTemplateContractTests
     {
         using var area = new TemporaryDirectory();
         var templatePath = Path.Combine(area.Path, "person.md");
-        File.WriteAllText(templatePath, "# {{ person.fullName }}\n{{#each events}}{{ category }}: {{ date }}\n{{/each}}");
+        new BiographyTemplateEditorSerializer().Save(templatePath, BiographyTemplateEditorModel.CreateDefault());
         var person = new Person("@I1@") { FullName = "Anna Jensen" };
         person.Events.Add(new GedcomEvent("BIRT")
         {
@@ -176,10 +176,11 @@ public sealed class BiographyTemplateContractTests
         });
 
         var preview = new BiographyTemplatePreviewService().Render(templatePath, person);
-        var generated = new BiographyTemplateMarkdownGenerator(File.ReadAllText(templatePath)).Generate(person);
+        var generated = new BiographyTemplateMarkdownGenerator(new BiographyTemplateLoader().Load(templatePath).Source).Generate(person);
 
-        preview.Should().Be("# Anna Jensen\nFødsel: 1900\n");
-        BiographyDocumentParser.Parse(generated).Body.Should().Contain(preview);
+        preview.Should().Contain("# Anna Jensen").And.Contain("Fødsel").And.Contain("1900");
+        BiographyDocumentParser.Parse(generated).Body.Should().Contain(
+            preview[..preview.IndexOf("## Biografi", StringComparison.Ordinal)].TrimEnd());
     }
 
     private sealed class TemporaryDirectory : IDisposable

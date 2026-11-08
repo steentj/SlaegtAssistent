@@ -11,107 +11,49 @@ public partial class TemplateCheatSheetViewModel : ViewModelBase
     private static readonly SafeMarkdownPreviewService PreviewService = new();
 
     public static readonly string Content =
-        "# Skabelon-cheat sheet\n\n" +
-        $"Offentlig feltkontrakt version {BiographyTemplateContract.CurrentVersion}.\n\n" +
-        "Skabeloner er almindelig Markdown med sikre felter, betingelser og løkker. " +
-        "Skabeloner kan ikke kalde C#-metoder, læse filer eller starte processer.\n\n" +
-        "## Felter\n\n" +
-        "Skriv et felt med dobbelte krøllede parenteser:\n\n" +
-        "`{{ person.fullName }}`\n\n" +
-        "### Person\n\n" +
-        "- `person.recordId`\n" +
-        "- `person.fullName`\n" +
-        "- `person.sex`\n" +
-        "- `person.birthDate`, `person.birthPlace`\n" +
-        "- `person.deathDate`, `person.deathPlace`\n" +
-        "- `person.createdDate` (oprettelsesdato fra GEDCOM-tagget `CREA`; udelad feltet for ikke at vise den)\n" +
-        "- `person.parents`, `person.children`, `person.partners`\n" +
-        "- `person.parentNames`, `person.childNames`, `person.partnerNames` viser navnelister med dokumentlinks.\n\n" +
-        "I relationsløkker giver `fullName` og `link` et sikkert relativt personlink, når dokumentmålet er entydigt. " +
-        "`plainName` giver navnet uden link, og `documentPath` giver den relative URI. " +
-        "Hovedpersonens `person.fullName` er altid almindelig tekst. " +
-        "Uden dokumentmål vises navnet som tekst. Navne i fri prosa og noter omskrives ikke. " +
-        "Previewets personnavne med ↗ og editorens personknapper åbner persondokumentet i appen. Markøren gemmes ikke i Markdown. Andre lokale links er fortsat blokeret.\n\n" +
-        "### Afsender (`SUBM`)\n\n" +
-        "- `submitter.recordId`\n" +
-        "- `submitter.name`, `submitter.address`\n" +
-        "- `submitter.phone`, `submitter.email`\n" +
-        "- `submitter.website`, `submitter.language`\n\n" +
-        "## Betingelser\n\n" +
-        "En betingelse viser kun indhold, når feltet har en værdi:\n\n" +
-        "{{#if person.birthDate}}\n" +
-        "**Født:** {{ person.birthDate }}\n" +
-        "{{/if}}\n\n" +
-        "Der findes ikke en `else`-gren. Brug flere `if`-blokke i stedet.\n\n" +
-        "## Løkker\n\n" +
-        "Brug `each` til lister. Inde i løkken bruges det aktuelle elements felter:\n\n" +
-        "{{#each person.parents}}\n" +
-        "- {{ fullName }} ({{ recordId }})\n" +
-        "{{/each}}\n\n" +
-        "## Hændelser\n\n" +
-        "Tilgængelige lister:\n\n" +
-        "- `events` – personens hændelser\n" +
-        "- `familyEvents` – hændelser fra personens familier\n" +
-        "- `allEvents` – begge grupper samlet\n" +
-        "- `census` – folketællinger\n\n" +
-        "Hændelsesfelter: `tag`, `category`, `value`, `date`, `place`, `type`, `note` og `sources`.\n\n" +
-        "{{#each allEvents}}\n" +
-        "- **{{ category }}**{{#if type}} ({{ type }}){{/if}}{{#if date}} – {{ date }}{{/if}}{{#if place}} i {{ place }}{{/if}}\n" +
-        "{{/each}}\n\n" +
-        "## Kilder og medier\n\n" +
-        "Listerne `sources` og `media` kan bruges direkte:\n\n" +
-        "{{#each sources}}\n" +
-        "- {{ title }}{{#if author}} ({{ author }}){{/if}}{{#if page}}, side {{ page }}{{/if}}\n" +
-        "{{/each}}\n\n" +
-        "{{#each media}}\n" +
-        "![{{ title }}]({{ relativeFile }})\n" +
-        "{{/each}}\n\n" +
-        "Mediefelter er `recordId`, `file`, `relativeFile`, `form`, `title`, `type` og `note`.\n\n" +
-        "## Tabel-eksempel\n\n" +
-        "Almindelig Markdown kan bruges til tabeller:\n\n" +
-        "| Felt | Skabelon |\n" +
-        "| --- | --- |\n" +
-        "| Navn | `{{ person.fullName }}` |\n" +
-        "| Fødselsdato | `{{ person.birthDate }}` |\n\n" +
-        "En dynamisk hændelsestabel kan skrives sådan:\n\n" +
-        "```text\n" +
-        "| Dato | Sted | Hændelse |\n" +
-        "| --- | --- | --- |\n" +
-        "{{#each allEvents}}\n" +
-        "| {{ date }} | {{ place }} | {{ category }} |\n" +
-        "{{/each}}\n" +
-        "```\n\n" +
-        "## Standardskabelon\n\n" +
-        "Den indbyggede standardskabelon viser navn, fakta, hændelser, census, kilder, medier " +
-        "og afsender. Den kan bruges som udgangspunkt for en egen global skabelon.\n\n" +
-        "## Normativ feltliste\n\n" +
-        ContractFieldList + "\n";
-
-    public static string ContractFieldList => string.Join(
-        "\n",
-        BiographyTemplateContract.PublicFieldPaths.Select(path => $"- `{path}`"));
+        "# Hjælp til persondokumentskabeloner\n\n" +
+        "## Åbn og tilpas\n\n" +
+        "Åbn Indstillinger og vælg Rediger skabelon…. Du behøver ikke kende et skabelonsprog. " +
+        "Vælg en sektion i listen til venstre. Brug Flyt op og Flyt ned til at ændre rækkefølgen. " +
+        "Fjern markeringen i Vis sektionen i dokumentet for at skjule den. " +
+        "Overskrift ændrer kun den valgte sektions overskrift. Markér de ønskede felter under Indhold.\n\n" +
+        "## Kontrollér resultatet\n\n" +
+        "Vælg fanen Forhåndsvisning. Et lokalt, opdigtet eksempel virker også uden GEDCOM. " +
+        "Hvis personer er indlæst, kan du vælge en af dem under Vis med. " +
+        "Resultatet opdateres automatisk. Ved fejl bevares den sidste gyldige forhåndsvisning.\n\n" +
+        "## Gem eller annuller\n\n" +
+        "Brug kladde overfører ændringerne til Indstillinger, men skriver endnu ikke en fil. " +
+        "Vælg Gem eller Gem som… i Indstillinger for at gemme skabelonen. " +
+        "Annuller i editoren kasserer kladden; Annuller i Indstillinger lader fil og aktiv indstilling være uændret. " +
+        "Fortryd og Gendan går tilbage og frem i ændringerne. Nulstil genskaber standarden efter bekræftelse.\n\n" +
+        "## Opdatér eksisterende dokumenter\n\n" +
+        "Vælg Anvend skabelon i hovedvinduet for at gennemgå ændringer uden at genindlæse GEDCOM. " +
+        "Godkend kun de ønskede ændringer. Fri tekst og godkendte personoplysninger bevares. " +
+        "Åbne dokumenter med ugemte ændringer forbliver ugemte.\n\n" +
+        "## Tastatur\n\n" +
+        "Tab og Skift+Tab flytter fokus. Piletaster vælger sektioner og felter. Mellemrum slår et valg til eller fra. " +
+        "Alt+Pil op eller ned flytter den valgte sektion. Ctrl+Alt+Pil op eller ned flytter det valgte felt. " +
+        "Ctrl+Z fortryder, Ctrl+Y gendanner. Escape annullerer editoren.\n\n" +
+        "## Tidligere skabeloner\n\n" +
+        "Gamle håndskrevne skabeloner konverteres ikke. Opret en ny skabelon ud fra standarden " +
+        "og brug Gem som… for at bevare den gamle fil.\n\n" +
+        string.Join("\n\n", BiographyTemplateEditorCatalog.Blocks.Select(block =>
+            $"## {block.Label}\n\n{block.Help}\n\nEksempel: {block.Example}"));
 
     [ObservableProperty]
     private string searchText = string.Empty;
 
-    public string FilteredContent
+    public string FilteredContent => string.IsNullOrWhiteSpace(SearchText)
+        ? Content
+        : FilterSections(SearchText.Trim());
+
+    private static string FilterSections(string query)
     {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(SearchText))
-            {
-                return Content;
-            }
-
-            var matchingLines = Content
-                .Split('\n')
-                .Where(line => line.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase))
-                .ToArray();
-
-            return matchingLines.Length == 0
-                ? "Ingen match fundet."
-                : string.Join(Environment.NewLine, matchingLines);
-        }
+        var matches = Content.Split("\n\n## ")
+            .Select((section, index) => index == 0 ? section : "## " + section)
+            .Where(section => section.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+            .ToArray();
+        return matches.Length == 0 ? "Ingen match fundet." : string.Join("\n\n", matches);
     }
 
     public string PreviewHtml => PreviewService.RenderHelp(FilteredContent).Html;

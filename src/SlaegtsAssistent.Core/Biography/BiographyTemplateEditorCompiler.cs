@@ -28,6 +28,11 @@ public sealed class BiographyTemplateEditorCompiler
                 $"Skabelonversion {model.Version} understøttes ikke. Den aktuelle version er {BiographyTemplateEditorModel.CurrentVersion}.");
         }
 
+        if (model.Blocks.Any(block => block is null || block.Heading is null))
+        {
+            throw new BiographyTemplateEditorException("Skabelonen indeholder en tom blok eller overskrift.");
+        }
+
         var duplicates = model.Blocks
             .GroupBy(block => block.Type)
             .Where(group => group.Count() > 1)

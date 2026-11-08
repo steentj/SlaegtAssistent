@@ -8,6 +8,62 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class TemplateEditorViewModelTests
 {
     [Fact]
+    public void ContextualHelp_ShouldFollowTheSelectedBlock()
+    {
+        var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
+        foreach (var block in viewModel.Blocks)
+        {
+            viewModel.SelectedBlock = block;
+            var descriptor = BiographyTemplateEditorCatalog.GetBlock(block.Type);
+            viewModel.SelectedBlockHelp.Should().Be(descriptor.Help);
+            viewModel.SelectedBlockExample.Should().Be("Eksempel: " + descriptor.Example);
+        }
+        viewModel.SelectedBlock = null;
+        viewModel.SelectedBlockHelp.Should().Contain("Vælg eller tilføj");
+        viewModel.SelectedBlockExample.Should().BeEmpty();
+        viewModel.StopPreview();
+    }
+
+    [Fact]
+    public void TogglingFields_ShouldKeepVisualOrderAndRenderInThatOrder()
+    {
+        var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
+        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+        var fields = viewModel.Fields.ToArray();
+        var birth = fields.Single(field => field.Field == BiographyTemplateField.Birth);
+        viewModel.ToggleFieldCommand.Execute(birth);
+        viewModel.ToggleFieldCommand.Execute(birth);
+        viewModel.Fields.Should().Equal(fields);
+        viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts).Fields
+            .Should().Equal(viewModel.Fields.Where(field => field.IsSelected).Select(field => field.Field));
+        viewModel.StopPreview();
+    }
+
+    [Fact]
+    public void EditingHeading_ShouldKeepSelectedBlockAndFieldInstances()
+    {
+        var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
+        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+        var selectedBlock = viewModel.SelectedBlock;
+        var fields = viewModel.Fields.ToArray();
+        var collectionChanges = 0;
+        viewModel.Blocks.CollectionChanged += (_, _) => collectionChanges++;
+
+        foreach (var heading in new[] { "M", "Mi", "Min", "Mine fakta" })
+        {
+            viewModel.SelectedBlockHeading = heading;
+            viewModel.SelectedBlock.Should().BeSameAs(selectedBlock);
+            viewModel.Fields.Should().Equal(fields);
+        }
+
+        collectionChanges.Should().Be(0);
+        viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts)
+            .Heading.Should().Be("Mine fakta");
+        viewModel.UndoCommand.Execute(null);
+        viewModel.SelectedBlockHeading.Should().Be("Min");
+    }
+
+    [Fact]
     public void Constructor_ShouldExposeDanishTaskOrientedBlocksWithoutSyntax()
     {
         var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());

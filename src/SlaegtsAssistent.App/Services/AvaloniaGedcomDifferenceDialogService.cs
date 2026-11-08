@@ -33,6 +33,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         }
 
         var gedcomChoices = new Dictionary<string, RadioButton>(StringComparer.Ordinal);
+        var templateOnly = differences.All(item => item.StructuredDifference?.Causes == BiographyDifferenceCause.Template);
         var approvedChoices = new Dictionary<string, RadioButton>(StringComparer.Ordinal);
         var reviewState = new GedcomDifferenceReviewViewModel(differences);
         var rows = new StackPanel { Spacing = 6 };
@@ -68,7 +69,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
             {
                 Content = structured?.Causes.HasFlag(BiographyDifferenceCause.BaselineMigration) == true
                     ? "_Migrér"
-                    : "Ny _GEDCOM",
+                    : templateOnly ? "Ny _skabelon" : "Ny _GEDCOM",
                 GroupName = difference.Key,
                 IsChecked = difference.UseGedcomByDefault,
             };
@@ -109,7 +110,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                 BiographyBaselineStatus.UnsupportedVersion => $"{difference.Difference.FieldName}\nUkendt baselineversion",
                 _ => difference.Difference.FieldName,
             };
-            row.Children.Add(CreateValueBlock(structured?.Path ?? fieldName, 1, FontWeight.SemiBold));
+            row.Children.Add(CreateValueBlock(templateOnly ? "Skabelon" : structured?.Path ?? fieldName, 1, FontWeight.SemiBold));
             row.Children.Add(CreateValueBlock(ActionText(structured), 2));
             row.Children.Add(CreateValueBlock(CauseText(structured), 3));
             row.Children.Add(CreateValueBlock(structured?.DocumentValue ?? difference.Difference.DocumentValue, 4));
@@ -127,7 +128,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         IReadOnlyDictionary<string, bool>? selectedResult = null;
         var dialog = new Window
         {
-            Title = "Forskelle mellem GEDCOM og Markdown",
+            Title = templateOnly ? "Skabelonændringer i dokumenterne" : "Forskelle mellem GEDCOM og Markdown",
             Width = 1480,
             Height = Math.Min(760, 230 + differences.Count * 48),
             MinWidth = 900,
@@ -155,7 +156,11 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
 
             UpdatePreview();
         };
-        var useAllButton = new Button { Content = "Vælg alle nye GEDCOM-værdier", MinWidth = 215 };
+        var useAllButton = new Button
+        {
+            Content = templateOnly ? "Vælg alle skabelonændringer" : "Vælg alle nye GEDCOM-værdier",
+            MinWidth = 215,
+        };
         useAllButton.Click += (_, _) =>
         {
             reviewState.UseAllImported();
@@ -196,7 +201,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
                                 Text = "Der er en ny dokumentkandidat. Gennemgå indholdet og vælg, om kandidaten skal anvendes.",
                                 TextWrapping = TextWrapping.Wrap,
                             },
-                            CreateHeaderRow(),
+                            CreateHeaderRow(templateOnly),
                             rows,
                             new TextBlock
                             {
@@ -216,7 +221,7 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
         return completion.Task;
     }
 
-    private static Grid CreateHeaderRow()
+    private static Grid CreateHeaderRow(bool templateOnly)
     {
         var row = new Grid
         {
@@ -224,12 +229,12 @@ public sealed class AvaloniaGedcomDifferenceDialogService : IGedcomDifferenceDia
             ColumnSpacing = 8,
         };
         row.Children.Add(CreateValueBlock("Person", 0, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("Feltsti", 1, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock(templateOnly ? "Ændring" : "Feltsti", 1, FontWeight.Bold));
         row.Children.Add(CreateValueBlock("Handling", 2, FontWeight.Bold));
         row.Children.Add(CreateValueBlock("Årsag", 3, FontWeight.Bold));
         row.Children.Add(CreateValueBlock("Dokument", 4, FontWeight.Bold));
         row.Children.Add(CreateValueBlock("Godkendt", 5, FontWeight.Bold));
-        row.Children.Add(CreateValueBlock("Ny GEDCOM", 6, FontWeight.Bold));
+        row.Children.Add(CreateValueBlock(templateOnly ? "Ny skabelon" : "Ny GEDCOM", 6, FontWeight.Bold));
         row.Children.Add(CreateValueBlock("Valg", 7, FontWeight.Bold));
         return row;
     }

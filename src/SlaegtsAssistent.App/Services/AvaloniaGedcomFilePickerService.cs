@@ -47,6 +47,15 @@ public sealed class AvaloniaGedcomFilePickerService : IGedcomFilePickerService
             Title = "Vælg GEDCOM-fil",
             AllowMultiple = false,
             SuggestedStartLocation = suggestedStartLocation,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Alle filer")
+                {
+                    Patterns = ["*"],
+                    AppleUniformTypeIdentifiers = ["public.item"],
+                    MimeTypes = ["*/*"],
+                },
+            ],
         };
     }
 

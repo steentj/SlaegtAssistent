@@ -2,15 +2,19 @@
 
 ## Automatiske kvalitetsporte
 
-- [ ] Alle fem features har `Requirements.md`, `Plan.md` og `Validation.md`.
-- [ ] Hver feature har dokumenteret en rød-grøn-refaktorér-cyklus.
-- [ ] Core-tests dækker editormodel, generator, versionsmetadata, serialisering, genåbning og deterministisk output.
-- [ ] App-tests dækker blokredigering, previewvalg, annullering, gemning, fejl og genåbning.
-- [ ] Integrationstests bekræfter atomisk lagring og tydelig overgangsbesked ved det tidligere format.
-- [ ] Regressionstests dækker importpreflight, personlinks, kandidatgodkendelse, genrendering og fri tekst.
-- [ ] Headless UI-tests dækker tastaturbetjening, fokus, danske labels og minimumsstørrelse.
-- [ ] `dotnet build` består uden warnings.
-- [ ] `dotnet test` består samlet.
+- [x] Alle fem features har `Requirements.md`, `Plan.md` og `Validation.md`.
+- [x] Hver feature har dokumenteret en rød-grøn-refaktorér-cyklus.
+- [x] Core-tests dækker editormodel, generator, versionsmetadata, serialisering, genåbning og deterministisk output.
+- [x] App-tests dækker blokredigering, previewvalg, annullering, gemning, fejl og genåbning.
+- [x] Integrationstests bekræfter atomisk lagring og tydelig overgangsbesked ved det tidligere format.
+- [x] Regressionstests dækker importpreflight, personlinks, kandidatgodkendelse, genrendering og fri tekst.
+- [x] Headless UI-tests dækker tastaturbetjening, fokus, danske labels og minimumsstørrelse.
+- [x] `dotnet build` består uden warnings.
+- [x] `dotnet test` består samlet.
+
+Valideret den 8. november 2026 i den lokale arbejdsmappe: `dotnet build --no-restore --verbosity minimal` bestod med 0 advarsler og 0 fejl; `dotnet test --no-build --no-restore --verbosity minimal` bestod med 132 Core-tests og 209 App-tests, i alt 341 tests. Alle ændringer er lokale og ikke committet.
+
+Trin 4 og opfølgningen er godkendt af brugeren som grundlag for at fortsætte. Trin 5's kode og automatiske kvalitetsporte er klar, men samlet manuel validering og brugertest er fortsat åbne. Brug opgavearket i `05-tilgaengelighed-hjaelp-og-regression/Brugertest.md`; automatiske resultater er ikke overført som manuelle afkrydsninger.
 
 ## Samlet manuel validering
 

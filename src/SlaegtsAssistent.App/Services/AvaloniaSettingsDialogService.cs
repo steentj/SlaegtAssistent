@@ -5,6 +5,7 @@ using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.App.Views;
 using SlaegtsAssistent.Core.Domain;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace SlaegtsAssistent.App.Services;
 
@@ -42,6 +43,17 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
         string? gedcomFilePath,
         string? outputFolder)
     {
+        return await EditSettingsAsync(currentSettings, previewPerson, gedcomFilePath, outputFolder,
+            previewPerson is null ? [] : [previewPerson]);
+    }
+
+    public async Task<AppSettings?> EditSettingsAsync(
+        AppSettings currentSettings,
+        Person? previewPerson,
+        string? gedcomFilePath,
+        string? outputFolder,
+        IEnumerable<Person> previewPeople)
+    {
         var owner = _applicationLifetime.MainWindow;
         if (owner is null)
         {
@@ -54,7 +66,9 @@ public sealed class AvaloniaSettingsDialogService : ISettingsDialogService
             _templateFilePickerService,
             previewPerson,
             gedcomFilePath,
-            outputFolder);
+            outputFolder,
+            new AvaloniaTemplateEditorDialogService(_applicationLifetime),
+            previewPeople: previewPeople);
         var dialog = new SettingsWindow(viewModel);
         var result = await dialog.ShowDialog<AppSettings?>(owner);
         if (result is not null && Application.Current is { } application)

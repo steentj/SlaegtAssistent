@@ -8,3 +8,9 @@
 6. Ret kritiske og alvorlige fund testdrevet og gentag berørte scenarier.
 7. Kør regression for standard- og egne skabeloner, importpreflight, preview, personlinks, kandidater, fri tekst og genstart.
 8. Kør `dotnet build` og `dotnet test`, udfyld sprintets samlede validering og stop for endelig godkendelse.
+
+## Status den 8. november 2026
+
+- Implementering af hjælp, tilgængelighedsnavne, fokus, fast handlingsområde og automatiske regressionstests er klar.
+- Build og alle 341 tests består. Opgaveark og ens eksempelgrundlag er forberedt i `Brugertest.md`.
+- Invitationer, brugertest, native kontrol på understøttede platforme og endelig godkendelse afventer faktisk manuel gennemførelse. Resultater registreres i `Validation.md`; automatiske tests erstatter ikke disse porte.

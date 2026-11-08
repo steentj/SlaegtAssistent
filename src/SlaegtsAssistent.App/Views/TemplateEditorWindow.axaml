@@ -20,6 +20,16 @@
         <KeyBinding Gesture="Ctrl+Alt+Up" Command="{Binding MoveSelectedFieldUpCommand}" />
         <KeyBinding Gesture="Ctrl+Alt+Down" Command="{Binding MoveSelectedFieldDownCommand}" />
     </Window.KeyBindings>
+    <Window.Styles>
+        <Style Selector="Button:focus-visible, TextBox:focus-visible, ComboBox:focus-visible, ListBox:focus-visible, CheckBox:focus-visible, Expander:focus-visible, TabItem:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppTextBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppTextBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </Window.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20" RowSpacing="16">
         <StackPanel Grid.Row="0" Spacing="4">
@@ -31,7 +41,7 @@
                        TextWrapping="Wrap" />
         </StackPanel>
 
-        <Grid Grid.Row="1" ColumnDefinitions="320,8,*" MinHeight="360">
+        <Grid Grid.Row="1" ColumnDefinitions="280,8,*">
             <Border Grid.Column="0"
                     Padding="12"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
@@ -45,10 +55,16 @@
                              ItemsSource="{Binding Blocks}"
                              SelectedItem="{Binding SelectedBlock, Mode=TwoWay}"
                              automation:AutomationProperties.Name="Dokumentets sektioner">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem" x:DataType="vm:TemplateBlockItemViewModel">
+                                <Setter Property="automation:AutomationProperties.Name" Value="{Binding AccessibilityName}" />
+                            </Style>
+                        </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:TemplateBlockItemViewModel">
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="4,7">
                                     <CheckBox IsChecked="{Binding IsVisible}"
+                                              automation:AutomationProperties.Name="{Binding AccessibilityName}"
                                               IsHitTestVisible="False"
                                               Focusable="False"
                                               VerticalAlignment="Center" />
@@ -94,8 +110,8 @@
                           ResizeDirection="Columns"
                           Background="{DynamicResource AppBorderBrush}" />
 
-            <TabControl Grid.Column="2">
-                <TabItem Header="Indstillinger">
+            <TabControl Grid.Column="2" automation:AutomationProperties.Name="Redigering og forhåndsvisning">
+                <TabItem Header="Indstillinger" automation:AutomationProperties.Name="Sektionens indstillinger">
                     <Border Padding="18"
                             Background="{DynamicResource AppPanelBackgroundBrush}"
                             BorderBrush="{DynamicResource AppBorderBrush}"
@@ -117,14 +133,23 @@
                                     automation:AutomationProperties.Name="Fjern valgt sektion" />
                         </Grid>
 
-                        <CheckBox Content="Vis sektionen i dokumentet"
+                        <Border Padding="10" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="Hjælp til sektionen" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding SelectedBlockHelp}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedBlockExample}" TextWrapping="Wrap"
+                                           automation:AutomationProperties.Name="Eksempel på sektionens resultat" />
+                            </StackPanel>
+                        </Border>
+
+                        <CheckBox x:Name="SectionVisibilityCheckBox" Content="Vis sektionen i dokumentet"
                                   IsChecked="{Binding SelectedBlockIsVisible, Mode=TwoWay}"
                                   IsEnabled="{Binding HasSelectedBlock}"
                                   automation:AutomationProperties.Name="Vis valgt sektion" />
 
                         <StackPanel Spacing="6" IsVisible="{Binding CanEditHeading}">
                             <TextBlock Text="Overskrift" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding SelectedBlockHeading, Mode=TwoWay}"
+                            <TextBox x:Name="HeadingTextBox" Text="{Binding SelectedBlockHeading, Mode=TwoWay}"
                                      IsEnabled="{Binding HasSelectedBlock}"
                                      automation:AutomationProperties.Name="Valgt sektions overskrift" />
                         </StackPanel>
@@ -142,7 +167,7 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:TemplateFieldItemViewModel">
                                         <CheckBox Content="{Binding Label}"
-                                                  IsChecked="{Binding IsSelected}"
+                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
                                                   Command="{Binding ToggleCommand}"
                                                   Margin="4"
                                                   automation:AutomationProperties.Name="{Binding Label}" />
@@ -152,14 +177,17 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Button Content="Flyt felt op"
                                         Command="{Binding MoveSelectedFieldUpCommand}"
-                                        IsEnabled="{Binding CanMoveSelectedFieldUp}" />
+                                        IsEnabled="{Binding CanMoveSelectedFieldUp}"
+                                        automation:AutomationProperties.Name="Flyt valgt felt op" />
                                 <Button Content="Flyt felt ned"
                                         Command="{Binding MoveSelectedFieldDownCommand}"
-                                        IsEnabled="{Binding CanMoveSelectedFieldDown}" />
+                                        IsEnabled="{Binding CanMoveSelectedFieldDown}"
+                                        automation:AutomationProperties.Name="Flyt valgt felt ned" />
                             </StackPanel>
                         </StackPanel>
 
                         <Expander Header="Flere muligheder"
+                                  automation:AutomationProperties.Name="Flere muligheder for sektionen"
                                   IsVisible="{Binding HasMultiplePresentations}">
                             <StackPanel Margin="0,10,0,0" Spacing="6">
                                 <TextBlock Text="Vis oplysninger som" FontWeight="SemiBold" />
@@ -173,7 +201,7 @@
                         </ScrollViewer>
                     </Border>
                 </TabItem>
-                <TabItem Header="Forhåndsvisning">
+                <TabItem Header="Forhåndsvisning" automation:AutomationProperties.Name="Forhåndsvisning af resultatet">
                     <Border Padding="12"
                             Background="{DynamicResource AppPanelBackgroundBrush}"
                             BorderBrush="{DynamicResource AppBorderBrush}"
@@ -211,18 +239,18 @@
             </TabControl>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <Grid Grid.Row="2" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="8">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Content="Fortryd"
                         Command="{Binding UndoCommand}"
-                        IsEnabled="{Binding CanUndo}" />
+                        IsEnabled="{Binding CanUndo}" automation:AutomationProperties.Name="Fortryd ændring" />
                 <Button Content="Gendan"
                         Command="{Binding RedoCommand}"
-                        IsEnabled="{Binding CanRedo}" />
+                        IsEnabled="{Binding CanRedo}" automation:AutomationProperties.Name="Gendan ændring" />
                 <Button Content="Nulstil"
-                        Command="{Binding ResetCommand}" />
+                        Command="{Binding ResetCommand}" automation:AutomationProperties.Name="Nulstil til standardskabelon" />
             </StackPanel>
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Center" Spacing="3">
                 <TextBlock Text="Genveje: Alt+Pil flytter sektioner. Ctrl+Alt+Pil flytter felter."
                            Foreground="{DynamicResource AppMutedTextBrush}"
                            TextWrapping="Wrap" />
@@ -233,12 +261,16 @@
                            TextWrapping="Wrap"
                            automation:AutomationProperties.Name="Fejl i skabelonen" />
             </StackPanel>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <Button Content="Annuller"
+                        x:Name="CancelDraftButton"
+                        automation:AutomationProperties.Name="Annuller skabelonændringer"
                         Command="{Binding CancelCommand}"
                         IsCancel="True"
                         MinWidth="100" />
-                <Button Content="Gem"
+                <Button Content="Brug kladde"
+                        x:Name="UseDraftButton"
+                        automation:AutomationProperties.Name="Brug kladde i Indstillinger"
                         Command="{Binding SaveCommand}"
                         IsDefault="True"
                         MinWidth="100" />

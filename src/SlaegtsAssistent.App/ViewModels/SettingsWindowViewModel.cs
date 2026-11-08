@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +18,10 @@ public partial class SettingsWindowViewModel : ViewModelBase
     private readonly Person? _previewPerson;
     private readonly string? _gedcomFilePath;
     private readonly string? _previewOutputFolder;
+    private readonly ITemplateEditorDialogService? _templateEditorDialogService;
+    private readonly TemplateEditorStorageService _templateStorage;
+    private BiographyTemplateEditorModel? _pendingTemplate;
+    private readonly IReadOnlyList<Person> _previewPeople;
 
     public SettingsWindowViewModel(
         AppSettings currentSettings,
@@ -24,17 +29,24 @@ public partial class SettingsWindowViewModel : ViewModelBase
         ITemplateFilePickerService? templateFilePickerService = null,
         Person? previewPerson = null,
         string? gedcomFilePath = null,
-        string? previewOutputFolder = null)
+        string? previewOutputFolder = null,
+        ITemplateEditorDialogService? templateEditorDialogService = null,
+        TemplateEditorStorageService? templateStorage = null,
+        IEnumerable<Person>? previewPeople = null)
     {
         _folderPickerService = folderPickerService;
         _templateFilePickerService = templateFilePickerService ?? new NullTemplateFilePickerService();
         _previewPerson = previewPerson;
         _gedcomFilePath = gedcomFilePath;
         _previewOutputFolder = previewOutputFolder;
+        _templateEditorDialogService = templateEditorDialogService;
+        _templateStorage = templateStorage ?? new TemplateEditorStorageService();
+        _previewPeople = previewPeople?.ToArray() ?? (previewPerson is null ? [] : [previewPerson]);
         DefaultGedcomInputFolder = currentSettings.DefaultGedcomInputFolder;
         DefaultMarkdownOutputFolder = currentSettings.DefaultMarkdownOutputFolder;
         GlobalBiographyTemplatePath = currentSettings.GlobalBiographyTemplatePath;
         Theme = currentSettings.Theme;
+        CheckSelectedTemplate();
     }
 
     [ObservableProperty]
@@ -51,6 +63,9 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? templateErrorMessage;
+
+    [ObservableProperty]
+    private string? templateStatusMessage;
 
     [ObservableProperty]
     private ThemePreference theme;
@@ -123,6 +138,69 @@ public partial class SettingsWindowViewModel : ViewModelBase
     private void ResetBiographyTemplate()
     {
         GlobalBiographyTemplatePath = null;
+        _pendingTemplate = null;
+        TemplateStatusMessage = "Standardskabelonen aktiveres, når du gemmer Indstillinger.";
+    }
+
+    partial void OnGlobalBiographyTemplatePathChanged(string? value)
+    {
+        _pendingTemplate = null;
+        TemplateStatusMessage = null;
+        CheckSelectedTemplate();
+    }
+
+    private void CheckSelectedTemplate()
+    {
+        try
+        {
+            if (NormalizePath(GlobalBiographyTemplatePath) is { } path)
+            {
+                _templateStorage.Load(path);
+            }
+            TemplateErrorMessage = null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or BiographyTemplateException)
+        {
+            TemplateErrorMessage = exception.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task EditBiographyTemplateAsync()
+    {
+        if (_templateEditorDialogService is null)
+        {
+            return;
+        }
+
+        var model = _pendingTemplate;
+        var startNew = false;
+        if (model is null)
+        {
+            try
+            {
+                model = NormalizePath(GlobalBiographyTemplatePath) is { } path
+                    ? _templateStorage.Load(path)
+                    : BiographyTemplateEditorModel.CreateDefault();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or BiographyTemplateException)
+            {
+                TemplateErrorMessage = exception.Message;
+                model = BiographyTemplateEditorModel.CreateDefault();
+                startNew = true;
+            }
+        }
+
+        var edited = await _templateEditorDialogService.EditAsync(model, _previewPeople);
+        if (edited is not null)
+        {
+            if (startNew)
+            {
+                GlobalBiographyTemplatePath = null;
+            }
+            _pendingTemplate = edited;
+            TemplateStatusMessage = "Skabelonen er en kladde. Gem eller Gem som i Indstillinger skriver filen og aktiverer den. Annuller bevarer alle filer og indstillinger.";
+        }
     }
 
     [RelayCommand]
@@ -137,9 +215,11 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
         try
         {
-            var template = string.IsNullOrWhiteSpace(GlobalBiographyTemplatePath)
-                ? BiographyTemplateMarkdownGenerator.DefaultTemplate
-                : File.ReadAllText(GlobalBiographyTemplatePath);
+            var template = _pendingTemplate is not null
+                ? new BiographyTemplateEditorCompiler().Compile(_pendingTemplate)
+                : string.IsNullOrWhiteSpace(GlobalBiographyTemplatePath)
+                    ? BiographyTemplateMarkdownGenerator.DefaultTemplate
+                    : new BiographyTemplateLoader().Load(GlobalBiographyTemplatePath).Source;
             PreviewText = new BiographyTemplateRenderer().Render(
                 new BiographyTemplateLoader().Parse(template, GlobalBiographyTemplatePath),
                 BiographyTemplateContext.FromPerson(
@@ -153,7 +233,8 @@ public partial class SettingsWindowViewModel : ViewModelBase
         catch (Exception exception) when (
             exception is IOException
                 or UnauthorizedAccessException
-                or BiographyTemplateException)
+                or BiographyTemplateException
+                or BiographyTemplateEditorException)
         {
             PreviewText = string.Empty;
             TemplateErrorMessage = $"Skabelonen kunne ikke forhåndsvises: {exception.Message}";
@@ -161,8 +242,47 @@ public partial class SettingsWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void Save()
+    private async Task SaveAsync()
     {
+        await SaveSettingsAsync(false);
+    }
+
+    [RelayCommand]
+    private async Task SaveAsAsync()
+    {
+        await SaveSettingsAsync(true);
+    }
+
+    private async Task SaveSettingsAsync(bool saveAs)
+    {
+        if (_pendingTemplate is not null || saveAs)
+        {
+            try
+            {
+                var model = _pendingTemplate ?? (NormalizePath(GlobalBiographyTemplatePath) is { } existingPath
+                    ? _templateStorage.Load(existingPath)
+                    : BiographyTemplateEditorModel.CreateDefault());
+                var path = NormalizePath(GlobalBiographyTemplatePath);
+                if (saveAs || path is null)
+                {
+                    path = await _templateFilePickerService.PickTemplateSaveFileAsync(path);
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        return;
+                    }
+                }
+                _templateStorage.Save(path, model);
+                GlobalBiographyTemplatePath = path;
+                _pendingTemplate = null;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+                BiographyTemplateException or BiographyTemplateEditorException or ArgumentException)
+            {
+                TemplateErrorMessage = $"Skabelonen kunne ikke gemmes. Den tidligere aktive skabelon er bevaret: {exception.Message}";
+                return;
+            }
+        }
+
         if (!ValidateSelectedTemplate())
         {
             return;

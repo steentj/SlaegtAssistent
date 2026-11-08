@@ -77,7 +77,34 @@ public static class BiographyTemplateEditorCatalog
 public sealed record BiographyTemplateBlockDescriptor(
     BiographyTemplateBlockType Type,
     string Label,
-    string Description);
+    string Description)
+{
+    public string Help => Type switch
+    {
+        BiographyTemplateBlockType.Title => "Viser personens navn øverst. Skjul sektionen, hvis navnet ikke skal gentages i dokumentet.",
+        BiographyTemplateBlockType.Facts => "Vælg fødsel, død og relationer. Flyt felterne for at ændre rækkefølgen. Manglende oplysninger udelades.",
+        BiographyTemplateBlockType.Events => "Vælg oplysninger om hændelser. Åbn Flere muligheder for at skifte mellem liste og tabel.",
+        BiographyTemplateBlockType.Census => "Vis folketællingernes dato, sted og note. Åbn Flere muligheder for at vælge liste eller tabel.",
+        BiographyTemplateBlockType.Sources => "Vælg kildens titel, forfatter og side. Flyt sektionen for at placere kilderne før eller efter hændelserne.",
+        BiographyTemplateBlockType.Media => "Vis lokale billeder og medier. Fjern markeringen i Vis sektionen i dokumentet for at skjule dem.",
+        BiographyTemplateBlockType.Submitter => "Vis navnet på GEDCOM-filens afsender. Sektionen udelades, når der ikke er afsenderoplysninger.",
+        BiographyTemplateBlockType.Biography => "Tilføjer en overskrift og plads til livshistorien. Din egen tekst i eksisterende dokumenter bevares ved skabelonændringer.",
+        _ => throw new BiographyTemplateEditorException($"Ukendt bloktype `{Type}`."),
+    };
+
+    public string Example => Type switch
+    {
+        BiographyTemplateBlockType.Title => "Anna Jensen",
+        BiographyTemplateBlockType.Facts => "Født: 12. marts 1880 i Odense. Forældre: Jens Jensen og Marie Hansen.",
+        BiographyTemplateBlockType.Events => "Vielse – 4. maj 1902 i Odense.",
+        BiographyTemplateBlockType.Census => "1911 – Odense – Bopæl i Vestergade.",
+        BiographyTemplateBlockType.Sources => "Kirkebog for Odense, side 42.",
+        BiographyTemplateBlockType.Media => "Et lokalt familiefoto med billedteksten Familiefoto.",
+        BiographyTemplateBlockType.Submitter => "Afsender: Karen Jensen.",
+        BiographyTemplateBlockType.Biography => "Biografi – Skriv biografien her.",
+        _ => throw new BiographyTemplateEditorException($"Ukendt bloktype `{Type}`."),
+    };
+}
 
 public sealed record BiographyTemplateFieldDescriptor(
     BiographyTemplateField Field,

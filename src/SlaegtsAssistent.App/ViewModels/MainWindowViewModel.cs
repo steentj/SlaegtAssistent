@@ -403,7 +403,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _importCancellation?.Cancel();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStartImport))]
     private async Task OpenSettingsAsync()
     {
         var previewPerson = SelectedPerson is null
@@ -415,7 +415,7 @@ public partial class MainWindowViewModel : ViewModelBase
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
             Theme = Theme,
-        }, previewPerson, SelectedGedcomFilePath, StandardMarkdownOutputFolder);
+        }, previewPerson, SelectedGedcomFilePath, StandardMarkdownOutputFolder, _familyTree?.People ?? []);
 
         if (updatedSettings is null)
         {
@@ -1298,6 +1298,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _allPeople.Clear();
         _allPeople.AddRange(people);
         ApplyPersonFilter();
+        ApplyBiographyTemplateCommand.NotifyCanExecuteChanged();
     }
 
     private void ApplyPersonFilter()
@@ -1516,7 +1517,9 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnIsImportingChanged(bool value)
     {
         SelectGedcomFileCommand.NotifyCanExecuteChanged();
+        ApplyBiographyTemplateCommand.NotifyCanExecuteChanged();
         CancelImportCommand.NotifyCanExecuteChanged();
+        OpenSettingsCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnImportPhaseTextChanged(string value)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.Core.Biography;
@@ -14,6 +15,7 @@ namespace SlaegtsAssistent.App.ViewModels;
 
 public partial class TemplateEditorViewModel : ViewModelBase
 {
+    private bool _reorderingItems;
     private readonly ITemplateEditorConfirmationService _confirmationService;
     private readonly ITemplateEditorPreviewService _previewService;
     private readonly TimeSpan _previewDelay;
@@ -198,6 +200,11 @@ public partial class TemplateEditorViewModel : ViewModelBase
         get => _selectedBlock;
         set
         {
+            if (_reorderingItems)
+            {
+                return;
+            }
+
             if (ReferenceEquals(_selectedBlock, value))
             {
                 return;
@@ -239,7 +246,7 @@ public partial class TemplateEditorViewModel : ViewModelBase
             OnPropertyChanged();
             if (!_refreshing && value is not null)
             {
-                UpdateSelectedBlock(block => block with { Presentation = value.Presentation });
+                UpdateSelectedBlock(block => block with { Presentation = value.Presentation }, rebuild: false);
             }
         }
     }
@@ -249,6 +256,11 @@ public partial class TemplateEditorViewModel : ViewModelBase
         get => _selectedField;
         set
         {
+            if (_reorderingItems)
+            {
+                return;
+            }
+
             if (ReferenceEquals(_selectedField, value))
             {
                 return;
@@ -271,7 +283,7 @@ public partial class TemplateEditorViewModel : ViewModelBase
                 return;
             }
 
-            UpdateSelectedBlock(item => item with { Heading = value ?? string.Empty });
+            UpdateSelectedBlock(item => item with { Heading = value ?? string.Empty }, rebuild: false);
         }
     }
 
@@ -286,11 +298,21 @@ public partial class TemplateEditorViewModel : ViewModelBase
                 return;
             }
 
-            UpdateSelectedBlock(item => item with { IsVisible = value });
+            UpdateSelectedBlock(item => item with { IsVisible = value }, rebuild: false);
+            SelectedBlock!.IsVisible = value;
+            OnPropertyChanged(nameof(SelectedBlockIsVisible));
         }
     }
 
     public bool HasSelectedBlock => SelectedBlock is not null;
+
+    public string SelectedBlockHelp => SelectedBlock is null
+        ? "Vælg eller tilføj en sektion for at se hjælp."
+        : BiographyTemplateEditorCatalog.GetBlock(SelectedBlock.Type).Help;
+
+    public string SelectedBlockExample => SelectedBlock is null
+        ? string.Empty
+        : "Eksempel: " + BiographyTemplateEditorCatalog.GetBlock(SelectedBlock.Type).Example;
 
     public bool HasFields => Fields.Count > 0 && SelectedBlock?.Type != BiographyTemplateBlockType.Title;
 
@@ -377,6 +399,7 @@ public partial class TemplateEditorViewModel : ViewModelBase
             return;
         }
 
+        SelectedField = field;
         UpdateSelectedBlock(block =>
         {
             var fields = block.Fields.ToList();
@@ -390,14 +413,17 @@ public partial class TemplateEditorViewModel : ViewModelBase
                     fields);
             }
 
-            fields.Add(field.Field);
+            fields = Fields.Where(item => item.IsSelected || item.Field == field.Field)
+                .Select(item => item.Field).ToList();
             return new BiographyTemplateBlock(
                 block.Type,
                 block.IsVisible,
                 block.Heading,
                 block.Presentation,
                 fields);
-        });
+        }, rebuild: false);
+        field.IsSelected = GetSelectedModelBlock()!.Fields.Contains(field.Field);
+        NotifyStateChanged();
     }
 
     [RelayCommand]
@@ -485,7 +511,18 @@ public partial class TemplateEditorViewModel : ViewModelBase
         }
 
         (blocks[index], blocks[target]) = (blocks[target], blocks[index]);
-        ApplyChange(new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, blocks), SelectedBlock.Type);
+        var selectedType = SelectedBlock.Type;
+        _reorderingItems = true;
+        try
+        {
+            Blocks.Move(index, target);
+        }
+        finally
+        {
+            _reorderingItems = false;
+        }
+        OnPropertyChanged(nameof(SelectedBlock));
+        ApplyChange(new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, blocks), selectedType, rebuild: false);
     }
 
     private void MoveSelectedField(int offset)
@@ -512,7 +549,33 @@ public partial class TemplateEditorViewModel : ViewModelBase
                 block.Heading,
                 block.Presentation,
                 fields);
-        });
+        }, rebuild: false);
+        SynchronizeFieldOrder();
+        NotifyStateChanged();
+    }
+
+    private void SynchronizeFieldOrder()
+    {
+        var selected = GetSelectedModelBlock()!.Fields;
+        var ordered = selected.Concat(Fields.Where(item => !item.IsSelected).Select(item => item.Field)).ToArray();
+        _reorderingItems = true;
+        try
+        {
+            for (var index = 0; index < ordered.Length; index++)
+            {
+                var current = Fields.Single(item => item.Field == ordered[index]);
+                var currentIndex = Fields.IndexOf(current);
+                if (currentIndex != index)
+                {
+                    Fields.Move(currentIndex, index);
+                }
+            }
+        }
+        finally
+        {
+            _reorderingItems = false;
+        }
+        OnPropertyChanged(nameof(SelectedField));
     }
 
     private bool CanMoveField(int offset)
@@ -533,7 +596,7 @@ public partial class TemplateEditorViewModel : ViewModelBase
         return index >= 0 && target >= 0 && target < selected.Fields.Count;
     }
 
-    private void UpdateSelectedBlock(Func<BiographyTemplateBlock, BiographyTemplateBlock> update)
+    private void UpdateSelectedBlock(Func<BiographyTemplateBlock, BiographyTemplateBlock> update, bool rebuild = true)
     {
         var selected = GetSelectedModelBlock();
         if (selected is null)
@@ -548,20 +611,29 @@ public partial class TemplateEditorViewModel : ViewModelBase
         }
 
         var blocks = _model.Blocks.Select(block => block.Type == selected.Type ? updated : block).ToArray();
-        ApplyChange(new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, blocks), selected.Type);
+        ApplyChange(new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, blocks), selected.Type, rebuild);
     }
 
     private BiographyTemplateBlock? GetSelectedModelBlock() => SelectedBlock is null
         ? null
         : _model.Blocks.SingleOrDefault(block => block.Type == SelectedBlock.Type);
 
-    private void ApplyChange(BiographyTemplateEditorModel changed, BiographyTemplateBlockType? selectedType)
+    private void ApplyChange(BiographyTemplateEditorModel changed, BiographyTemplateBlockType? selectedType, bool rebuild = true)
     {
         _undo.Push(_model);
         _redo.Clear();
         _model = changed;
         ErrorMessage = null;
-        Rebuild(selectedType);
+        if (rebuild)
+        {
+            Rebuild(selectedType);
+        }
+        else
+        {
+            OnPropertyChanged(nameof(SelectedBlockHeading));
+            NotifyStateChanged();
+            SchedulePreview();
+        }
     }
 
     private void Rebuild(BiographyTemplateBlockType? selectedType)
@@ -677,13 +749,18 @@ public partial class TemplateEditorViewModel : ViewModelBase
 
     private void CancelPreview()
     {
+        Interlocked.Increment(ref _previewGeneration);
         _previewCancellation?.Cancel();
         _previewCancellation?.Dispose();
         _previewCancellation = null;
     }
 
+    public void StopPreview() => CancelPreview();
+
     private void RefreshSelectedBlock()
     {
+        OnPropertyChanged(nameof(SelectedBlockHelp));
+        OnPropertyChanged(nameof(SelectedBlockExample));
         _refreshing = true;
         try
         {
@@ -768,14 +845,35 @@ public partial class TemplateEditorViewModel : ViewModelBase
     }
 }
 
-public sealed record TemplateBlockItemViewModel(
-    BiographyTemplateBlockType Type,
-    string Label,
-    string Description,
-    bool IsVisible);
-
-public sealed class TemplateFieldItemViewModel
+public sealed class TemplateBlockItemViewModel(
+    BiographyTemplateBlockType type,
+    string label,
+    string description,
+    bool isVisible) : ObservableObject
 {
+    private bool _isVisible = isVisible;
+
+    public BiographyTemplateBlockType Type { get; } = type;
+    public string Label { get; } = label;
+    public string Description { get; } = description;
+    public string AccessibilityName => $"{Label}, {(_isVisible ? "vises" : "skjult")}";
+
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (SetProperty(ref _isVisible, value))
+            {
+                OnPropertyChanged(nameof(AccessibilityName));
+            }
+        }
+    }
+}
+
+public sealed class TemplateFieldItemViewModel : ObservableObject
+{
+    private bool _isSelected;
     public TemplateFieldItemViewModel(
         BiographyTemplateField field,
         string label,
@@ -792,7 +890,11 @@ public sealed class TemplateFieldItemViewModel
 
     public string Label { get; }
 
-    public bool IsSelected { get; }
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
 
     public IRelayCommand ToggleCommand { get; }
 }
