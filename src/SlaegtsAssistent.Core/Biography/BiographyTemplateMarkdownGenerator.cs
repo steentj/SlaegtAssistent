@@ -4,25 +4,8 @@ namespace SlaegtsAssistent.Core.Biography;
 
 public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGenerator
 {
-    public const string DefaultTemplate =
-        "# {{ person.fullName }}\n\n" +
-        "## Fakta\n" +
-        "{{#if person.birthDate }}- **Født:** {{ person.birthDate }}{{#if person.birthPlace }} i {{ person.birthPlace }}{{/if}}\n{{/if}}" +
-        "{{#if person.deathDate }}- **Død:** {{ person.deathDate }}{{#if person.deathPlace }} i {{ person.deathPlace }}{{/if}}\n{{/if}}" +
-        "{{#if person.parents }}- **Forældre:** {{ person.parentNames }}\n{{/if}}" +
-        "{{#if person.children }}- **Børn:** {{ person.childNames }}\n{{/if}}" +
-        "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}" +
-        "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}\n" +
-        "## Hændelser\n" +
-        "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}\n{{/each}}\n" +
-        "## Folketællinger\n" +
-        "{{#each census }}- {{ date }}{{#if place }} i {{ place }}{{/if}}{{#if note }}: {{ note }}{{/if}}\n{{/each}}\n" +
-        "## Kilder\n" +
-        "{{#each sources }}- {{ title }}{{#if author }} ({{ author }}){{/if}}{{#if page }}, side {{ page }}{{/if}}\n{{/each}}\n" +
-        "## Medier\n" +
-        "{{#each media }}{{#if relativeFile }}![{{ title }}]({{ relativeFile }})\n{{/if}}{{/each}}\n" +
-        "{{#if submitter}}---\nKilde/afsender: {{ submitter.name }}\n{{/if}}" +
-        "## Biografi\n\n_Skriv den fulde livshistorie her._\n";
+    public static string DefaultTemplate { get; } = new BiographyTemplateEditorCompiler()
+        .Compile(BiographyTemplateEditorModel.CreateDefault());
 
     private readonly BiographyTemplate _template;
     private readonly BiographyTemplateRenderer _renderer;

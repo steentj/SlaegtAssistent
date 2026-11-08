@@ -1,0 +1,248 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:automation="using:Avalonia.Automation"
+        xmlns:wv="using:Avalonia.Controls"
+        x:Class="SlaegtsAssistent.App.Views.TemplateEditorWindow"
+        x:DataType="vm:TemplateEditorViewModel"
+        Width="1040"
+        Height="720"
+        MinWidth="760"
+        MinHeight="560"
+        CanResize="True"
+        Title="Rediger persondokumentskabelon"
+        WindowStartupLocation="CenterOwner">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Alt+Up" Command="{Binding MoveSelectedBlockUpCommand}" />
+        <KeyBinding Gesture="Alt+Down" Command="{Binding MoveSelectedBlockDownCommand}" />
+        <KeyBinding Gesture="Ctrl+Alt+Up" Command="{Binding MoveSelectedFieldUpCommand}" />
+        <KeyBinding Gesture="Ctrl+Alt+Down" Command="{Binding MoveSelectedFieldDownCommand}" />
+    </Window.KeyBindings>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20" RowSpacing="16">
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock Text="Tilpas persondokumentet"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="Vælg sektioner, rækkefølge og indhold. Du behøver ikke kende et skabelonsprog."
+                       Foreground="{DynamicResource AppMutedTextBrush}"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="320,8,*" MinHeight="360">
+            <Border Grid.Column="0"
+                    Padding="12"
+                    Background="{DynamicResource AppPanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+                    <TextBlock Grid.Row="0" Text="Sektioner" FontSize="17" FontWeight="SemiBold" />
+                    <ListBox Grid.Row="1"
+                             Name="BlockList"
+                             ItemsSource="{Binding Blocks}"
+                             SelectedItem="{Binding SelectedBlock, Mode=TwoWay}"
+                             automation:AutomationProperties.Name="Dokumentets sektioner">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TemplateBlockItemViewModel">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="4,7">
+                                    <CheckBox IsChecked="{Binding IsVisible}"
+                                              IsHitTestVisible="False"
+                                              Focusable="False"
+                                              VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6">
+                        <Button Content="Flyt op"
+                                Command="{Binding MoveSelectedBlockUpCommand}"
+                                IsEnabled="{Binding CanMoveSelectedBlockUp}"
+                                automation:AutomationProperties.Name="Flyt valgt sektion op" />
+                        <Button Content="Flyt ned"
+                                Command="{Binding MoveSelectedBlockDownCommand}"
+                                IsEnabled="{Binding CanMoveSelectedBlockDown}"
+                                automation:AutomationProperties.Name="Flyt valgt sektion ned" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <ComboBox ItemsSource="{Binding AvailableBlocks}"
+                                  SelectedItem="{Binding SelectedAvailableBlock, Mode=TwoWay}"
+                                  DisplayMemberBinding="{Binding Label}"
+                                  PlaceholderText="Tilføj en sektion"
+                                  automation:AutomationProperties.Name="Sektion som skal tilføjes" />
+                        <Button Grid.Column="1"
+                                Content="Tilføj"
+                                Command="{Binding AddBlockCommand}"
+                                IsEnabled="{Binding CanAddBlock}"
+                                automation:AutomationProperties.Name="Tilføj valgt sektion" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1"
+                          ResizeDirection="Columns"
+                          Background="{DynamicResource AppBorderBrush}" />
+
+            <TabControl Grid.Column="2">
+                <TabItem Header="Indstillinger">
+                    <Border Padding="18"
+                            Background="{DynamicResource AppPanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <StackPanel>
+                                <TextBlock Text="Valgt sektion" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="Indstillingerne gælder kun for den valgte sektion."
+                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Content="Fjern sektion"
+                                    Command="{Binding RemoveSelectedBlockCommand}"
+                                    IsEnabled="{Binding HasSelectedBlock}"
+                                    automation:AutomationProperties.Name="Fjern valgt sektion" />
+                        </Grid>
+
+                        <CheckBox Content="Vis sektionen i dokumentet"
+                                  IsChecked="{Binding SelectedBlockIsVisible, Mode=TwoWay}"
+                                  IsEnabled="{Binding HasSelectedBlock}"
+                                  automation:AutomationProperties.Name="Vis valgt sektion" />
+
+                        <StackPanel Spacing="6" IsVisible="{Binding CanEditHeading}">
+                            <TextBlock Text="Overskrift" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding SelectedBlockHeading, Mode=TwoWay}"
+                                     IsEnabled="{Binding HasSelectedBlock}"
+                                     automation:AutomationProperties.Name="Valgt sektions overskrift" />
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding HasFields}" Spacing="8">
+                            <TextBlock Text="Indhold" FontWeight="SemiBold" />
+                            <TextBlock Text="Markér de oplysninger, der skal med. Den viste rækkefølge bliver dokumentets rækkefølge."
+                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                       TextWrapping="Wrap" />
+                            <ListBox Name="FieldList"
+                                     ItemsSource="{Binding Fields}"
+                                     SelectedItem="{Binding SelectedField, Mode=TwoWay}"
+                                     MaxHeight="230"
+                                     automation:AutomationProperties.Name="Felter i den valgte sektion">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TemplateFieldItemViewModel">
+                                        <CheckBox Content="{Binding Label}"
+                                                  IsChecked="{Binding IsSelected}"
+                                                  Command="{Binding ToggleCommand}"
+                                                  Margin="4"
+                                                  automation:AutomationProperties.Name="{Binding Label}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Flyt felt op"
+                                        Command="{Binding MoveSelectedFieldUpCommand}"
+                                        IsEnabled="{Binding CanMoveSelectedFieldUp}" />
+                                <Button Content="Flyt felt ned"
+                                        Command="{Binding MoveSelectedFieldDownCommand}"
+                                        IsEnabled="{Binding CanMoveSelectedFieldDown}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Expander Header="Flere muligheder"
+                                  IsVisible="{Binding HasMultiplePresentations}">
+                            <StackPanel Margin="0,10,0,0" Spacing="6">
+                                <TextBlock Text="Vis oplysninger som" FontWeight="SemiBold" />
+                                <ComboBox ItemsSource="{Binding AvailablePresentations}"
+                                          SelectedItem="{Binding SelectedPresentation, Mode=TwoWay}"
+                                          DisplayMemberBinding="{Binding Label}"
+                                          automation:AutomationProperties.Name="Visningsform" />
+                            </StackPanel>
+                        </Expander>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </TabItem>
+                <TabItem Header="Forhåndsvisning">
+                    <Border Padding="12"
+                            Background="{DynamicResource AppPanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="Vis med" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding PreviewPeople}"
+                                          SelectedItem="{Binding SelectedPreviewPerson, Mode=TwoWay}"
+                                          DisplayMemberBinding="{Binding Label}"
+                                          automation:AutomationProperties.Name="Person til forhåndsvisning" />
+                            </Grid>
+                            <TextBlock Grid.Row="1"
+                                       Text="Opdaterer forhåndsvisning…"
+                                       IsVisible="{Binding IsPreviewBusy}"
+                                       Foreground="{DynamicResource AppMutedTextBrush}" />
+                            <wv:NativeWebView Grid.Row="2"
+                                              x:Name="TemplatePreviewWebView"
+                                              automation:AutomationProperties.Name="Forhåndsvisning af persondokument" />
+                            <StackPanel Grid.Row="3" Spacing="4">
+                                <TextBlock Text="{Binding PreviewErrorMessage}"
+                                           Foreground="{DynamicResource AppDangerBrush}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding PreviewDiagnosticsText}"
+                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Fortryd"
+                        Command="{Binding UndoCommand}"
+                        IsEnabled="{Binding CanUndo}" />
+                <Button Content="Gendan"
+                        Command="{Binding RedoCommand}"
+                        IsEnabled="{Binding CanRedo}" />
+                <Button Content="Nulstil"
+                        Command="{Binding ResetCommand}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Text="Genveje: Alt+Pil flytter sektioner. Ctrl+Alt+Pil flytter felter."
+                           Foreground="{DynamicResource AppMutedTextBrush}"
+                           TextWrapping="Wrap" />
+                <TextBlock Name="EditorErrorText"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="{DynamicResource AppDangerBrush}"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           automation:AutomationProperties.Name="Fejl i skabelonen" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Content="Annuller"
+                        Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        MinWidth="100" />
+                <Button Content="Gem"
+                        Command="{Binding SaveCommand}"
+                        IsDefault="True"
+                        MinWidth="100" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

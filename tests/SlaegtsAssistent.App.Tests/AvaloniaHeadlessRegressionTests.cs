@@ -4,6 +4,7 @@ using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.App.Views;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Tests;
 
@@ -39,6 +40,36 @@ public sealed class AvaloniaHeadlessRegressionTests
             buttons.Should().Contain(button => button.Content as string == "Gem" && button.Focusable);
             buttons.Should().Contain(button => button.Content as string == "Annuller" && button.Focusable);
             buttons.Should().OnlyContain(button => button.Command != null);
+            return Task.CompletedTask;
+        });
+
+    [Fact]
+    public Task TemplateEditorWindow_ShouldExposeGuidedKeyboardAccessibleControlsWithoutSyntax() =>
+        HeadlessTestApplication.RunAsync(() =>
+        {
+            var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
+            var window = new TemplateEditorWindow
+            {
+                DataContext = viewModel,
+            };
+            var buttons = Descendants<Button>(window).ToArray();
+            var visibleText = string.Join(" ", Descendants<TextBlock>(window).Select(item => item.Text));
+
+            window.MinWidth.Should().Be(760);
+            window.MinHeight.Should().Be(560);
+            window.FindControl<ListBox>("BlockList").Should().NotBeNull();
+            window.FindControl<ListBox>("FieldList").Should().NotBeNull();
+            window.FindControl<NativeWebView>("TemplatePreviewWebView").Should().NotBeNull();
+            Descendants<TabItem>(window).Select(item => item.Header as string)
+                .Should().Contain(["Indstillinger", "Forhåndsvisning"]);
+            window.FindControl<TextBlock>("EditorErrorText").Should().NotBeNull();
+            buttons.Should().Contain(button => button.Content as string == "Gem" && button.IsDefault);
+            buttons.Should().Contain(button => button.Content as string == "Annuller" && button.IsCancel);
+            buttons.Should().Contain(button => button.Content as string == "Nulstil" && button.Focusable);
+            window.KeyBindings.Should().HaveCountGreaterThanOrEqualTo(6);
+            visibleText.Should().NotContain("{{");
+            visibleText.Should().NotContain("#each");
+            visibleText.Should().NotContain("person.");
             return Task.CompletedTask;
         });
 
