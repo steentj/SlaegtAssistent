@@ -13,6 +13,34 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class PersonFilterUiRegressionTests
 {
     [Fact]
+    public Task ÅbningFraGrafenSkifterTilEditorOgBevarerUgemtTekst() =>
+        HeadlessTestApplication.RunAsync(async () =>
+        {
+            using var workspace = await CreateWorkspaceAsync();
+            var window = ShowWindow(workspace.ViewModel);
+            try
+            {
+                var vm = workspace.ViewModel;
+                var anna = vm.People.Single(person => person.DisplayName == "Anna Jensen");
+                var bo = vm.People.Single(person => person.DisplayName == "Bo Jensen");
+                vm.SelectedPerson = anna;
+                vm.Editor!.MarkdownText += "\nUgemt tekst";
+                vm.PersonGraph.SetGraph(new SlaegtsAssistent.Core.Graph.PersonGraphBuilder().Build(
+                    [new(anna.RecordId, anna.DisplayName, "F", null, null), new(bo.RecordId, bo.DisplayName, "M", null, null)], []), null, anna.RecordId);
+                vm.DocumentTabIndex = 0;
+                vm.PersonGraph.Select(bo.RecordId);
+                vm.PersonGraph.OpenBiographyCommand.Execute(null);
+
+                vm.SelectedPerson.Should().BeSameAs(bo);
+                vm.DocumentTabIndex.Should().Be(1);
+                vm.SelectedPerson = anna;
+                vm.Editor!.MarkdownText.Should().Contain("Ugemt tekst");
+                vm.Editor.IsDirty.Should().BeTrue();
+            }
+            finally { window.Close(); }
+        });
+
+    [Fact]
     public Task FilteringPerson_ShouldKeepSelectionPreviewHtmlAndRawGedcom_InRealWindow() =>
         HeadlessTestApplication.RunAsync(async () =>
         {

@@ -68,6 +68,9 @@ obj/
 .#*
 TestGedComData/
 
+# Lokalt byggede tredjepartsværktøjer
+tools/graphviz/
+
 # OS
 .DS_Store
 Thumbs.db

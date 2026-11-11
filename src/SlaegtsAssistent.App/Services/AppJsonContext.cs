@@ -7,7 +7,10 @@ namespace SlaegtsAssistent.App.Services;
 [JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(GedcomSnapshotManifest))]
+[JsonSerializable(typeof(GraphSettings))]
 internal partial class AppJsonContext : JsonSerializerContext;
+
+internal sealed record GraphSettings(int FormatVersion, string? ProbandId);
 
 internal sealed record GedcomSnapshotManifest(
     int FormatVersion,

@@ -9,6 +9,25 @@ namespace SlaegtsAssistent.App.Views;
 
 public partial class MainWindow : Window
 {
+    private void GraphZoomIn(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GraphControl.ZoomBy(1.2);
+    private void GraphZoomOut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GraphControl.ZoomBy(1 / 1.2);
+    private void GraphShowAll(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GraphControl.ShowAll();
+    private void GraphCenterProband(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GraphControl.CenterProband();
+    private void GraphListKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel) return;
+        if (e.Key == Avalonia.Input.Key.Enter)
+        {
+            viewModel.PersonGraph.OpenBiographyCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Avalonia.Input.Key.Escape)
+        {
+            viewModel.PersonGraph.Select(null);
+            viewModel.PersonGraph.Hover(null);
+            e.Handled = true;
+        }
+    }
     private bool _canCloseWithoutPrompt;
     private EditorViewModel? _subscribedEditor;
     private bool _previewAdapterReady;

@@ -7,6 +7,30 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class GedcomSnapshotStoreTests
 {
     [Fact]
+    public void GetValidatedSourceCopyPath_VirkerUdenDenOprindeligeFilOgAfviserAendretKopi()
+    {
+        var sourcePath = CreateTemporaryGedcomFile();
+        var outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new FileSystemGedcomSnapshotStore();
+            store.Save(outputDirectory, sourcePath, new GedcomLoader().Load(sourcePath));
+            File.Delete(sourcePath);
+            var copy = store.GetValidatedSourceCopyPath(outputDirectory);
+            copy.Should().NotBeNull();
+            new GedcomLoader().Load(copy!).FindPerson("@I1@").Should().NotBeNull();
+            File.AppendAllText(copy!, "ændret");
+            var action = () => store.GetValidatedSourceCopyPath(outputDirectory);
+            action.Should().Throw<GedcomSnapshotException>().WithMessage("*integritetskontrol*");
+        }
+        finally
+        {
+            DeleteIfExists(sourcePath);
+            DeleteDirectoryIfExists(outputDirectory);
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_RoundTripsSourceIdentityAndRawPersonSegments()
     {
         var sourcePath = CreateTemporaryGedcomFile();

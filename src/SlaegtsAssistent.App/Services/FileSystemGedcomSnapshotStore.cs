@@ -59,7 +59,18 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
                     $"GEDCOM-snapshotets formatversion {manifest.FormatVersion} understøttes ikke.");
             }
 
+            if (string.IsNullOrEmpty(manifest.SourceHash) ||
+                manifest.SourceCopyFileName != $"source-{manifest.SourceHash}.gedcom" ||
+                manifest.SourceHash.Length != 64 || !manifest.SourceHash.All(Uri.IsHexDigit))
+            {
+                throw new GedcomSnapshotException("GEDCOM-snapshotets kildefil er ugyldig.");
+            }
+
             var sourceCopyPath = Path.Combine(directory, manifest.SourceCopyFileName);
+            if (new FileInfo(sourceCopyPath).LinkTarget is not null)
+            {
+                throw new GedcomSnapshotException("GEDCOM-snapshotets kildefil må ikke være et symbolsk link.");
+            }
             if (!File.Exists(sourceCopyPath))
             {
                 throw new GedcomSnapshotException(
@@ -103,6 +114,12 @@ public sealed class FileSystemGedcomSnapshotStore : IGedcomSnapshotStore
                 "Der mangler adgang til GEDCOM-snapshotet.",
                 exception);
         }
+    }
+
+    public string? GetValidatedSourceCopyPath(string? outputDirectory)
+    {
+        var snapshot = Load(outputDirectory);
+        return snapshot is null ? null : Path.Combine(GetSnapshotDirectory(outputDirectory!), $"source-{snapshot.SourceHash}.gedcom");
     }
 
     public void Save(string outputDirectory, string sourcePath, FamilyTree familyTree)

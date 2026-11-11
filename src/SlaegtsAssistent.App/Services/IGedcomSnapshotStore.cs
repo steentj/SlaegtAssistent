@@ -16,5 +16,7 @@ public interface IGedcomSnapshotStore
 {
     GedcomSnapshot? Load(string? outputDirectory);
 
+    string? GetValidatedSourceCopyPath(string? outputDirectory) => null;
+
     void Save(string outputDirectory, string sourcePath, FamilyTree familyTree);
 }

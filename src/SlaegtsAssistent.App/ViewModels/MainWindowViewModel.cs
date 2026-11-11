@@ -1299,6 +1299,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _allPeople.AddRange(people);
         ApplyPersonFilter();
         ApplyBiographyTemplateCommand.NotifyCanExecuteChanged();
+        QueueGraphRefresh();
     }
 
     private void ApplyPersonFilter()
@@ -1492,6 +1493,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void EditorOnPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
+        if (args.PropertyName == nameof(EditorViewModel.MarkdownText)) QueueGraphRefresh();
         if (args.PropertyName == nameof(EditorViewModel.IsDirty))
         {
             UpdateDirtyState();
@@ -1516,6 +1518,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnIsImportingChanged(bool value)
     {
+        if (value)
+        {
+            _graphDebounce?.Cancel();
+            _graphCancellation?.Cancel();
+            _graphRevision++;
+        }
+        if (!value) QueueGraphRefresh();
         SelectGedcomFileCommand.NotifyCanExecuteChanged();
         ApplyBiographyTemplateCommand.NotifyCanExecuteChanged();
         CancelImportCommand.NotifyCanExecuteChanged();

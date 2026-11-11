@@ -3,7 +3,7 @@
 
 Udvikles i små, afsluttede bidder (sprints), hvor hvert trin resulterer i et funktionelt program.
 
-Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares, så eksisterende specifikationshenvisninger fortsat virker. Personlinks er gennemført som sprint 5. Næste sprint er sprint 6 om brugervenlig skabelonredigering; grafisk slægtstræ og eksport flyttes til sprint 7.
+Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares, så eksisterende specifikationshenvisninger fortsat virker. Personlinks er gennemført som sprint 5. Sprint 6 omhandler brugervenlig skabelonredigering. Trin 12 er planlagt som sprint 7A–7C med særskilte leverancer for grafvisning, grafeksport/udskrift og biografieksport.
 
 ### Trin 1: Fundamentet (Uden AI)
 *   **Mål:** Læs data og tillad manuel redigering.
@@ -120,13 +120,20 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Succeskriterium:** En førstegangsbruger kan på højst fem minutter ændre sektionsrækkefølge, skjule en sektion, vælge liste eller tabel og gemme en gyldig skabelon uden at se eller skrive `{{ ... }}`.
 *   **Specifikation:** [Analyse og beslutning](sprints/sprint-06-brugervenlig-skabelonredigering/Analyse.md), [udførlig implementeringsplan](sprints/sprint-06-brugervenlig-skabelonredigering/Plan.md), [krav](sprints/sprint-06-brugervenlig-skabelonredigering/Requirements.md) og [validering](sprints/sprint-06-brugervenlig-skabelonredigering/Validation.md).
 
-### Trin 12: Grafisk Slægtstræ & Eksport SPRINT 7
-*   **Mål:** Opsætte output fra applikationen
+### Trin 12: Interaktivt personnetværk og eksport SPRINT 7A–7C
+*   **Mål:** Navigér i alle personforbindelser gennem en Obsidian-inspireret graf, og del færdige grafer og redigerede biografier i lokale standardformater.
 *   **Forudsætning:** Trin 5–11 er færdige, så eksporten arbejder på stabile, brugervenligt konfigurerede persondokumenter med dokumenteret synkronisering.
-*   **Opgaver:**
-    *   Udvikling af funktion til at generere Graphviz .dot-filer ud fra GEDCOM-træet. 
-    *   Integration af Graphviz-rendering og visning af interaktivt, zoombart slægtstræ (SVG) i appen via Avalonia.Svg.
-    *   Implementering af udskriftsfunktion samt eksport af slægtstræ (SVG/PNG) og biografier (PDF/DOCX/ODT) via lokal Python/Pandoc-sidecar.
+*   **Status:** Detaljeret planlagt; implementering og validering er ikke gennemført som del af planlægningen.
+*   **Sprint 7A – personnetværk:**
+    1. Saml alle kendte personer, godkendte familierelationer og entydige Markdown-personlinks i én graf med stabil identitet og diagnostik.
+    2. Generér DOT og beregn lokalt kraftbaseret layout med Graphviz `sfdp`; vis grafen i en dedikeret Avalonia-tegnekontrol med zoom og panorering.
+    3. Vis kvinder som røde prikker, mænd som blå og ukendt/andet køn som grå. En frit valgt rodperson/proband vises som en lidt større prik med ring; probandvalg skjuler ingen personer eller forbindelser.
+    4. Vis navn og eksisterende fødsels-/dødsdatoer ved hover/fokus på personen og alle direkte forbundne personer, suppleret med en fuldstændig tilgængelig nabooversigt.
+    5. Åbn personens eksisterende Markdown-dokument ved klik uden at ændre proband eller miste ugemte tekster. Søgning omfatter hele grafen.
+*   **Sprint 7B – grafeksport og udskrift:** Eksportér hele grafen eller aktuelt udsnit som SVG, PNG og PDF. Etablér lokal sidecar og private værktøjspakker. Udskriv genererer PDF og åbner systemets PDF-fremviser, hvor brugeren vælger printer.
+*   **Sprint 7C – biografieksport:** Eksportér aktuelle, eventuelt ugemte biografitekster som DOCX, PDF og ODT, samlet eller som separate filer, med kontrollerede lokale billeder, interne personlinks, batchstatus og udskriftsflow.
+*   **Teknisk beslutning:** Interaktion sker på native noder/koordinater, ikke gennem en statisk SVG som eneste UI. Eksport bruger en fælles grafscene; persondokumenter genrenderes eller gemmes ikke som bivirkning af eksport. Alt arbejde udføres lokalt.
+*   **Specifikation:** [Samlet implementeringsvejledning](sprints/sprint-07a-personnetvaerk/Implementeringsvejledning.md), [sprint 7A](sprints/sprint-07a-personnetvaerk/Plan.md), [grafkontrakt](sprints/sprint-07a-personnetvaerk/Grafkontrakt.md), [sprint 7B](sprints/sprint-07b-grafeksport-og-udskrift/Plan.md), [fælles eksportkontrakt](sprints/sprint-07b-grafeksport-og-udskrift/Eksportkontrakt.md), [sprint 7C](sprints/sprint-07c-biografieksport/Plan.md) og [dokumentkontrakt](sprints/sprint-07c-biografieksport/Dokumentkontrakt.md). Hver sprint og hver feature har særskilte krav og valideringsplaner.
 
 ### Trin 13: Den Lokale AI-Assistent SPRINT 8
 *   **Mål:** Få hjælp til at skrive prosaen.

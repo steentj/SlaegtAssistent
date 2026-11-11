@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:views="using:SlaegtsAssistent.App.Views"
         xmlns:wv="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.WebView"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -155,7 +156,7 @@
                     Padding="12">
                 <Grid RowDefinitions="Auto,*,Auto">
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                        <StackPanel Spacing="2">
+                        <StackPanel Spacing="2" IsVisible="{Binding IsBiographyTab}">
                             <TextBlock Text="{Binding ActivePersonText}"
                                        FontSize="18"
                                        FontWeight="SemiBold" />
@@ -163,13 +164,47 @@
                                        FontSize="11"
                                        Foreground="{DynamicResource AppMutedTextBrush}" />
                         </StackPanel>
+                        <StackPanel Spacing="2" IsVisible="{Binding IsGraphTab}">
+                            <TextBlock Text="{Binding PersonGraph.ProbandText}" FontSize="18" FontWeight="SemiBold" />
+                        </StackPanel>
                         <Button Grid.Column="1"
                                 Content="Gem ændringer"
                                 Command="{Binding SaveAllCommand}"
+                                IsVisible="{Binding IsBiographyTab}"
                                 VerticalAlignment="Center" />
                     </Grid>
 
-                    <TabControl Grid.Row="1">
+                    <TabControl Grid.Row="1" SelectedIndex="{Binding DocumentTabIndex, Mode=TwoWay}">
+                        <TabItem Header="Graf">
+                            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Opdatér graf" Command="{Binding RefreshGraphCommand}" />
+                                    <TextBox Width="180" PlaceholderText="Søg person" Text="{Binding PersonGraph.SearchText}" />
+                                    <Button Content="Brug som proband" Command="{Binding PersonGraph.UseAsProbandCommand}" />
+                                    <Button Content="Åbn biografi" Command="{Binding PersonGraph.OpenBiographyCommand}" />
+                                </StackPanel>
+                                <Grid Grid.Row="1" ColumnDefinitions="*,200" ColumnSpacing="8">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="+" Click="GraphZoomIn" ToolTip.Tip="Zoom ind" />
+                                            <Button Content="−" Click="GraphZoomOut" ToolTip.Tip="Zoom ud" />
+                                            <Button Content="Vis alle" Click="GraphShowAll" />
+                                            <Button Content="Centrér proband" Click="GraphCenterProband" />
+                                        </StackPanel>
+                                        <views:PersonGraphControl x:Name="GraphControl" Grid.Row="1" DataContext="{Binding PersonGraph}" />
+                                    </Grid>
+                                    <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="8">
+                                        <ListBox ItemsSource="{Binding PersonGraph.SearchResults}" SelectedItem="{Binding PersonGraph.SelectedPerson, Mode=TwoWay}" KeyDown="GraphListKeyDown" AutomationProperties.Name="Søgte personer">
+                                            <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding PersonGraph.DirectConnections}">
+                                            <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Details}" TextWrapping="Wrap" Margin="0,0,0,8" /></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl></ScrollViewer>
+                                    </Grid>
+                                </Grid>
+                                <TextBlock Grid.Row="2" Text="{Binding PersonGraph.Status}" TextWrapping="Wrap" />
+                            </Grid>
+                        </TabItem>
                         <TabItem Header="Editor">
                             <Grid RowDefinitions="Auto,*" RowSpacing="8">
                                 <StackPanel IsVisible="{Binding Editor.HasPersonLinks}" Spacing="4">
@@ -228,7 +263,7 @@
                         </TabItem>
                     </TabControl>
 
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Grid.Row="2" IsVisible="{Binding IsBiographyTab}"
                                Text="Fri tekst ændres aldrig automatisk af GEDCOM."
                                FontSize="11"
                                Foreground="{DynamicResource AppMutedTextBrush}"
@@ -335,7 +370,8 @@
                 <TextBlock Text="{Binding SaveStatusText}"
                            Foreground="{DynamicResource AppAccentBrush}"
                            FontWeight="SemiBold" />
-                <TextBlock Grid.Column="1" Text="{Binding ActivePersonText}" Foreground="{DynamicResource AppMutedTextBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding ActivePersonText}" IsVisible="{Binding IsBiographyTab}" Foreground="{DynamicResource AppMutedTextBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding PersonGraph.ProbandText}" IsVisible="{Binding IsGraphTab}" Foreground="{DynamicResource AppMutedTextBrush}" />
                 <TextBlock Grid.Column="2" Text="{Binding ActiveFilePathText}" Foreground="{DynamicResource AppMutedTextBrush}" />
                 <TextBlock Grid.Column="3" Text="Lokal behandling" Foreground="{DynamicResource AppMutedTextBrush}" />
             </Grid>
