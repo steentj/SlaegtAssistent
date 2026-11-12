@@ -65,4 +65,34 @@ public sealed class PersonGraphControlTests
         finally { window.Close(); }
         return Task.CompletedTask;
     });
+
+    [Fact]
+    public Task TrækOverPersonPanorererGrafenUdenAtÅbnePerson() => HeadlessTestApplication.RunAsync(() =>
+    {
+        string? opened = null;
+        var model = new PersonGraphViewModel(id => opened = id);
+        model.SetGraph(new PersonGraphBuilder().Build([new("A", "Anna", null, null, null)], []),
+            new PersonGraphLayout(new GraphBounds(100, 100), new Dictionary<string, GraphPoint> { ["A"] = new(50, 50) }));
+        var control = new PersonGraphControl { DataContext = model };
+        var window = new Window { Width = 400, Height = 400, Content = control };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            control.ShowAll();
+            var before = control.GetVisibleWorldBounds().Origin;
+            var center = new Point(control.Bounds.Width / 2, control.Bounds.Height / 2);
+            var dragged = new Point(center.X + 40, center.Y + 20);
+            window.MouseDown(center, MouseButton.Left, RawInputModifiers.None);
+            window.MouseMove(dragged, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(dragged, MouseButton.Left, RawInputModifiers.None);
+            var after = control.GetVisibleWorldBounds().Origin;
+
+            after.Should().NotBe(before);
+            opened.Should().BeNull();
+            model.SelectedPerson.Should().BeNull();
+        }
+        finally { window.Close(); }
+        return Task.CompletedTask;
+    });
 }

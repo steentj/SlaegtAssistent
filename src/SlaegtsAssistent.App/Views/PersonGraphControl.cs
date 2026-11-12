@@ -205,7 +205,7 @@ public sealed class PersonGraphControl : Control
         if (_pointerDown is { } down)
         {
             if (Math.Abs(point.X - down.X) > 4 || Math.Abs(point.Y - down.Y) > 4) _dragged = true;
-            if (_dragged && (_pressedId is null || _middleDrag)) _camera = _camera.Pan(point.X - _previous.X, point.Y - _previous.Y);
+            if (_dragged) _camera = _camera.Pan(point.X - _previous.X, point.Y - _previous.Y);
             _previous = point;
         }
         else _model?.Hover(Hit(point));
