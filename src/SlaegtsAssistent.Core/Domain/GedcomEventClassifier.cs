@@ -15,6 +15,7 @@ public static class GedcomEventClassifier
             "DEAT" => GedcomEventCategory.Death,
             "BURI" => GedcomEventCategory.Burial,
             "CENS" => GedcomEventCategory.Census,
+            "RESI" => GedcomEventCategory.Residence,
             "EVEN" when IsMilitaryService(type) => GedcomEventCategory.MilitaryService,
             _ => GedcomEventCategory.Other,
         };

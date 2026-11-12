@@ -10,5 +10,6 @@ public enum GedcomEventCategory
     Burial,
     Census,
     MilitaryService,
+    Residence,
     Other,
 }
