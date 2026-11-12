@@ -135,21 +135,33 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Teknisk beslutning:** Interaktion sker på native noder/koordinater, ikke gennem en statisk SVG som eneste UI. Eksport bruger en fælles grafscene; persondokumenter genrenderes eller gemmes ikke som bivirkning af eksport. Alt arbejde udføres lokalt.
 *   **Specifikation:** [Samlet implementeringsvejledning](sprints/sprint-07a-personnetvaerk/Implementeringsvejledning.md), [sprint 7A](sprints/sprint-07a-personnetvaerk/Plan.md), [grafkontrakt](sprints/sprint-07a-personnetvaerk/Grafkontrakt.md), [sprint 7B](sprints/sprint-07b-grafeksport-og-udskrift/Plan.md), [fælles eksportkontrakt](sprints/sprint-07b-grafeksport-og-udskrift/Eksportkontrakt.md), [sprint 7C](sprints/sprint-07c-biografieksport/Plan.md) og [dokumentkontrakt](sprints/sprint-07c-biografieksport/Dokumentkontrakt.md). Hver sprint og hver feature har særskilte krav og valideringsplaner.
 
-### Trin 13: Den Lokale AI-Assistent SPRINT 8
+### Trin 13: Versionsstyring af persondokumenter SPRINT 7D
+*   **Mål:** Brugeren kan versionere alle persondokumenter lokalt med Git gennem et simpelt brugerinterface og rulle tilbage uden at miste historik.
+*   **Forudsætning:** Trin 10–11 er implementeret (dokumentkatalog, editorcache og gemning).
+*   **Feature-rækkefølge:**
+    1. Core-typer og parsere for Git-output.
+    2. Git-opslag og lokal versionsservice (init, status, commit, historik, diff, ikke-destruktiv tilbagerulning).
+    3. Commit-knap med commitdialog i hovedvinduet.
+    4. Versionshistorik-vindue (status, Vis ændringer, Commit alle) og diffvindue.
+    5. Tilbagerulning (Rul tilbage her), regression og dokumentation.
+*   **Beslutning:** Git CLI findes lokalt (privat pakke, kendte stier eller `PATH`); mangler Git, deaktiveres funktionen tydeligt. Medpakning af Git og automatisk commit før import er opfølgning.
+*   **Specifikation:** [Analyse](sprints/sprint-07d-versionsstyring/Analyse.md), [implementeringsvejledning](sprints/sprint-07d-versionsstyring/Implementeringsvejledning.md), [plan](sprints/sprint-07d-versionsstyring/Plan.md), [krav](sprints/sprint-07d-versionsstyring/Requirements.md) og [validering](sprints/sprint-07d-versionsstyring/Validation.md).
+
+### Trin 14: Den Lokale AI-Assistent SPRINT 8
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 14: Lokale Bøger som Sandhed (RAG) SPRINT 9
+### Trin 15: Lokale Bøger som Sandhed (RAG) SPRINT 9
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 15: Transkriberings-modulet (HTR) SPRINT 10
+### Trin 16: Transkriberings-modulet (HTR) SPRINT 10
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.
