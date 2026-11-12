@@ -12,11 +12,9 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class GraphWorkspaceUiTests
 {
     [Fact]
-    public Task GraffanenSøgerAllePersonerOgViserProbanden() => HeadlessTestApplication.RunAsync(() =>
+    public Task GraffanenSøgerAllePersonerOgViserProbanden() => HeadlessTestApplication.RunAsync(async () =>
     {
         var vm = new MainWindowViewModel();
-        vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build(
-            [new("A", "Anna", "F", null, null), new("B", "Bo", "M", null, null)], []), null, "A");
         var window = new MainWindow();
         var webView = window.FindControl<NativeWebView>("PreviewWebView")!;
         ((Panel)webView.Parent!).Children.Remove(webView);
@@ -27,6 +25,13 @@ public sealed class GraphWorkspaceUiTests
             window.Measure(new Size(1280, 800));
             window.Arrange(new Rect(0, 0, 1280, 800));
             Dispatcher.UIThread.RunJobs();
+            // Lad grafens forsinkede opdatering køre færdigt, så den ikke overskriver testgrafen bagefter.
+            await Task.Delay(800);
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(200);
+            Dispatcher.UIThread.RunJobs();
+            vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build(
+                [new("A", "Anna", "F", null, null), new("B", "Bo", "M", null, null)], []), null, "A");
             window.GetVisualDescendants().OfType<TabControl>().Single().Items
                 .Cast<TabItem>().Select(tab => tab.Header).Should().Equal("Graf", "Editor", "Preview");
             var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg person");
@@ -40,6 +45,5 @@ public sealed class GraphWorkspaceUiTests
             vm.IsGraphTab.Should().BeTrue();
         }
         finally { window.Close(); }
-        return Task.CompletedTask;
     });
 }
