@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed record LocalProcessRequest(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, TimeSpan Timeout);
+public sealed record LocalProcessRequest(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, TimeSpan Timeout, IReadOnlyDictionary<string, string?>? EnvironmentVariables = null);
 public sealed record LocalProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
 public interface ILocalProcessRunner
@@ -34,13 +34,15 @@ public sealed class LocalProcessRunner : ILocalProcessRunner
             RedirectStandardError = true,
         };
         foreach (var argument in request.Arguments) start.ArgumentList.Add(argument);
+        if (request.EnvironmentVariables is not null)
+            foreach (var variable in request.EnvironmentVariables) start.Environment[variable.Key] = variable.Value;
         using var process = new Process { StartInfo = start };
         process.Start();
         using var kill = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });
         try
         {
-            var stdout = ReadBoundedAsync(process.StandardOutput, 1024 * 1024, timeout.Token);
-            var stderr = ReadBoundedAsync(process.StandardError, 4 * 1024 * 1024, timeout.Token);
+            var stdout = ReadBoundedAsync(process.StandardOutput.BaseStream, 1024 * 1024, timeout.Token);
+            var stderr = ReadBoundedAsync(process.StandardError.BaseStream, 4 * 1024 * 1024, timeout.Token);
             var exited = process.WaitForExitAsync(timeout.Token);
             var completed = await Task.WhenAny(stdout, stderr, exited).ConfigureAwait(false);
             if (completed.IsFaulted || completed.IsCanceled) await completed.ConfigureAwait(false);
@@ -62,16 +64,16 @@ public sealed class LocalProcessRunner : ILocalProcessRunner
         }
     }
 
-    private static async Task<string> ReadBoundedAsync(StreamReader reader, int maximum, CancellationToken token)
+    private static async Task<string> ReadBoundedAsync(Stream stream, int maximum, CancellationToken token)
     {
-        var result = new StringBuilder();
-        var buffer = new char[4096];
+        using var result = new MemoryStream();
+        var buffer = new byte[4096];
         int read;
-        while ((read = await reader.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false)) != 0)
+        while ((read = await stream.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false)) != 0)
         {
             if (result.Length + read > maximum) throw new InvalidDataException("Et lokalt værktøj gav for meget output.");
-            result.Append(buffer, 0, read);
+            result.Write(buffer, 0, read);
         }
-        return result.ToString();
+        return Encoding.UTF8.GetString(result.GetBuffer(), 0, (int)result.Length);
     }
 }

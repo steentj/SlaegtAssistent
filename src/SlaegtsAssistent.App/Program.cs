@@ -12,6 +12,11 @@ sealed class Program
     public static int Main(string[] args)
     {
         if (Array.Exists(args, argument =>
+                string.Equals(argument, "--release-export-smoke-test", StringComparison.Ordinal)))
+        {
+            return ReleaseExportSmokeTest.Run();
+        }
+        if (Array.Exists(args, argument =>
                 string.Equals(argument, "--release-smoke-test", StringComparison.Ordinal)))
         {
             return ReleaseSmokeTest.Run();

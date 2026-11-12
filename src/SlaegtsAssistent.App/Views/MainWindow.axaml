@@ -184,14 +184,25 @@
                                     <Button Content="Åbn biografi" Command="{Binding PersonGraph.OpenBiographyCommand}" />
                                 </StackPanel>
                                 <Grid Grid.Row="1" ColumnDefinitions="*,200" ColumnSpacing="8">
-                                    <Grid RowDefinitions="Auto,*">
+                                    <Grid RowDefinitions="Auto,Auto,*">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Button Content="+" Click="GraphZoomIn" ToolTip.Tip="Zoom ind" />
                                             <Button Content="−" Click="GraphZoomOut" ToolTip.Tip="Zoom ud" />
                                             <Button Content="Vis alle" Click="GraphShowAll" />
                                             <Button Content="Centrér proband" Click="GraphCenterProband" />
                                         </StackPanel>
-                                        <views:PersonGraphControl x:Name="GraphControl" Grid.Row="1" DataContext="{Binding PersonGraph}" />
+                                        <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,6">
+                                            <CheckBox x:Name="ExportViewport" Content="Aktuelt udsnit" Margin="0,0,12,0" />
+                                            <CheckBox x:Name="ExportLabels" Content="Vis navne og datoer" IsChecked="True" Margin="0,0,12,0" />
+                                            <ComboBox x:Name="ExportPngSize" SelectedIndex="1" Width="110" Margin="0,0,8,0"><ComboBoxItem Content="2048 px"/><ComboBoxItem Content="4096 px"/><ComboBoxItem Content="8192 px"/></ComboBox>
+                                            <ComboBox x:Name="ExportPaper" SelectedIndex="0" Width="130" Margin="0,0,8,0"><ComboBoxItem Content="A4 liggende"/><ComboBoxItem Content="A4 stående"/><ComboBoxItem Content="A3 liggende"/><ComboBoxItem Content="A3 stående"/></ComboBox>
+                                            <Button Content="SVG…" Click="GraphExportSvg" Margin="0,0,6,0" />
+                                            <Button Content="PDF…" Click="GraphExportPdf" Margin="0,0,6,0" />
+                                            <Button Content="PNG…" Click="GraphExportPng" />
+                                            <Button Content="Udskriv…" Click="GraphPrint" Margin="6,0,0,0" />
+                                            <Button x:Name="CancelGraphExport" Content="Annullér eksport" Click="GraphCancelExport" IsEnabled="False" Margin="6,0,0,0" />
+                                        </WrapPanel>
+                                        <views:PersonGraphControl x:Name="GraphControl" Grid.Row="2" DataContext="{Binding PersonGraph}" />
                                     </Grid>
                                     <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="8">
                                         <ListBox ItemsSource="{Binding PersonGraph.SearchResults}" SelectedItem="{Binding PersonGraph.SelectedPerson, Mode=TwoWay}" KeyDown="GraphListKeyDown" AutomationProperties.Name="Søgte personer">

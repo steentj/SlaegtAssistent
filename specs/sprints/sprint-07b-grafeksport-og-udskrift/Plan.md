@@ -1,6 +1,6 @@
 # Plan: Sprint 7B – grafeksport og udskrift
 
-Anden del af roadmap-trin 12. Forudsætning: sprint 7A's grafmodel og koordinater er tilgængelige. Status: planlagt. Leverancen er selvstændig SVG/PNG/PDF samt det eksplicit beskrevne udskriftsflow via systemets PDF-fremviser.
+Anden del af roadmap-trin 12. **Status: afsluttet for lokal brug på denne Mac**, efter brugerens afgrænsning og manuelle afprøvning. SVG, PNG, PDF og udskriftsflow er implementeret; tekstens læsbarhed følges særskilt i [issue #9](https://github.com/steentj/SlaegtAssistent/issues/9). Den selvstændige publicerede apphost er ikke godkendt på denne Mac; lokal brug er afprøvet via `dotnet`. Valideringsjournalen beskriver de kontroller, der faktisk er gennemført, og de forhold, der ikke er afprøvet.
 
 Læs [Eksportkontrakt.md](Eksportkontrakt.md). Implementér:
 
@@ -9,6 +9,6 @@ Læs [Eksportkontrakt.md](Eksportkontrakt.md). Implementér:
 
 Genbrug procesrunner og værktøjsopslag fra 7A, atomisk filskrivning og eksisterende dialog-/picker-mønstre. Nye App-services: `IExportFilePickerService`, `IGraphExportService`, `GraphExportService`, `ILocalExportSidecar`, `LocalExportSidecar`, `ISystemDocumentLauncher`. Nye ViewModels: `GraphExportViewModel`. Nye Core-typer under `Core/Graph/Export`: `GraphExportOptions`, `GraphExportScene`, `GraphExportSceneBuilder`, `GraphSvgWriter`. Bitmap-rendering forbliver i App, ikke Core.
 
-Første feature skal bevise en rigtig graf-PDF fra en lille fast scene på hver målplatform, før der bygges et fuldt dialogflow. Fastlås herefter værktøjsversioner, licenser og pakningsopsætning. En isoleret prøve er en del af implementeringen; Python- og native-afhængigheder skal ikke vælges frit af kodningsmodellen.
+For denne lokale leverance fastholdes de afprøvede macOS-arm64-binærpakker i kontrolsummerede arkiver. En ren build genskaber dem uden download. De indsamlede licenser og begrænsninger ved komponenternes oprindelsesoplysninger står i [licensoversigten](../../../vendor/licenser/README.md).
 
 Følg samme arbejdsrytme som [7A](../sprint-07a-personnetvaerk/Plan.md): afgrænset feature, fejlende tests, implementering, dokumenteret manuel kontrol. Godkendelse må ikke foregives ved manglende maskiner eller printer. Ingen GitHub-/cloud-tjeneste kræves under appens brug.

@@ -26,6 +26,13 @@ public sealed class PersonGraphControl : Control
     private bool _middleDrag;
     private GraphSpatialIndex? _spatialIndex;
 
+    public (GraphPoint Origin, GraphBounds Bounds) GetVisibleWorldBounds()
+    {
+        if (Bounds.Width <= 0 || Bounds.Height <= 0 || _camera.Zoom <= 0)
+            throw new InvalidOperationException("Grafens udsnit er ikke tilgængeligt.");
+        return (_camera.ToWorld(new GraphPoint(0, 0)), new GraphBounds(Bounds.Width / _camera.Zoom, Bounds.Height / _camera.Zoom));
+    }
+
     public PersonGraphControl()
     {
         DataContextChanged += (_, _) => AttachModel(DataContext as PersonGraphViewModel);

@@ -20,5 +20,5 @@ public static class HeadlessTestApplication
 
     public static AppBuilder BuildAvaloniaApp() => AppBuilder
         .Configure<SlaegtsAssistent.App.App>()
-        .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        .UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }

@@ -23,6 +23,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            ExportJobDirectory.CleanupAbandoned(System.IO.Path.GetTempPath(), System.DateTime.UtcNow);
+            PrintDocumentStore.Cleanup(System.IO.Path.GetTempPath(), System.DateTime.UtcNow);
             var services = ConfigureServices(desktop);
             _services = services;
             var settings = services.GetRequiredService<IApplicationSettingsService>().Load();

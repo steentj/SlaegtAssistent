@@ -9,6 +9,6 @@
 | X-05 | SVG er selvstændig; PNG har valgt opløsning; PDF har korrekt papir/retning/margen og søgbar tekst | 02 |
 | X-06 | Filvalg, overskrivningsbekræftelse, annullering og atomisk publicering beskytter tidligere output | 02 |
 | X-07 | Udskriv åbner den genererede PDF med forklaring og reserve til Gem PDF; appen påstår ikke printerkvittering | 02 |
-| X-08 | Joboprydning og faktisk afprøvet platformspakning dokumenteres for alle tre platforme | 01–02 |
+| X-08 | Joboprydning og faktisk afprøvet lokal programpakke dokumenteres for denne Mac | 01–02 |
 
 Normative størrelser, formater og fejlpolitikker findes i [Eksportkontrakt.md](Eksportkontrakt.md). DOT kan bruges som udvikler-/fejlsøgningsartefakt, men er ikke et nyt påkrævet brugerformat.

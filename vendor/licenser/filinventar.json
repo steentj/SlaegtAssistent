@@ -1,0 +1,1258 @@
+{
+  "formatVersion": 1,
+  "platform": "macOS arm64",
+  "pdfVaerktoej": {
+    "oplysteVersioner": {
+      "python": "3.13.1",
+      "weasyprint": "66.0",
+      "pyinstaller": "6.22.3"
+    },
+    "filer": [
+      {
+        "sti": "_internal/PIL/.dylibs/libXau.6.dylib",
+        "sha256": "d72b243f3f5706026980aabdb433d78b91a3ba837135bbecdb4de325e616f06c"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libavif.16.4.2.dylib",
+        "sha256": "a5a4d7b78febfada791f24746a64ef9639f630aaeb4a01d04ea16fa8f9453839"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libjpeg.62.4.0.dylib",
+        "sha256": "5b9c19697633f9bfe374dcd7d07c2b1a3d54597e4b0ac393cc840ed3d1087413"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/liblcms2.2.dylib",
+        "sha256": "257cc40fa271d7f97f05a19b1368cec7427318b9c229cc53c1ccdc502885105c"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/liblzma.5.dylib",
+        "sha256": "a3b0800f35ddfa6f3ed58037076538b384c1dce20463d23157345acd2f6bdfe4"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libopenjp2.2.5.4.dylib",
+        "sha256": "2a32c480981eb8d0be84de27adca79a464c3d0c32867100b37bf69f03616317d"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libsharpyuv.0.dylib",
+        "sha256": "04f424cee191ed92a2675edd060efb667a0e9f0ee21db156f14b2066a8794afd"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libtiff.6.dylib",
+        "sha256": "1108a3834210fdb7e447b85ca98105179064387991bc22837ad65664bef14918"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libwebp.7.dylib",
+        "sha256": "7eb21d47e03ebd47986a547c1731a70db51f06d0b7af4fa659f6f3ac1eb8828d"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libwebpdemux.2.dylib",
+        "sha256": "c39b6fbe5794e9c9f7f935057ccaad6ee2c75a0fdfe24313ef1195e5c44f3333"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libwebpmux.3.dylib",
+        "sha256": "5d657600da37437995c76c61cc37105d12f7f3cfe8d3faeb8926d676b46de32b"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libxcb.1.1.0.dylib",
+        "sha256": "41889f04fd577d142dfd9c0dca11366b8c927a1bae4d9283eebe53b70c92cedf"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libz.1.3.1.zlib-ng.dylib",
+        "sha256": "da218f81bc0abd4f199c8a94d605c1b17c3cf442321d9725f27afd52ebd938d1"
+      },
+      {
+        "sti": "_internal/PIL/_avif.cpython-313-darwin.so",
+        "sha256": "de4a5057b73ccd96802680583a12508525c5012c88ed16c4bfe9e2e6d7836995"
+      },
+      {
+        "sti": "_internal/PIL/_imaging.cpython-313-darwin.so",
+        "sha256": "78f3d46f482719d25b2b23496ff643fddaac595a82c0852140ad1ecfacd3c1d1"
+      },
+      {
+        "sti": "_internal/PIL/_imagingcms.cpython-313-darwin.so",
+        "sha256": "dae3ad30069f362110181cd8caa439d11fe83a25dc78b9dce1509c454e426c71"
+      },
+      {
+        "sti": "_internal/PIL/_imagingtk.cpython-313-darwin.so",
+        "sha256": "58f14fc2ef1272f2ec2ad1f062e5882b691341ee4d14c5333cff460c74df9811"
+      },
+      {
+        "sti": "_internal/PIL/_webp.cpython-313-darwin.so",
+        "sha256": "338f7a1c57c865ee3c12275f7f02f463d2dfb880aeb1dd410d4cf8ffff718fd7"
+      },
+      {
+        "sti": "_internal/_brotli.cpython-313-darwin.so",
+        "sha256": "ee57c1ff57026aa930c2cd4b33b48bfdf8282291a4a68617c17e1d411acfa7f5"
+      },
+      {
+        "sti": "_internal/_cffi_backend.cpython-313-darwin.so",
+        "sha256": "c010ee0a1a7206f5a5265966d751c406de9be17c7d87913aceacede38c6636c1"
+      },
+      {
+        "sti": "_internal/base_library.zip",
+        "sha256": "c23edde3d8bf8bffdc34f073bb914820e57c8a6828f39385dce68ccdd948a3d5"
+      },
+      {
+        "sti": "_internal/fontTools/misc/bezierTools.cpython-313-darwin.so",
+        "sha256": "38d34572d7ad7487d60930a8475961218fff1fa3e857da2071d280ce3dfe623b"
+      },
+      {
+        "sti": "_internal/fontTools/varLib/iup.cpython-313-darwin.so",
+        "sha256": "ab5704c2e7032cfdeb19e38b6234815d1cceb9549312c7869fcbd94c7e437aec"
+      },
+      {
+        "sti": "_internal/fonts/graf.ttf",
+        "sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e"
+      },
+      {
+        "sti": "_internal/fonts/licens.txt",
+        "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9"
+      },
+      {
+        "sti": "_internal/fonts.conf",
+        "sha256": "a1d8a5c5c86d96de52012eee0aacd1807e59f739113e575efb42130abaded095"
+      },
+      {
+        "sti": "_internal/libXau.6.dylib",
+        "symbolskLink": "PIL/.dylibs/libXau.6.dylib"
+      },
+      {
+        "sti": "_internal/libavif.16.4.2.dylib",
+        "symbolskLink": "PIL/.dylibs/libavif.16.4.2.dylib"
+      },
+      {
+        "sti": "_internal/libbrotlicommon.1.2.1.dylib",
+        "sha256": "fefa60a0a92a97029a88c41826bd9454443913639e2e6b8558f8dc4aeab52de9"
+      },
+      {
+        "sti": "_internal/libbrotlicommon.1.dylib",
+        "symbolskLink": "libbrotlicommon.1.2.1.dylib"
+      },
+      {
+        "sti": "_internal/libbrotlidec.1.2.1.dylib",
+        "sha256": "09ae293ad41f396ad0b4a00c2acac976075e98078f12ef269a8e610bf019d6fe"
+      },
+      {
+        "sti": "_internal/libbrotlidec.1.dylib",
+        "symbolskLink": "libbrotlidec.1.2.1.dylib"
+      },
+      {
+        "sti": "_internal/libcrypto.3.dylib",
+        "sha256": "1c2c7825bb8186f7b7a35fe641e68793cc903b9202cc41f34934e8fcb38f8dfd"
+      },
+      {
+        "sti": "_internal/libdatrie.1.dylib",
+        "sha256": "019eeba0f50f1a1cde4c16d4c76e6e3bfdafc54956831419c2f90c66771841cd"
+      },
+      {
+        "sti": "_internal/libfontconfig.1.dylib",
+        "sha256": "b0abc262c11d80ae2d46c5394197851c1d3cb0a41af3d555a5593aeb5e83d550"
+      },
+      {
+        "sti": "_internal/libfontconfig.dylib",
+        "symbolskLink": "libfontconfig.1.dylib"
+      },
+      {
+        "sti": "_internal/libfreetype.6.dylib",
+        "sha256": "25753ff95f14a03f8f8dde2fc4d17d10994ae52ca451ababe405cff77a4f5454"
+      },
+      {
+        "sti": "_internal/libfribidi.0.dylib",
+        "sha256": "936597d8c461e025d23618e3a341e12085cc5fd44056c8344f85836b6f9f7a45"
+      },
+      {
+        "sti": "_internal/libgio-2.0.0.dylib",
+        "sha256": "6537909cefb6824b274387be5487ec76ce1a19691f227d39305b094ed9e2a395"
+      },
+      {
+        "sti": "_internal/libglib-2.0.0.dylib",
+        "sha256": "34e91fce68b07b46b2694a0ea35887074b9ee2b9c360f9a3298a2d50ea44feaa"
+      },
+      {
+        "sti": "_internal/libgmodule-2.0.0.dylib",
+        "sha256": "e71e5955cb921602b2523608bb1a58d7c6afee308d911d204f6698cd2b3a9f49"
+      },
+      {
+        "sti": "_internal/libgobject-2.0.0.dylib",
+        "sha256": "df4c3302d9850d36655f0cb86b73ae2463e74b81efa9ff731fe332e59697d4f2"
+      },
+      {
+        "sti": "_internal/libgobject-2.0.dylib",
+        "symbolskLink": "libgobject-2.0.0.dylib"
+      },
+      {
+        "sti": "_internal/libgraphite2.3.3.1.dylib",
+        "sha256": "b5e94743843ae422be58b6b2af368102d01e09597de790630bababaf11b7a05d"
+      },
+      {
+        "sti": "_internal/libgraphite2.3.dylib",
+        "symbolskLink": "libgraphite2.3.3.1.dylib"
+      },
+      {
+        "sti": "_internal/libgthread-2.0.0.dylib",
+        "sha256": "b37cd46aed7f1da997b3edb4b93d87d4d39cd0de752d0b5d7ff600d42d67e0ff"
+      },
+      {
+        "sti": "_internal/libgthread-2.0.dylib",
+        "symbolskLink": "libgthread-2.0.0.dylib"
+      },
+      {
+        "sti": "_internal/libharfbuzz.0.dylib",
+        "sha256": "3701888a948c66cd7e88ac014f4fce6ff2b099a0280f58d46319a6c3a47fdb84"
+      },
+      {
+        "sti": "_internal/libharfbuzz.dylib",
+        "symbolskLink": "libharfbuzz.0.dylib"
+      },
+      {
+        "sti": "_internal/libintl.8.dylib",
+        "sha256": "1e9741be68ca173dffc9d719ad638cb73e7b2d950d06091eb7d69e4c8e4ae887"
+      },
+      {
+        "sti": "_internal/libjpeg.62.4.0.dylib",
+        "symbolskLink": "PIL/.dylibs/libjpeg.62.4.0.dylib"
+      },
+      {
+        "sti": "_internal/liblcms2.2.dylib",
+        "symbolskLink": "PIL/.dylibs/liblcms2.2.dylib"
+      },
+      {
+        "sti": "_internal/liblzma.5.dylib",
+        "symbolskLink": "PIL/.dylibs/liblzma.5.dylib"
+      },
+      {
+        "sti": "_internal/libmpdec.4.dylib",
+        "sha256": "0a00189df9a91e622012620fd736959c99d28deffb88137e9adf6c13f69485bb"
+      },
+      {
+        "sti": "_internal/libopenjp2.2.5.4.dylib",
+        "symbolskLink": "PIL/.dylibs/libopenjp2.2.5.4.dylib"
+      },
+      {
+        "sti": "_internal/libpango-1.0.0.dylib",
+        "sha256": "c39b5977786b59d4946b7f5e237de35e4bbacfab0d95a2eb901d69d42859466e"
+      },
+      {
+        "sti": "_internal/libpango-1.0.dylib",
+        "symbolskLink": "libpango-1.0.0.dylib"
+      },
+      {
+        "sti": "_internal/libpangoft2-1.0.0.dylib",
+        "sha256": "7baea71c60d68d82a0b7b722f6d29373a7a942dd92ad81f5cc1ce2e0bea80080"
+      },
+      {
+        "sti": "_internal/libpangoft2-1.0.dylib",
+        "symbolskLink": "libpangoft2-1.0.0.dylib"
+      },
+      {
+        "sti": "_internal/libpcre2-8.0.dylib",
+        "sha256": "4c494053ae7324f5dda00472f12c9b3d6303dcf8ac2ca3baf7dcdd7d80f95021"
+      },
+      {
+        "sti": "_internal/libpng16.16.dylib",
+        "sha256": "c662c15e52f71da5914295393a71718043afaa1f50cbfc85cfc863f4f7a9cb83"
+      },
+      {
+        "sti": "_internal/libpython3.13.dylib",
+        "sha256": "9f5e1eb3ace502bf18b90e0a2eb25b20b6281d08106125ec5cefbd29c9610199"
+      },
+      {
+        "sti": "_internal/libreadline.8.dylib",
+        "sha256": "a8a6a2cd71babc8b81a117703bcd90af1c8083dde5f74bef5b263c2ed53cb377"
+      },
+      {
+        "sti": "_internal/libsharpyuv.0.dylib",
+        "symbolskLink": "PIL/.dylibs/libsharpyuv.0.dylib"
+      },
+      {
+        "sti": "_internal/libssl.3.dylib",
+        "sha256": "c41d4093eae78e01a0763c49c3edc18f71e8ae70506dc2d744ef57638f2915bf"
+      },
+      {
+        "sti": "_internal/libthai.0.dylib",
+        "sha256": "bce94e3de983325de9eabc6160d1bdbd291c6f2ea3de8242ab68a68d10c3db4d"
+      },
+      {
+        "sti": "_internal/libtiff.6.dylib",
+        "symbolskLink": "PIL/.dylibs/libtiff.6.dylib"
+      },
+      {
+        "sti": "_internal/libwebp.7.dylib",
+        "symbolskLink": "PIL/.dylibs/libwebp.7.dylib"
+      },
+      {
+        "sti": "_internal/libwebpdemux.2.dylib",
+        "symbolskLink": "PIL/.dylibs/libwebpdemux.2.dylib"
+      },
+      {
+        "sti": "_internal/libwebpmux.3.dylib",
+        "symbolskLink": "PIL/.dylibs/libwebpmux.3.dylib"
+      },
+      {
+        "sti": "_internal/libxcb.1.1.0.dylib",
+        "symbolskLink": "PIL/.dylibs/libxcb.1.1.0.dylib"
+      },
+      {
+        "sti": "_internal/libz.1.3.1.zlib-ng.dylib",
+        "symbolskLink": "PIL/.dylibs/libz.1.3.1.zlib-ng.dylib"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_NO.txt",
+        "sha256": "cf122e25bfa6f1694023a8afeb6e034197d46e78fb41df27cc45f9f23edcfdad"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_be_BY.txt",
+        "sha256": "ba3c76d7e9926426ecf93250db3f393c11bc372ec3a64fc49b9639291e809bf3"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_bg_BG.txt",
+        "sha256": "26ca94269f58ad71be0985dbab8ed58e735bd9fffee4a17c6ae24575e1d16abf"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_ca.txt",
+        "sha256": "2069d317451414a3f34d54a26c85b07cd3268b0a014c4f8a4b64398caae7f514"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_cs_CZ.txt",
+        "sha256": "adc50a58231a94ab7f225d9913da331f9dc2049128c9742cf60d0c32a8b04028"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_da_DK.txt",
+        "sha256": "6055fdab59b2d781b27a0286f8fd3b09fa3f4d706c023d6481c5044492e405ea"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_de.txt",
+        "sha256": "be7b3c67a66ea7185a69a3ce3b1e712cd6bb904dce8ac0eecdefd2f1a948baf3"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_el_GR.txt",
+        "sha256": "0b3e117f4ab079e7cbcdd7f4645f9a4f193ae123e6c781928597b27d22706aa7"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_en_GB.txt",
+        "sha256": "6f3d1dddcf62d2d452801bd86289ad5826a30d15a502c0825f5c73715372db50"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_en_US.txt",
+        "sha256": "9bcae072bff45cc0333d6b3c508c92d85b9065fc861c743c1506b303eba3f4a1"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_es.txt",
+        "sha256": "1f1088dce1140d981660faf3f5acc825e74aa1f943a8bec88cb046e4c528a1fb"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_et_EE.txt",
+        "sha256": "da273b8ec03e35774a426e9df047ad85253ec9e61a5c056f019d57c1395ef1cb"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_eu.txt",
+        "sha256": "b0dcf82345f4a6a74e290cd7e7b43b73f8612e14ed5cec53ee736edaeb1d16b5"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_fr.txt",
+        "sha256": "6951d9806c65c7f757d303061ca49cd7a1ddeddc552147f5c29de6540821f2cf"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_gl.txt",
+        "sha256": "2830f43a0a7e503765d59cc553a32bf1d342fee4e5dd7f0f19136b07e63e371b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_hr_HR.txt",
+        "sha256": "2ba15b47f64eba01489d2962a8c04c6e457a33bba418d6384bda30dfe9e23b65"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_hu_HU.txt",
+        "sha256": "d18ff3a0b4e8d2b537982085bc19de03ed77cb29bdfabc67f728bb547e10853a"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_is.txt",
+        "sha256": "64edf9fc3871e109a0b0d3a12d1ace5f7830b76d6de220e3d68679254e7969c7"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_it_IT.txt",
+        "sha256": "e6f356c3c49bc6016b6a635c20b468468eef6d011953a7051bbdfd56e17f0d3b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_lt_LT.txt",
+        "sha256": "6cd16fef901c886068d0c755c884bfcb9bc6ea9410f52152d8d01111db402938"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_lv_LV.txt",
+        "sha256": "5e2cfa2c9a2b0ea1500c8cafca40256cbfec7de5dc46c5e4ca45950f76fd8659"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_pl_PL.txt",
+        "sha256": "99df1756a8d42e035e6ad6e79d2176a31ff71607a09300c9ace259895cc87403"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_pt_BR.txt",
+        "sha256": "07400608865ce4c964cc443a9f354c733ca7f3f7d31f4463222b927cb7c54b87"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_pt_PT.txt",
+        "sha256": "62f19b9d8b42f2b0ff165ab434f40cfb4210a464f0662c31f6f99d77d0306e06"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_ro_RO.txt",
+        "sha256": "4808da6b026988000dd0943e86b77f312901e2759f11b1621e6512bddcbbe986"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_sk_SK.txt",
+        "sha256": "17b8f471cf1ec7b177d4a74bcd09e63cb4f122412b43d80489df6551985bdf27"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_sl_SI.txt",
+        "sha256": "76e518bc5426ac5e3954f5168e7737a549ad7a3b6d3f81d6fd4473a1679940da"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_sq_AL.txt",
+        "sha256": "e4175731cfc7881f595d6d1753e061c36752ff191ac7030757ea00edd0a59359"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_sr.txt",
+        "sha256": "c552643a0490b8a68e4c5fb25cf3fb4b6605c2f5e8c9cfdf8dbc1a3c2845bd62"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_sv.txt",
+        "sha256": "eee15b8d93b2413256ae1cb8af7d1489935571e0eaf15d9b27bab1203d3aafc2"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_te_IN.txt",
+        "sha256": "fca0ff51f3bf572f9f6a408cd820e43e34c4d7d298e38169b32fbf5baac59c24"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_th_TH.txt",
+        "sha256": "32164b4ee0e25b3a46a7370a1b7370ab712bbe4d8abe1443965eec7f7edc30f4"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/README_hyph_uk_UA.txt",
+        "sha256": "b5866714694f0e9a7c9d044984b4b39ec6289ade07fa7d2a083a31f5072f3529"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_af_ZA.dic",
+        "sha256": "541a45d73d92c69445613ec558c2c1a6829550d1a1ad8aa9dc6dfb752db87da1"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_as_IN.dic",
+        "sha256": "321ffb692c12792dddb4294ab5857821fc1ab8f2d0a8c0fcdced00200602ead6"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_be_BY.dic",
+        "sha256": "e4339b5a53d2f0fb4179c1060173788d5b6ed3f07bbbccb8b74f5cea614a809e"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_bg_BG.dic",
+        "sha256": "7dad4f2ccfce1909b27f53082cf57c7914809a8ba31ccbcee3dc817dcd7c7994"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_ca.dic",
+        "sha256": "4a4816e93a92df35819c5f4775106577aa279739a12c687291d747a3ce767b8b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_cs_CZ.dic",
+        "sha256": "a378d024438b446ac0524237dc6d728dc520550db5fe0fb1fdbb47c2ee0ca525"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_da_DK.dic",
+        "sha256": "7cd275073e43922adf9ec973506e7b04e3a77b513190982ce6c5dcee176f6abe"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_de_AT.dic",
+        "sha256": "3e0b4687479d25099e37ebd946998c08fcccc12a0acf9380d8b19319a50b9f3a"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_de_CH.dic",
+        "sha256": "825159436515ab150d3da0ddf5eedb814c0ec6c7eec98fbd53e3ba5b2a4a1443"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_de_DE.dic",
+        "sha256": "2e2f5ffea6bc53f67ffe8c076921c7b1b34a2ec2b9ec57a4608374bb65a1a1e1"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_el_GR.dic",
+        "sha256": "f2284153c3f9a809b959dcaeb349e00d90b4c4cf37c3d3a338b371c32f10e89d"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_en_GB.dic",
+        "sha256": "9fdc97f7faabcda30c15a9d53bc7fbf21daec795fb3c9a9588f7bdb30c563f41"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_en_US.dic",
+        "sha256": "486fb6840b1049d5d252ef784be11cd4dc2be0bf296568b74b41e4f4e17cba7d"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_eo.dic",
+        "sha256": "f2feb4cabe54b696affec72960b1670cfd9e4eae007854944bd02c0d348f59d7"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_es.dic",
+        "sha256": "a95be7365a482b930ade0ff54d413cd24357ade97cefd434b704286eda828d71"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_et_EE.dic",
+        "sha256": "2ee13914fcd9e9b110e9e3d56e1d6acc28bf792c15b1b69efc2e71ac96c23c74"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_eu.dic",
+        "sha256": "5f499f513435a8432961750fae7b31bc5d3989b686a744c331bb75471a14b71b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_fr.dic",
+        "sha256": "476ca60b958400c8b3fbe55764b4900df87acf60394ef62362705d9c701db191"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_gl.dic",
+        "sha256": "357355b82eb82ed081433503327ac4ba5b4f3606b6a3e50d69091d57eef4d5b8"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_hr_HR.dic",
+        "sha256": "77613ff6e907d2e9ffd93d45bfb16873aa9182e2215df276dbf850d1b0e28f65"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_hu_HU.dic",
+        "sha256": "d253b8c6188cd0f1b2340c31c8202bf1978611385cf69b211b56991321ccbee0"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_id_ID.dic",
+        "sha256": "ac53214620527f8a145ce4d70f0a3a5d336a145643b52547375aedacef558dc0"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_is.dic",
+        "sha256": "690ed04b72b60d05f66971ad9fd799656419228bfa8df00190adf02e27c0b1ef"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_it_IT.dic",
+        "sha256": "8c25b6fb62c2fb97586c6f7c6fb48f29f49e90a5c33c09ac9112dba6942b50cd"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_kn_IN.dic",
+        "sha256": "a15acb05a834979904330afda768accfa7fee10da386cc534d7944144eb1997f"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_lt.dic",
+        "sha256": "05bbdb2c1193cac2aaecec696900a7927dc150def37729a8b52a5702a3101e2b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_lv_LV.dic",
+        "sha256": "775d9a539fd8e98fabbfefd87af5887bb24eb4700b47ed5f8e360b0bab75b078"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_mn_MN.dic",
+        "sha256": "c49d5ead63948d84c75d43245d837a9d7c8dc36c2a97dc5e8a7ade031c7a00e9"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_mr_IN.dic",
+        "sha256": "740707cd6d149d1339e921e126a25dcea889712f4889fbc72434d753324409ed"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_nb_NO.dic",
+        "sha256": "c6c9b07d9f2c60bb47857fd629d9a453026312c894665d22c72e8e1699420f6c"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_nl_NL.dic",
+        "sha256": "0a97b76b259ed4165d094dedf9b6fb98c57734a437df0b5b263ee13e262d5f8f"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_nn_NO.dic",
+        "sha256": "c6c9b07d9f2c60bb47857fd629d9a453026312c894665d22c72e8e1699420f6c"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_or_IN.dic",
+        "sha256": "264b3a880fc7dc9f477abac80708172144ec3bb28baa8266539fe7ffff7a8a30"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_pa_IN.dic",
+        "sha256": "87b2e3d7dc8cc4e4f0bb1d6f4265e8d8eefa478fbc890a60839868af4f5c2c06"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_pl_PL.dic",
+        "sha256": "9fe3917ec1fb09b7ffa560e85fb810e098d45a9a45ad6d5c08311544dd92a100"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_pt_BR.dic",
+        "sha256": "a8eb1a64e4af4649c739211b397fa37b01f9d5774cf558fe3895fc3f26fd33a4"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_pt_PT.dic",
+        "sha256": "6f18ee89de6db21d9b06120a5527ec41d8132514fc112ccfe7d289ba91649840"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_ro_RO.dic",
+        "sha256": "24adbfe7cc2267ea5ce4afd34f7d69da5a9163ef3dd57b158bbb196b9d651e94"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_ru_RU.dic",
+        "sha256": "e9a6ae92765fc7e63d879f2ccf3f50f2b95bc8ed7618a6f31c34ce7d39844c83"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sa_IN.dic",
+        "sha256": "e7f21be6f039cef24a3643ca7bc6d196bee1ee2661e53514f2c7e1392655d733"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sk_SK.dic",
+        "sha256": "7359863ec5d5dbbf35c7d4f38faca1af7b43bc4aa643871e63f2dc0dfac4f922"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sl_SI.dic",
+        "sha256": "3d9026755aa0936e9331595a08bb65c295ccac84acefe58cb6c9fe2ff11ceef8"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sq_AL.dic",
+        "sha256": "99fbce3b0e60cc500e45643dd40903dfa71cfc1605a5b139cfb22129bd665dbe"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sr.dic",
+        "sha256": "ce785026592f525c38e67152699224d47a4cdf555a1a4eb65d50458c5548f69f"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sr_Latn.dic",
+        "sha256": "b423f910400472979a2b0fe1c95965c940e927f7588dace0e42c17f7b0663376"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_sv.dic",
+        "sha256": "44c5a59f1ef8a17b9433e4510a1abcac753d34ac875dc27ea95427f1e581f17b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_te_IN.dic",
+        "sha256": "2ad470071dfd9bb3ad5101d528e1fb0090d96c841c4f2bb07b325476b3c853fe"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_th_TH.dic",
+        "sha256": "fbd19d561c19a13d1901a0b9653e24b4c0c2c81177064266e2acb23bac68145b"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_uk_UA.dic",
+        "sha256": "ae80645b757d6b57e5cdf34ab6cf7441a2414c60bff2352c7e815c1c12baad3d"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/hyph_zu_ZA.dic",
+        "sha256": "e75802e08127877d38891c140e8989af559665bae82f94d33c340cba2aa9de20"
+      },
+      {
+        "sti": "_internal/pyphen/dictionaries/update.sh",
+        "sha256": "37afc8fb1e5ba92bef682e206ccb6e49e4147cdb38f88879e6422608a237fdb5"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_asyncio.cpython-313-darwin.so",
+        "sha256": "f974fcc91e60fa87fcab400fe33409b49d000ecb36667f196280dfe0a0c6ddc4"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_bisect.cpython-313-darwin.so",
+        "sha256": "29d4379c10d64df4dd983d3b6e9210e3f228cedf2f44d6730b81031e403baa2f"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_blake2.cpython-313-darwin.so",
+        "sha256": "fe8b45807d34b21730c525bec27a29e7b46b550536d27a456c3d4d93ab9906dd"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_bz2.cpython-313-darwin.so",
+        "sha256": "c79cbde0d7a57d8adef0ac4852651134f852979f27749b2e9dedb1137e32c50c"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_cn.cpython-313-darwin.so",
+        "sha256": "96064fa504aa920dd896d413879aafe0874dd99c805197b149eb98488ecadb75"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_hk.cpython-313-darwin.so",
+        "sha256": "47fc2754bf092817c8cdea806c0bbdfab3069832f879f979000db0a2d2c3cc5f"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_iso2022.cpython-313-darwin.so",
+        "sha256": "3d3d9b3e0f9f7d98c47c6987309d86c5b40a5f54f006b6c4df5c3c2f6401dd67"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_jp.cpython-313-darwin.so",
+        "sha256": "92f716f320ccd37ed5f8f988cd49ca6d3ed0869dfcf75fd423121df5c18fa64b"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_kr.cpython-313-darwin.so",
+        "sha256": "a81fae0fa499b703ebbf60a4276b3b7e0adbfe0501a907442a9f88264b2d34c3"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_codecs_tw.cpython-313-darwin.so",
+        "sha256": "91068d2a77aceb31e6cd9e3ce3849bf395008b4a33067d4d9abf099c3ce6ace4"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_contextvars.cpython-313-darwin.so",
+        "sha256": "5d8409cf482827284f531f824e39f2cf3f5a886a51003014ee196dc076835512"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_csv.cpython-313-darwin.so",
+        "sha256": "a29245aa49ac0b52d941be125a0b6d4f275b828ebfc5d0b40e642460c00cd767"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_ctypes.cpython-313-darwin.so",
+        "sha256": "4a95dea61d19a09886b87b3080c50cfe8176404d3216f3e9a9217147cf7f62ec"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_curses.cpython-313-darwin.so",
+        "sha256": "5afc2884cb4f1c5f0905e6021c654ddee9f1c17ad20fc511ff28a1e3679dbf06"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_datetime.cpython-313-darwin.so",
+        "sha256": "2325f2e1904fe7e7267051e7b1260fda1a2a8e030357cb8a58cce99e6bdcbd3d"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_decimal.cpython-313-darwin.so",
+        "sha256": "2be8694d8f651dbfcb9e58757be5ef8b2d4c0bee7020bf93aead616c5ecbd76d"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_elementtree.cpython-313-darwin.so",
+        "sha256": "37f85c2754877a54bcce73b4bc5349112aef16a284a209207d9807ea385a342f"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_hashlib.cpython-313-darwin.so",
+        "sha256": "4d84ea17271fc199aa112c8677afb441aeab07f44bfc97536d9c15a3afae15c6"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_heapq.cpython-313-darwin.so",
+        "sha256": "dd6b1d93a6e39454c5ea56b9e784522dc8de2e9684bdcc7e010cc89b9f58c7c5"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_json.cpython-313-darwin.so",
+        "sha256": "ba86d7a23e5e68858de366a00c855603a9925c66aaee4835ea9ab2fbb5d14ebb"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_lzma.cpython-313-darwin.so",
+        "sha256": "b89dab202fbb7014e0e5aea2ee0d57adf6d051b1c7269ec56e60b2766801b779"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_md5.cpython-313-darwin.so",
+        "sha256": "6541895c8e4330210b8206c8bcf9011e2d97238572fc1e6cc5083ede0c7d98e3"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_multibytecodec.cpython-313-darwin.so",
+        "sha256": "bbd92c5cbe9181c377261dbdce7906969f89559d2eed66e0f8d9aac8147d59cc"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_multiprocessing.cpython-313-darwin.so",
+        "sha256": "84070dfcf64d566962b42b35f97730cd697c5350d88b50ef66e615b35ef85f24"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_opcode.cpython-313-darwin.so",
+        "sha256": "804cde89e79a6c2d10be65929bf8f3cf2e7fdd5272eb8126a32f7db610d7f1d4"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_pickle.cpython-313-darwin.so",
+        "sha256": "9ba5940295ad431536eca2df2e05175b1febdf0e59fc6c9ae6e89cd1138c9132"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_posixshmem.cpython-313-darwin.so",
+        "sha256": "9c3a678170af6b7a19b0efa232c3403ebb853b87b165f03f6c574e7b5ea8a4a5"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_posixsubprocess.cpython-313-darwin.so",
+        "sha256": "a60cd29842d282284f904bb49237309e2bfd988ba9ee0d884fe2fd223486d17b"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_queue.cpython-313-darwin.so",
+        "sha256": "57eb8f20c9394db6198ca5331251d4c4860c024468ba047102773c9e2884e6e7"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_random.cpython-313-darwin.so",
+        "sha256": "6d5170ca752922670c86ac6fc148137f09f3e52773f3bbdeeb7ee369d70e3b0f"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_scproxy.cpython-313-darwin.so",
+        "sha256": "b806707f653310e37572c276a7d940179f4893787e96f8970feae450ddeedb97"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_sha1.cpython-313-darwin.so",
+        "sha256": "9d9ce15ecb6117c26bef1081d5b3b95bd1300f5c94807afdb94162c21cf05320"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_sha2.cpython-313-darwin.so",
+        "sha256": "b124e12bf33eca20632d96c4ebfed279f016db729a06168e47316355f5fa8d8d"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_sha3.cpython-313-darwin.so",
+        "sha256": "6bb8ac5cd1b5de4671b37cdd8d5265c15cd79dc281d1ee3e405ef6108daa86fe"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_socket.cpython-313-darwin.so",
+        "sha256": "3b7923cda8e3862b7752bab2dd96f1b8b862e208ec7795e9debd0eca2b1a3bc5"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_ssl.cpython-313-darwin.so",
+        "sha256": "290bb1a3bd25897c8c47a4f81c26b2282bab8921e65dec514fd2673146af7021"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_statistics.cpython-313-darwin.so",
+        "sha256": "959cc6f02c41dae3bc8ad480e93fb6de61397e43c36f156ebc8df3db2f72b481"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/_struct.cpython-313-darwin.so",
+        "sha256": "f216cba01804fe99e2d2c002d68f72280b3250fb7a14113cdfb4cbb496bfaff0"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/array.cpython-313-darwin.so",
+        "sha256": "54a8f1380b0a2112d7cea21f88d96b056bd3d95f7a4dfceb0e699150509cd268"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/binascii.cpython-313-darwin.so",
+        "sha256": "b9d73f98bf65cd04c66270d2a3f50f2eb1c9c0abe460dc7369f75a327c2bee00"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/fcntl.cpython-313-darwin.so",
+        "sha256": "15d353c73d9956f514d0d9ec99091886301bd70377652af8dcc9fb5ef484c220"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/grp.cpython-313-darwin.so",
+        "sha256": "2a76e175b9bbd34bc12d3bef6b1c02f62203103baa050f58b7233d9e6b9caae6"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/math.cpython-313-darwin.so",
+        "sha256": "24381183b13ac738185975efb91bb031f13d16b1c4916756fa2ad9acc445dfb0"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/mmap.cpython-313-darwin.so",
+        "sha256": "53146d875fd46714de2ac5a21d5105a5cf521c8cd44ddd28d5160038730f2484"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/pyexpat.cpython-313-darwin.so",
+        "sha256": "f879ab378805c3a521cead49e68f4e2c87b0b3a1e11c15e5e61e8ea1b844e4f9"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/readline.cpython-313-darwin.so",
+        "sha256": "2afe26b487b80cde3ddd1a4cd3eb650f5e9e3e4d8b89b9faeb32788d8d8b63c1"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/resource.cpython-313-darwin.so",
+        "sha256": "b22925e0b1f47b882ba38550e1e3c4f184f50c406176f4a55d04e279790ecbe1"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/select.cpython-313-darwin.so",
+        "sha256": "c5769643cce0a7a0b1b17bfa585cf6440c418b11a44af431f00dbe432eece4be"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/syslog.cpython-313-darwin.so",
+        "sha256": "869919e257e0c764c5c190bd891d94680762236943368ff25c34adbcb09a9200"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/termios.cpython-313-darwin.so",
+        "sha256": "865003012ae578d535c965c0be1f1325b6f8f0583b04da597b50ad16dbc81c96"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/unicodedata.cpython-313-darwin.so",
+        "sha256": "629b69bf4994efda9bfe401895f902eeb0d86e3ad802d260ef8e61a739d71b2d"
+      },
+      {
+        "sti": "_internal/python3.13/lib-dynload/zlib.cpython-313-darwin.so",
+        "sha256": "578342b1f0cd13ba917cd6b9c73bed47bacd113f71271422608b12cda292d6c9"
+      },
+      {
+        "sti": "_internal/setuptools/_vendor/jaraco/text/Lorem ipsum.txt",
+        "sha256": "37fedcffbf73c4eb9f058f47677cb33203a436ff9390e4d38a8e01c9dad28e0b"
+      },
+      {
+        "sti": "_internal/weasyprint/__init__.py",
+        "sha256": "6e0bfb73af85bed7e38fbd558ef8438d0fb1945e33ed09e89441ecbe5768fc2b"
+      },
+      {
+        "sti": "_internal/weasyprint/__main__.py",
+        "sha256": "c1eec6f872536f8231a2e304f48f9c5d48f5bd258fa88c747caebc58775a29a3"
+      },
+      {
+        "sti": "_internal/weasyprint/anchors.py",
+        "sha256": "c971190f4b85b0201d0e30b4edc1e05aa46e18e4ac3ac9a69a4e2899965e700a"
+      },
+      {
+        "sti": "_internal/weasyprint/css/__init__.py",
+        "sha256": "b81cf6d95e1bc9d7f2b988d0f980f78efb8a7d598af4836dca402310e22038ae"
+      },
+      {
+        "sti": "_internal/weasyprint/css/computed_values.py",
+        "sha256": "574c0fb0054751c44f1ba6c43373b816b35af0f6db53f2c633c71110b50e223e"
+      },
+      {
+        "sti": "_internal/weasyprint/css/counters.py",
+        "sha256": "0c74ab189af692da592c273e25822213aeda9344ce46c29204a9238eefaac1d1"
+      },
+      {
+        "sti": "_internal/weasyprint/css/html5_ph.css",
+        "sha256": "97cb7864ddcaa1ebcac745047cdc37fef8158c0adc208eb2e436576689566b0d"
+      },
+      {
+        "sti": "_internal/weasyprint/css/html5_ua.css",
+        "sha256": "14cde777a5db5851b46513018756e98966da4f15c63c485ffcaa99cd3582055e"
+      },
+      {
+        "sti": "_internal/weasyprint/css/html5_ua_form.css",
+        "sha256": "acdc70e3591056977cb0b9160d25b45ab388ab20d8b5abe2296a61a6e3e9d89c"
+      },
+      {
+        "sti": "_internal/weasyprint/css/media_queries.py",
+        "sha256": "c073ed799f46b36b6db80e64669303811b451e7858655c2b157ae12a0991fb88"
+      },
+      {
+        "sti": "_internal/weasyprint/css/properties.py",
+        "sha256": "e67cb0cf24232ce48a286c6cbc9b15828c907ccb0b4906ab31eb28f964606255"
+      },
+      {
+        "sti": "_internal/weasyprint/css/targets.py",
+        "sha256": "e4e7f0d51ae63ec7d08c3b99d450a092db291946a2df026635ad3731b4f6b0e2"
+      },
+      {
+        "sti": "_internal/weasyprint/css/utils.py",
+        "sha256": "d8ac56cb36052e7c9ec63d81427dbec837c61ba4d745efb25a34132d59c80088"
+      },
+      {
+        "sti": "_internal/weasyprint/css/validation/__init__.py",
+        "sha256": "b6ec895c63fa4db51d562fcab712e3d2715ae3dbc617928d6645c8f07c51fdcc"
+      },
+      {
+        "sti": "_internal/weasyprint/css/validation/descriptors.py",
+        "sha256": "54e2e668a64fefa993570302a8ccd581fccfd49688e336167442052cd5c27d84"
+      },
+      {
+        "sti": "_internal/weasyprint/css/validation/expanders.py",
+        "sha256": "f52262561a0af07112c3098dd88a978fe6e6682f69e12483d79b6a99f3084e71"
+      },
+      {
+        "sti": "_internal/weasyprint/css/validation/properties.py",
+        "sha256": "d71a187f4ac4b3874a6437994fb421f99dff1a6ac1275a50f19a3310824e8321"
+      },
+      {
+        "sti": "_internal/weasyprint/document.py",
+        "sha256": "112848513610f4ccb1140d67b941341c6ab580fe9bbabb14eb2f5a729913e31d"
+      },
+      {
+        "sti": "_internal/weasyprint/draw/__init__.py",
+        "sha256": "0e1f93522e9018268225494902512e4d391dea63650c4c9b76d0fefbef76df07"
+      },
+      {
+        "sti": "_internal/weasyprint/draw/border.py",
+        "sha256": "22cc9ec82dc12a8a1741464db57683deefd888091d2d36e7db3b8183ee7ea804"
+      },
+      {
+        "sti": "_internal/weasyprint/draw/color.py",
+        "sha256": "663aa230348d20538bb08cf6a8fdf41eb14c6d5a9e1266002b1714ead978181b"
+      },
+      {
+        "sti": "_internal/weasyprint/draw/text.py",
+        "sha256": "a9920963b945035d0614802a67175ad99e7897d64e381a0903dc30ea53eda59a"
+      },
+      {
+        "sti": "_internal/weasyprint/formatting_structure/boxes.py",
+        "sha256": "5fdeb429916e357592a9f0f586a3bc24ebb9d9c5c6675f591d863e9f6b763750"
+      },
+      {
+        "sti": "_internal/weasyprint/formatting_structure/build.py",
+        "sha256": "e08089ba20eff2dda1b701b23dbf5a187b803cad2eff7115053531c96e10f578"
+      },
+      {
+        "sti": "_internal/weasyprint/html.py",
+        "sha256": "a26eddbe1c75d9e72e9d36957259967a392be673d017505999e1fb8ea43fe063"
+      },
+      {
+        "sti": "_internal/weasyprint/images.py",
+        "sha256": "1b7e42350d1d22330f4506aa76a0fab430bdcf739b91f1ce7e85af4c93ac5622"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/__init__.py",
+        "sha256": "dd7659edf9b7b7d1707a4d6a1460dc669adb51d49735976f732ff4cbf91fcd66"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/absolute.py",
+        "sha256": "0bee768839dbe87e68181a5dc54eac2b1bc3bc4fa906206b1dcf158e1f896f6d"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/background.py",
+        "sha256": "d194456460099ef17d7942c8332b7ca32ea50ea13e84a49b732a2640fc7c1ec4"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/block.py",
+        "sha256": "401476b1a22240eebc5c1b5416d9910f64344753a851a51884d3f0d28d2aa4f5"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/column.py",
+        "sha256": "f246b4409baf47e33b428104c882e9251318b4817e33e7fc83cf3c654c621ab6"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/flex.py",
+        "sha256": "a6d5b6307bca0fedaf22818617f4eacb878067502ed4649d403a7a6d4ff2b9c7"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/float.py",
+        "sha256": "15e336316ec5ce307bc3358dcde35d4884631b483c9fb6fa48c5609ae539b3ba"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/grid.py",
+        "sha256": "5ec1bf6782ce33edf8993443dc0a8411f07efeea933db7fde16103d734b625d6"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/inline.py",
+        "sha256": "60097aaec5dea7b5b2183a807feb8874645c040dccb7ea6cfd0a9fbf88123677"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/leader.py",
+        "sha256": "c24948d1a2f24f1d15261a94ec3fc5c6d2697deedd5ecc1c37e540a40bac33e4"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/min_max.py",
+        "sha256": "25d5c91bd2123bf46c7de1ee6bffb7838efb6b5e88f8dae762ec07fed430ab8a"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/page.py",
+        "sha256": "ee51e696ee1555720f3184e1a920da335f621c5e02019e0e317ffd34f1677f54"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/percent.py",
+        "sha256": "d97cd3fd8f9fbbb395b7652dd5ff53d53b7d4b87ed46be31ef02f76a0bc426eb"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/preferred.py",
+        "sha256": "ad2fb3c8f63e46849f6efd7afcb25bef2eb569d959103d8c03a78d3521b55372"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/replaced.py",
+        "sha256": "b9c01de9530a204af28e7c0af1c88a6d4a04db22b6f7e8207589465b728f0d79"
+      },
+      {
+        "sti": "_internal/weasyprint/layout/table.py",
+        "sha256": "8dd64add921c3a9787c0b5ee11ff5fc2b3349d8f2c7652e3ee56aa38aec2e378"
+      },
+      {
+        "sti": "_internal/weasyprint/logger.py",
+        "sha256": "cf5ab9e3c7d7e6c85f0322e830b78cf68cd618a828053290b1d953b5f444ffd5"
+      },
+      {
+        "sti": "_internal/weasyprint/matrix.py",
+        "sha256": "bf504fb729fff92ff84eb01483338e47ebe251781daac0012919dd084a6b90f7"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/__init__.py",
+        "sha256": "c90c9a03fbf441be1de225da7064062ad3b6aacacc5e3d225f69254d20478202"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/anchors.py",
+        "sha256": "c7eeeaf3b5dc799a3d4b0b809b9a3a10edf11a4bd4a67798f5a71db8527b07a4"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/debug.py",
+        "sha256": "ade2f0e94ea12bde053953585bca6c76dfd214dd758887b5ae1624afab14445e"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/fonts.py",
+        "sha256": "0ff4f4256167a1f483a9d536f67a1383c21bc9e9cdf5295a50bc524cf960d494"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/metadata.py",
+        "sha256": "af90138fc2efffa21bf916c0db381acf2a3ac89c05f8ba2aa0d01651c855e2a1"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/pdfa.py",
+        "sha256": "f7b27b9e528798fe6f752073d17d1c0e71a7a803d9e6aaa843b02b66c756453f"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/pdfua.py",
+        "sha256": "f7aa6888c8e1407778323003d0be42f1e8a8e32c985a3b1ba39ed3b3f7e1304c"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/sRGB2014.icc",
+        "sha256": "384b832de3412066743b52a75ee906b6fb9fb8d9e09e936fc2c43223815c6e0a"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/stream.py",
+        "sha256": "887456ca54fbc58393b7724859c5f31570dc395d996707c2d1edba28d20ba092"
+      },
+      {
+        "sti": "_internal/weasyprint/pdf/tags.py",
+        "sha256": "3f816447d54e734c3dd82f51a7a8a4e4c92c6eb72df6f6f78caad6339e52d950"
+      },
+      {
+        "sti": "_internal/weasyprint/stacking.py",
+        "sha256": "e9ce9e67f071b5c62f9446c7e8941da9a2b060192e6aa5301864acdce7e4a52f"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/__init__.py",
+        "sha256": "11d1e35b16ec82f9abb81872470ba0daea0704b1ef95d4315af8dfabd37b99d0"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/bounding_box.py",
+        "sha256": "6ae5ecfaf0f69ef3b1ddca651cb197173cbb5ff7ff218e2183f2332a55135e33"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/css.py",
+        "sha256": "014b088a6dab3a64462e016e8969b81335f09eb4654e17337ccd7b52ad8c4548"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/defs.py",
+        "sha256": "a68487f4b3dd45376abf41fe36ced6e7c578b11cd42d92888cafd70a786bc58d"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/images.py",
+        "sha256": "dc0de9ba52f87033d0db6bb3d10ab243bf2a711229fec1320002318f28fad9dd"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/path.py",
+        "sha256": "67e4fa91b514de9c87873555d0948180efbe5da0865cbb07f9c4bd880b084cc3"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/shapes.py",
+        "sha256": "343a3428c9f0ae6d218f704e99faca8d1668e22245f68f8c794859e5abc035ca"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/text.py",
+        "sha256": "255acb4a90ed5373fd220906e7483f950562d0be6e35b5e810387ab64de8db3e"
+      },
+      {
+        "sti": "_internal/weasyprint/svg/utils.py",
+        "sha256": "9aaaf087e8240a012fd1d8b24e4ea8de125b246f60192d70204d1dbf9250b928"
+      },
+      {
+        "sti": "_internal/weasyprint/text/constants.py",
+        "sha256": "89f3de4c6feeb3fb12816b8cf964d0803aeb020c309e885847adc7852ff57483"
+      },
+      {
+        "sti": "_internal/weasyprint/text/ffi.py",
+        "sha256": "d055b135e627d0db9bf9f28758494571073d1a696088b00abd2f368690f1b00b"
+      },
+      {
+        "sti": "_internal/weasyprint/text/fonts.py",
+        "sha256": "2ced01e5c6eeda38fee4fcb11af4ff3b1815126367a1ce73dd20382121d1914a"
+      },
+      {
+        "sti": "_internal/weasyprint/text/line_break.py",
+        "sha256": "3a073edda4c59cb24e04c647ae10cc14cd3b2123c73ee890d07cad481dbf0f4d"
+      },
+      {
+        "sti": "_internal/weasyprint/urls.py",
+        "sha256": "bfeb78027c8e534802c31100ab43f01bf44598f017970da9639b755bb6625040"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/INSTALLER",
+        "sha256": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/METADATA",
+        "sha256": "ec3db34d6650ea2b1089a1e773d736c22b6deb1155939131964c8450e9c21f7a"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/RECORD",
+        "sha256": "7c6a368829009c68a927fc9fc690666d3f0e66371895d236c21c279195ad77f3"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/REQUESTED",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/WHEEL",
+        "sha256": "1b68144734c4b66791f27add5d425f3620775585718a03d0f9b110ba3a4d88db"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/entry_points.txt",
+        "sha256": "c200e9dd75f3172c1d620239bd458ca75cc0c31d6c6575c7d054d441b14eaba0"
+      },
+      {
+        "sti": "_internal/weasyprint-66.0.dist-info/licenses/LICENSE",
+        "sha256": "bfd14eccfa6100575460e685556b183399d4bd335904e3c9521b0116d21c54da"
+      },
+      {
+        "sti": "_internal/zopfli/zopfli.abi3.so",
+        "sha256": "72e5c68fd9ec523315d7a29bd53073b43c701738a5b96a96936a30929facacb2"
+      },
+      {
+        "sti": "slaegt-export",
+        "sha256": "58ed607dae5cf778d7b0be0352f8654ca9c5e25f930c2e1583a3d4b14930e271"
+      }
+    ]
+  },
+  "graphviz": {
+    "oplystVersion": "16.1.1",
+    "filer": [
+      {
+        "sti": "lib/libaom.3.dylib",
+        "sha256": "37063621cb7c9fc43d14b203c62534f44d79548bb6a41fd31eec6f57d63cfc14"
+      },
+      {
+        "sti": "lib/libavif.16.dylib",
+        "sha256": "f05e1b2edfe224006da41499beb26e797aac2c99a88c5e52b7ba53b16c6b99c5"
+      },
+      {
+        "sti": "lib/libbrotlicommon.1.dylib",
+        "sha256": "ffa79abbf9f19ba6da790b894dcd964d54197ac3c5caf9a893eaef4e63e2b3cd"
+      },
+      {
+        "sti": "lib/libbrotlidec.1.dylib",
+        "sha256": "c9e82d22f66ba3b1220bca2da29c13d9dcc72a004f8635d8a16ceee54e58b6be"
+      },
+      {
+        "sti": "lib/libdav1d.7.dylib",
+        "sha256": "8176bb3e6ec148ff65efd88b5a5af3994cb28c9b73be5c0849050fe421524f1d"
+      },
+      {
+        "sti": "lib/libfontconfig.1.dylib",
+        "sha256": "9440968f691c712440288915bad9aa2694bf753066c14daee3e2c018e56a0086"
+      },
+      {
+        "sti": "lib/libfreetype.6.dylib",
+        "sha256": "ef93dbbe1579c20e32ffd16f739a079e3d76c4bf56f2d88feaa88f43d17f008c"
+      },
+      {
+        "sti": "lib/libgd.3.dylib",
+        "sha256": "3c8b07e5715446e1ba31cab93d0bd10b57e9bac1911038a43c06d7d4117f3c80"
+      },
+      {
+        "sti": "lib/libglib-2.0.0.dylib",
+        "sha256": "15d793d59c5515e6addd05e04a748ea2930fcee456ede9aa4863c07e12a12ff2"
+      },
+      {
+        "sti": "lib/libgmodule-2.0.0.dylib",
+        "sha256": "82818b1dd3565810109bede7c0c7c1d4c66d17c7b9f94b6f8541e92387cfdf3a"
+      },
+      {
+        "sti": "lib/libgthread-2.0.0.dylib",
+        "sha256": "38e82f0f645a8884d82a75b26cfe2b32b066acb0c6dac311e1b22db4dcd8e813"
+      },
+      {
+        "sti": "lib/libgts-0.7.5.dylib",
+        "sha256": "99766cd108d863e0967a8116894318c68ba9b6cb93aa86f8ff97bf1b3463dcee"
+      },
+      {
+        "sti": "lib/libintl.8.dylib",
+        "sha256": "0c714ad8e39946089527999493474cb9ce90be73df3e88aa2a000b3055da23ae"
+      },
+      {
+        "sti": "lib/libjpeg.8.dylib",
+        "sha256": "46c3385d2b9cd5f1fcc5c04ae4707babc9e45b89f69591901c02beb0571f2e50"
+      },
+      {
+        "sti": "lib/liblzma.5.dylib",
+        "sha256": "8a6c4bf21391271d02f3f618dd476de7a14427a5842c8617f8d6a11d89ef4f34"
+      },
+      {
+        "sti": "lib/libpcre2-8.0.dylib",
+        "sha256": "09822dc1655123ba9d4be6c45fddfb2ad31ba03de5b2710e069b1a375706e110"
+      },
+      {
+        "sti": "lib/libpng16.16.dylib",
+        "sha256": "c5cd335651052515515d92db5f36445ff2a1e2e807132ce559a7c6a06d4fba0a"
+      },
+      {
+        "sti": "lib/libsharpyuv.0.dylib",
+        "sha256": "f3176df47496901cc11c87d11c8b2c3896ac295b8ae2368ba240bbd217612978"
+      },
+      {
+        "sti": "lib/libtiff.6.dylib",
+        "sha256": "03688281b482ab9ecf48569a7f8d8e73237939052a93fc2f42ff32dd2834ee3a"
+      },
+      {
+        "sti": "lib/libvmaf.3.dylib",
+        "sha256": "9dc547b56d1da232a32f808ff6724dad6cd6c0bd64f21df8ae96413e3853ec4b"
+      },
+      {
+        "sti": "lib/libwebp.7.dylib",
+        "sha256": "2a61732e09111129324fdd5a2b2e6b7174a28ed22cbc6cad7624799a19f9b18d"
+      },
+      {
+        "sti": "lib/libzstd.1.dylib",
+        "sha256": "61d5ab59601ddf91467ee9e081186789a997c23f07491debd53648f4ef5cc2d0"
+      },
+      {
+        "sti": "sfdp",
+        "sha256": "dbc9b192a2e2529c96513523a0ea1b2c284f2e12b0b9da9fb1f35bf2916bd65a"
+      }
+    ]
+  }
+}

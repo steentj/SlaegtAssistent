@@ -123,7 +123,7 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 ### Trin 12: Interaktivt personnetværk og eksport SPRINT 7A–7C
 *   **Mål:** Navigér i alle personforbindelser gennem en Obsidian-inspireret graf, og del færdige grafer og redigerede biografier i lokale standardformater.
 *   **Forudsætning:** Trin 5–11 er færdige, så eksporten arbejder på stabile, brugervenligt konfigurerede persondokumenter med dokumenteret synkronisering.
-*   **Status:** Detaljeret planlagt; implementering og validering er ikke gennemført som del af planlægningen.
+*   **Status:** Sprint 7B er afsluttet for lokal brug på denne Mac med kendte forbehold i [valideringsjournalen](sprints/sprint-07b-grafeksport-og-udskrift/Validation.md). Sprint 7C er planlagt.
 *   **Sprint 7A – personnetværk:**
     1. Saml alle kendte personer, godkendte familierelationer og entydige Markdown-personlinks i én graf med stabil identitet og diagnostik.
     2. Generér DOT og beregn lokalt kraftbaseret layout med Graphviz `sfdp`; vis grafen i en dedikeret Avalonia-tegnekontrol med zoom og panorering.

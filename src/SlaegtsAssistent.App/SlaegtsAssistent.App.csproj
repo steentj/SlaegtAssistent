@@ -24,6 +24,30 @@
     <Content Include="..\..\tools\graphviz\osx-arm64\**\*" Link="tools\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Target Name="RestoreLocalMacExportTools" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'osx-arm64') and !Exists('$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export/slaegt-export') and Exists('$(MSBuildProjectDirectory)/../../vendor/eksport/osx-arm64/pdf-vaerktoej.tar.gz')">
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/genskab-pdfvaerktoej-macos.py&quot;" />
+  </Target>
+
+  <Target Name="RestoreLocalMacGraphviz" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'osx-arm64') and !Exists('$(MSBuildProjectDirectory)/../../tools/graphviz/osx-arm64/sfdp') and Exists('$(MSBuildProjectDirectory)/../../vendor/graphviz/osx-arm64/graphviz.tar.gz')">
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/genskab-graphviz-macos.py&quot;" />
+  </Target>
+
+  <Target Name="CopyRestoredMacGraphviz" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'osx-arm64') and Exists('$(MSBuildProjectDirectory)/../../tools/graphviz/osx-arm64/sfdp')">
+    <Exec Command="/usr/bin/ditto &quot;$(MSBuildProjectDirectory)/../../tools/graphviz/osx-arm64&quot; &quot;$(TargetDir)tools&quot;" />
+  </Target>
+
+  <Target Name="PublishRestoredMacGraphviz" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(RuntimeIdentifier)' == 'osx-arm64' and Exists('$(MSBuildProjectDirectory)/../../tools/graphviz/osx-arm64/sfdp')">
+    <Exec Command="/usr/bin/ditto &quot;$(MSBuildProjectDirectory)/../../tools/graphviz/osx-arm64&quot; &quot;$(PublishDir)tools&quot;" />
+  </Target>
+
+  <Target Name="CopyLocalMacExportTools" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'osx-arm64') and Exists('$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export/slaegt-export')">
+    <Exec Command="/usr/bin/ditto &quot;$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export&quot; &quot;$(TargetDir)tools/export/slaegt-export&quot;" />
+  </Target>
+
+  <Target Name="PublishLocalMacExportTools" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(RuntimeIdentifier)' == 'osx-arm64' and Exists('$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export/slaegt-export')">
+    <Exec Command="/usr/bin/ditto &quot;$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export&quot; &quot;$(PublishDir)tools/export/slaegt-export&quot;" />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Avalonia.BuildServices" Version="11.3.2" ExcludeAssets="all" />
     <PackageReference Include="Avalonia" Version="12.1.0" />

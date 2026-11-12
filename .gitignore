@@ -70,6 +70,11 @@ TestGedComData/
 
 # Lokalt byggede tredjepartsværktøjer
 tools/graphviz/
+tools/export/
+
+# Python-cache
+__pycache__/
+*.pyc
 
 # OS
 .DS_Store
