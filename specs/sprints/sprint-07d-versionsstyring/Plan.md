@@ -57,11 +57,13 @@ Status: **planlagt**. Se [Analyse.md](Analyse.md) for review og beslutninger og 
 - `.gitignore`: `.slaegtsassistent/manifest.json`, undermapper og `.a.md.<guid>.tmp` ignoreres; `a.md` ignoreres ikke (`git check-ignore`).
 - Status efter ændring, ny fil, sletning ⇒ korrekte arter og antal; `.slaegtsassistent/**` og ikke-`.md`-filer tælles ikke; `LastChangeTime` = højeste ændringstidspunkt blandt ikke-slettede; kun sletninger ⇒ `null`.
 - Historik: nyeste først; `æøå` i besked og filnavn; `HasMore` ved over grænsen.
-- Commit alle: committer ændrede, nye og slettede filer; blank besked afvises; uden ændringer ⇒ `Success == false` med besked og ingen tom commit; commit virker uden global Git-identitet.
+- Commit alle: committer ændrede, nye og slettede dokumenter; blank besked afvises; uden ændringer ⇒ `Success == false` med besked og ingen tom commit; commit virker uden global Git-identitet. Staged ændringer uden for dokumentomfanget afvises uden commit eller indeksændring.
+- Hooks: opsæt lokale og globale hooks for `pre-commit`, `prepare-commit-msg`, `commit-msg` og `post-commit`, som skriver markørfiler; aktivering og alle commits lykkes uden markører.
+- Attributter: `*.md text eol=lf` og konverteringsfilter afvises før aktivering/commit/rollback; CRLF-dokumenter round-trippes byte-for-byte uden aktive konverteringsattributter.
 - Vis ændringer (ikke committet): ny fil vises som tilføjet; status-antal er uændret bagefter.
 - Vis ændringer (commit): inkl. rodcommit (start-commit viser alle filer som nye).
 - Diff over 1 MB (fx 3 000 filer eller en stor fil) ⇒ henter op til 8 mio. tegn; over grænsen ⇒ `VersionControlException` med dansk tekst.
-- Tilbagerulning: (a) slettet fil gendannes; (b) fil oprettet efter målet fjernes; (c) ændret indhold gendannes byte-for-byte inkl. CRLF; (d) ikke committede ændringer committes først som "Automatisk version før tilbagerulning"; (e) ny commit "Rul tilbage til …: <besked>" oprettes og historikken er intakt; (f) ugyldigt id (`--help`, `abc`) afvises uden at køre Git; (g) mål lig nuværende tilstand ⇒ "allerede i denne tilstand" og ingen ny commit; (h) `.slaegtsassistent/**` er uberørt.
+- Tilbagerulning: (a) slettet fil gendannes; (b) fil oprettet efter målet fjernes; (c) ændret indhold gendannes byte-for-byte inkl. CRLF; (d) ikke committede ændringer committes først som "Automatisk version før tilbagerulning"; (e) ny commit "Rul tilbage til …: <besked>" oprettes og historikken er intakt; (f) ugyldigt id (`--help`, `abc`) afvises uden at køre Git; (g) aktuelle bytes og filnavne lig målet, også med en anden HEAD og nye/slettede filer, giver "allerede i denne tilstand" uden ny commit; (h) `.slaegtsassistent/**` er uberørt; (i) commitfejl, timeout og annullering genopretter og verificerer snapshot af seneste commit; (j) staged filer uden for dokumentomfanget afvises uden ændring.
 - Samtidige kald serialiseres (to samtidige `CommitAllAsync` giver ikke `index.lock`-fejl).
 
 **Kør:** `dotnet test tests/SlaegtsAssistent.App.Tests --filter "FullyQualifiedName~Git|FullyQualifiedName~LocalProcessRunner|FullyQualifiedName~Graphviz"`.
@@ -82,7 +84,7 @@ Status: **planlagt**. Se [Analyse.md](Analyse.md) for review og beslutninger og 
 6. Registrér `IVersionDialogService`, `VersioningWorkflow` (singleton) og de øvrige i `App.axaml.cs`. Grænsefladerne `IVersionHistoryWindowService` og `IVersionDiffWindowService` oprettes allerede i V3 (workflowet afhænger af den sidste) sammen med `NullVersionHistoryWindowService` og `NullVersionDiffWindowService` (ingen handling). De Avalonia-baserede implementeringer og registreringerne tilføjes i V4.
 
 **Tests (mindst):**
-- Workflow: `IkkeAktiveret` + bekræftet ⇒ `EnableAsync` kaldes; afvist ⇒ intet kaldes; `GitMangler` ⇒ besked og ingen commit; ugemte editorer ⇒ `SaveAllEditors` kaldes **før** `CommitAllAsync`; mislykket gemning ⇒ ingen commit; 0 ændringer ⇒ besked og ingen dialog; annulleret/blank besked ⇒ ingen commit; succes ⇒ `CommitAllAsync` kaldt med brugerens besked; fejl fra servicen vises; import i gang ⇒ afbrudt; ingen arbejdsmappe ⇒ besked "Vælg først en arbejdsmappe i Indstillinger.".
+- Workflow: `IkkeAktiveret` + bekræftet ⇒ `SaveAllEditors` kaldes før `EnableAsync`; afvist ⇒ intet kaldes; gemmefejl ⇒ ingen aktivering/startcommit; `GitMangler` ⇒ besked og ingen commit; ugemte editorer i aktiveret arkiv gemmes før status/commit; mislykket gemning ⇒ ingen commit; 0 ændringer ⇒ besked og ingen dialog; annulleret/blank besked ⇒ ingen commit; succes ⇒ `CommitAllAsync` kaldt med brugerens besked; fejl fra servicen vises; import i gang ⇒ afbrudt; ingen arbejdsmappe ⇒ besked "Vælg først en arbejdsmappe i Indstillinger.".
 - Main-VM: `CommitCommand` er deaktiveret under import; standardkonstruktøren virker uændret (alle eksisterende tests grønne); `DocumentsSaved` rejses efter `SaveAll`.
 - Headless: `MainWindow` åbner og viser knapperne "Commit" og "Versionshistorik".
 
@@ -127,7 +129,7 @@ Status: **planlagt**. Se [Analyse.md](Analyse.md) for review og beslutninger og 
 **Filer:** ændret `ViewModels/VersionHistoryViewModel.cs` (aktivér `RollbackCommand`), `Services/VersioningWorkflow.cs` (`RollbackAsync`), tests, `specs/Roadmap.md`, `CHANGELOG.md` (brug skill `changelog-by-date`), `README.md` (kort afsnit), evt. hjælpetekst.
 
 **Trin:**
-1. Fejlende tests for `VersioningWorkflow.RollbackAsync`; implementér efter "Flow → Rul tilbage her". Rækkefølge: bekræftelse ⇒ `SaveAllEditors` ⇒ `RollbackToAsync` ⇒ (ved succes) `ReloadWorkspace` ⇒ resultat.
+1. Fejlende tests for `VersioningWorkflow.RollbackAsync`; implementér efter "Flow → Rul tilbage her". Rækkefølge: bekræftelse ⇒ erhverv fælles arbejdsområdespærring ⇒ `SaveAllEditors` ⇒ `RollbackToAsync` inkl. verifikation/genopretning ⇒ `ReloadWorkspace` ⇒ frigiv spærring ⇒ resultat.
 2. Aktivér `RollbackCommand` i listen (`IsRollbackVisible = true`); deaktiver for den nyeste version uden ændringer.
 3. Efter tilbagerulning opdateres historik/status, og `InfoMessage` viser "Dokumenterne er rullet tilbage til <dato tid>." eller den "allerede i denne tilstand"-besked.
 4. **Regressionstest:** kør hele `dotnet test`. Udvid `AvaloniaHeadlessRegressionTests` med en test af at hovedvinduets øvrige knapper er uændrede.
@@ -137,7 +139,7 @@ Status: **planlagt**. Se [Analyse.md](Analyse.md) for review og beslutninger og 
 8. Udfyld "Registrering" i Validation.md med de faktiske resultater (også afvigelser og ikke-kørte tests).
 
 **Tests (mindst):**
-- Workflow: afvist bekræftelse ⇒ intet sker; ugemte editorer gemmes først; mislykket gemning ⇒ ingen tilbagerulning; succes ⇒ `ReloadWorkspace` kaldt **efter** `RollbackToAsync`; fejl ⇒ `ReloadWorkspace` ikke kaldt og fejl vist; "allerede i denne tilstand" ⇒ ingen genindlæsning.
+- Workflow: afvist bekræftelse ⇒ intet sker; fælles spærring blokerer redigering, gemning, import, mappeskift og skabelonanvendelse under forsinket rollback; ugemte editorer gemmes først; mislykket gemning ⇒ ingen tilbagerulning; succes/genoprettet fejltilstand ⇒ `ReloadWorkspace` kaldes **før** spærringen frigives; fejl vises uden at love verificeret genopretning, hvis den fejler; "allerede i denne tilstand" ⇒ ingen commit eller genindlæsning.
 - Integration (`GitFact`): ende-til-ende med rigtig `MainWindowViewModel`, rigtig service og rigtig midlertidig arbejdsmappe: gem et dokument, Commit, ændr, Commit, rul tilbage til første version, kontrollér filens indhold, editorens tekst efter genindlæsning og historikkens fire poster (to brugerversioner, start-commit, tilbagerulning).
 
 **Kør:** `dotnet build` og hele `dotnet test`.

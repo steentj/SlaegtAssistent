@@ -17,15 +17,17 @@ Sprunget-over-tests tæller ikke som succes; antal og årsag noteres i Registrer
 
 1. Start appen; åbn arbejdsmappen. Knapperne **Commit** og **Versionshistorik** er synlige efter **Gem**. ✔/✘
 2. Tryk **Commit** i en mappe uden versionsstyring: dialogen "Slå versionsstyring til" vises; vælg **Annullér** ⇒ intet sker, ingen `.git`-mappe. ✔/✘
-3. Tryk **Commit** igen og vælg **Slå til**. ⇒ `.git` og `.gitignore` oprettes. `git log` i mappen viser "Start versionsstyring". `git status` viser ingen ændringer. ✔/✘
-4. Ret teksten i et dokument **uden** at gemme. Tryk **Commit**. Dialogen foreslår "Ændringer <dato tid>". Ret beskeden til noget med æøå, og tryk **Commit**. `git log -1 --stat` viser den rettede besked korrekt og filen som ændret; editoren er ikke længere "ugemt". ✔/✘
+3. Ret teksten i et dokument uden at gemme, tryk **Commit**, og vælg **Slå til**. ⇒ editoren gemmes før aktivering, `.git` og `.gitignore` oprettes, og `git log` viser "Start versionsstyring" med den indtastede tekst. Fremkald derefter en gemmefejl og bekræft, at hverken arkivet eller startcommitten oprettes/ændres. ✔/✘
+4. Ret teksten i et dokument uden at gemme i et aktiveret arkiv. Tryk **Commit**. Dialogen foreslår "Ændringer <dato tid>". Ret beskeden til noget med æøå, og tryk **Commit**. `git log -1 --stat` viser den rettede besked korrekt og filen som ændret; editoren er ikke længere "ugemt". ✔/✘
 5. Tryk **Commit** uden ændringer ⇒ besked "Der er ingen ændringer at committe."; ingen ny commit. ✔/✘
 6. Tryk **Commit**, og annullér i beskeddialogen ⇒ ingen commit. ✔/✘
 7. Start en import og tryk på **Commit** under importen ⇒ knappen er deaktiveret. ✔/✘
-8. Tjek at `.slaegtsassistent/` ikke er med i `git ls-files`. ✔/✘
+8. Tjek at `.slaegtsassistent/` og `.gitignore` ikke er med i `git ls-files`. Stage med `git add -f -- .slaegtsassistent/manifest.json`; aktivering, **Commit** og tilbagerulning skal afvises uden commit, uden ændring af indekset og uden ændring af filen. Afstage manuelt bagefter. ✔/✘
 9. Pr. platform (Windows, macOS, Linux efter tilgængelighed): gentag 3–4 og kontrollér, at æøå i filnavn og besked er korrekte, og at `git diff` ikke viser linjeskifts-ændringer. ✔/✘ (angiv platform)
 10. Prøv med en mappe inde i et andet Git-arkiv ⇒ forklarende besked, intet ændres i det overliggende arkiv. ✔/✘
 11. Skjul Git midlertidigt (omdøb `git` eller start med tom `PATH`) ⇒ forklarende besked, appen fungerer ellers. ✔/✘
+12. Installer hooks i arkivet og angiv en global `core.hooksPath` med markør-hooks for `pre-commit`, `prepare-commit-msg`, `commit-msg` og `post-commit`. Aktivér versionsstyring og udfør commits/rollback ⇒ ingen hook-markør oprettes. ✔/✘
+13. Tilføj `*.md text eol=lf` og et aktivt konverteringsfilter i attributterne ⇒ versionsstyringen afviser operationen med en dansk forklaring før dokumenter eller indeks ændres. Fjern attributterne, prøv CRLF igen, og kontrollér byte-for-byte round-trip. ✔/✘
 
 ## Manuel validering V4 – Historik og Vis ændringer
 
@@ -55,7 +57,9 @@ Forberedelse: tre versioner **A** (oprindelig), **B** (dokument X ændret, dokum
 6. **Rul tilbage her** på den nyeste version uden ændringer er deaktiveret. ✔/✘
 7. Rul tilbage til en version, hvor dokumenterne allerede er i samme tilstand ⇒ "allerede i denne tilstand", ingen ny version. ✔/✘
 8. Rul tilbage og kør derefter en ny GEDCOM-synkronisering/anvend skabelon ⇒ differenceskærmen fungerer og viser forskelle mod den gendannede tilstand (ingen korrupte frontmatter-metadata). ✔/✘
-9. Simulér fejl (gør en fil skrivebeskyttet eller åbn den eksklusivt på Windows) ⇒ tydelig dansk fejl; dokumenterne er tilbage på seneste version. ✔/✘
+9. Opret versionshistorik B, redigér arbejdsfiler tilbage til bytepræcis tilstand A uden commit, og rul tilbage til A ⇒ ingen automatisk sikkerhedsversion oprettes; test også med en ny fil og en slettet fil. ✔/✘
+10. Med forsinket rollback-service prøv at redigere, gemme, importere, anvende skabelon og skifte mappe ⇒ alle handlinger er blokeret fra før editor-gemning til afsluttet genindlæsning. Tekst skrevet før låsen beholdes; ingen input kan gå tabt. ✔/✘
+11. Simulér fejl under `restore`, afsluttende commit, timeout og annullering ⇒ appen kontrollerer om committen faktisk lykkedes; ellers genopretter den seneste commit, verificerer filbytes og indeks og genindlæser før låsen frigives. Fremkald også fejl i genopretningen ⇒ fejlbeskeden lover ikke, at dokumenterne er tilbage. ✔/✘
 
 ## Samlet sprintaccept
 

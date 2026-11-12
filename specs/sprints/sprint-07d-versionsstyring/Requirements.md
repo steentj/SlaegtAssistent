@@ -6,11 +6,11 @@ ID'erne bruges i tests og i Validation.md. Beslutningsgrundlaget står i [Analys
 
 - **VS-1** Versionsstyring bruger Git lokalt i arbejdsmappen (`StandardMarkdownOutputFolder`). Ingen netværkskald, ingen remote, ingen telemetri.
 - **VS-2** Kun Markdown-dokumenter direkte i arbejdsmappen (`*.md`) versioneres. `.slaegtsassistent/` og andre filer versioneres ikke og tælles ikke som ændringer.
-- **VS-3** Appen ændrer aldrig brugerens globale Git-konfiguration, kører aldrig kommandoer mod et overliggende arkiv, og springer hooks over.
+- **VS-3** Appen ændrer aldrig brugerens globale Git-konfiguration, kører aldrig kommandoer mod et overliggende arkiv, og forhindrer alle Git-hooks i at køre ved hvert Git-kald med en app-ejet tom hookmappe (ikke `--no-verify` alene).
 - **VS-4** Mangler Git, er versionsfunktionerne deaktiverede med en dansk forklaring; resten af appen er upåvirket.
 - **VS-5** Er mappen ikke versioneret, tilbydes "Slå versionsstyring til" (initialiserer arkiv, `.gitignore`, arkivlokal identitet og en start-commit) efter bekræftelse.
 - **VS-6** Ligger arbejdsmappen inde i et andet Git-arkiv, deaktiveres funktionen med forklaring; det overliggende arkiv ændres ikke.
-- **VS-7** Tegn som æøå og mellemrum i filnavne og commit-beskeder bevares korrekt på alle platforme. Linjeskift i dokumenter bevares byte-for-byte.
+- **VS-7** Tegn som æøå og mellemrum i filnavne og commit-beskeder bevares korrekt på alle platforme. Linjeskift i dokumenter bevares byte-for-byte; aktive Git-attributter eller filtre, der konverterer dokumentbytes, afvises før ændringer.
 - **VS-8** Ingen ny NuGet-pakke og ingen ændring af lockfiler.
 
 ## Commit
@@ -44,10 +44,10 @@ ID'erne bruges i tests og i Validation.md. Beslutningsgrundlaget står i [Analys
 ## Rul tilbage
 
 - **RT-1** Rul tilbage her kræver en bekræftelse, der nævner versionens dato, tid og besked og forklarer, at nuværende tilstand gemmes som en ny version først.
-- **RT-2** Tilbagerulningen er **ikke-destruktiv**: ugemte editorer gemmes, ikke committede ændringer committes automatisk som "Automatisk version før tilbagerulning", dokumenterne gendannes til den valgte version (gendannede, fjernede og ændrede filer), og resultatet committes som `Rul tilbage til <dato tid>: <besked>`. Ingen historik slettes eller omskrives; `reset --hard` bruges aldrig.
-- **RT-3** Er dokumenterne allerede i den valgte tilstand, oprettes ingen ny version, og brugeren får besked.
-- **RT-4** Efter tilbagerulning genindlæses arbejdsområdet (personliste, editorer, preview, graf) fra de gendannede filer; ingen ugemt tekst går tabt.
-- **RT-5** Mislykkes gendannelsen, føres dokumenterne tilbage til den seneste version, og brugeren får en tydelig fejl.
+- **RT-2** Tilbagerulningen er **ikke-destruktiv**: ugemte editorer gemmes, ikke committede ændringer committes automatisk som "Automatisk version før tilbagerulning", dokumenterne gendannes til den valgte version (gendannede, fjernede og ændrede filer), og resultatet committes som `Rul tilbage til <dato tid>: <besked>`. Alle commits afgrænses til Markdown-filer i arbejdsrodens indeks; staged filer uden for omfanget medfører sikker afvisning. Ingen historik slettes eller omskrives; `reset --hard` bruges aldrig.
+- **RT-3** Er de aktuelle Markdown-filnavne og bytes allerede identiske med den valgte tilstand, oprettes ingen ny version, også selvom HEAD er en anden version eller status indeholder nye/slettede filer; brugeren får besked.
+- **RT-4** Et fælles arbejdsområdelås blokerer redigering, gemning, import, mappeskift, skabelonanvendelse og andre dokumentændringer fra før editor-gemning til afsluttet genindlæsning. Efter tilbagerulning genindlæses arbejdsområdet (personliste, editorer, preview, graf) fra den verificerede filtilstand; ingen ugemt tekst går tabt.
+- **RT-5** Mislykkes gendannelsen eller den afsluttende commit, genoprettes dokumenter og indeks til rollback-operationens seneste verificerede committilstand. Udfald efter timeout/annullering afgøres ved at kontrollere HEAD, forælder, besked og dokumenttræ. Resultatet af genopretning verificeres; brugeren får aldrig at vide, at dokumenterne er ført tilbage, hvis tilstanden ikke kan bekræftes.
 - **RT-6** Commit-id'er valideres (`^[0-9a-f]{40,64}$`) og bekræftes som commit, før de bruges i en kommando.
 - **RT-7** Tilbagerulning er deaktiveret under import og for den nyeste version, når der ikke er ikke committede ændringer.
 
@@ -55,7 +55,7 @@ ID'erne bruges i tests og i Validation.md. Beslutningsgrundlaget står i [Analys
 
 - **RS-1** Git køres aldrig via shell; argumenter sendes som liste. Sti- og id-argumenter kan ikke tolkes som flag (sti efter `--`, id valideret).
 - **RS-2** Versionskommandoer kører én ad gangen, har tidsgrænse (30–60 sek.) og kan annulleres; hovedtråden blokeres ikke.
-- **RS-3** `index.lock`-konflikter og andre Git-fejl oversættes til danske beskeder.
+- **RS-3** `index.lock`-konflikter og andre Git-fejl oversættes til danske beskeder. Staged ændringer uden for dokumentomfanget afvises før enhver commit uden at blive ændret.
 - **RS-4** `LocalProcessRunner`-udvidelsen er bagudkompatibel; Graphviz-kald opfører sig uændret.
 - **RS-5** Core-delen har ingen I/O og ingen Avalonia-afhængighed; ViewModels bruger ingen Avalonia-typer.
 - **RS-6** Tests mod rigtig Git rører ikke brugerens globale konfiguration og rydder deres midlertidige mapper; manglende Git registreres som *ikke kørt*.

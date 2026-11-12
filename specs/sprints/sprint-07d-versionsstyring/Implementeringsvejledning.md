@@ -124,24 +124,27 @@ Rækkefølge; første kandidat der findes **og** svarer på `git --version` med 
 Alle kald går gennem én privat metode `RunGitAsync(workspace, args, ct, maxOutput = default)` som bygger:
 
 ```
-<git> -C <workspace> --no-pager -c core.quotepath=false -c core.autocrlf=false -c core.safecrlf=false -c commit.gpgsign=false <args…>
+<git> -C <workspace> --no-pager -c core.quotepath=false -c core.autocrlf=false -c core.safecrlf=false -c core.attributesFile=<appens-tomme-attributfil> -c core.hooksPath=<appens-tomme-hookmappe> -c commit.gpgsign=false <args…>
 ```
 
+- Opret og kontrollér app-ejede, tomme filer/mapper til `core.attributesFile` og `core.hooksPath` med absolutte stier uden for arbejdsområdet. Brug dem i **alle** Git-kald, også aktivering og commits; overskriv ikke brugerens globale konfiguration. `GitLocator` sender også `-c core.hooksPath=<appens-tomme-hookmappe>` ved `--version`. `--no-verify` er ikke tilstrækkeligt og bruges ikke.
 - `Environment`: `GIT_TERMINAL_PROMPT=0`, `LC_ALL=C`, `GIT_OPTIONAL_LOCKS=0`. `Utf8Output = true`. `Timeout` = 30 sekunder (60 til diff og tilbagerulning). `WorkingDirectory` = arbejdsmappen.
 - Alle kald serialiseres med én `SemaphoreSlim(1, 1)` i servicen.
 - **Pathspec for dokumenter** (kaldet `MD`): to argumenter efter `--`: `:(glob)*.md`. (`*` krydser ikke `/`, så kun mapperodens filer.)
 - Annullering (`ct`) skal give `OperationCanceledException` videre uændret.
 - Fejl: ikke-nul exit ⇒ `VersionOperationResult(false, <dansk tekst>)`. Indeholder stderr `index.lock` ⇒ "Et andet program bruger versionsarkivet lige nu. Prøv igen om lidt." Ellers ⇒ "Git-kommandoen fejlede: " + første ikke-tomme stderr-linje (højst 300 tegn). Vis aldrig stakspor.
+- Før enhver commit-opskrift inspiceres hele indekset med NUL-afgrænset output. Hvis en staged sti ikke er et Markdown-dokument direkte i arbejdsroden, afbrydes handlingen før indekset eller filerne ændres; staged ændringer uden for omfanget må aldrig committes eller ryddes. Denne kontrol gælder også aktivering og begge commits i tilbagerulning. Alle commit-kommandoer bruger desuden `--only -- MD`, så en eventuel staged fil uden for omfanget ikke kan komme med ved en samtidig ekstern indeksændring. Ved tomt dokumentomfang må `--allow-empty` kun anvendes efter kontrol af, at indekset er tomt. `.gitignore` oprettes, men stages/committes ikke.
+- Før aktivering og hver dokumentændrende Git-operation kontrolleres effektive attributter for de berørte Markdown-stier i arbejdsområdet og i måltræet, hvor et måltræ findes. Konverteringsattributter (`text`, `eol`, `crlf`, `filter`, `working-tree-encoding` eller `ident`) med en aktiv værdi medfører sikker afvisning med forklaring. `core.autocrlf=false` og den tomme app-ejede attributfil er stadig påkrævet. Afvis også ved fejl, hvis attributkilderne eller status ikke kan kontrolleres.
 
 | Formål | Kommando (efter fælles præfiks) |
 | --- | --- |
 | Git findes | `--version` (kun via locatoren, uden `-C`) |
 | Arkivrod-test | `rev-parse --show-prefix` ⇒ exit ≠ 0: intet arkiv. Tom tekst: mappen er arkivets rod. Ikke-tom tekst: mappen ligger **inde i** et andet arkiv ⇒ `ForkertArkiv` |
 | Har commits | `rev-parse --verify --quiet HEAD` (exit 0 = ja). Arkiv uden HEAD behandles som `IkkeAktiveret` |
-| Aktivér | (1) hvis intet arkiv: `init`. (2) skriv `.gitignore` hvis den mangler (atomisk, UTF-8 uden BOM, indhold nedenfor). (3) hvis `config --get user.name` er tom: `config user.name Slægtsassistent` og `config user.email slaegtsassistent@localhost`. (4) `config core.autocrlf false`. (5) `add -A -- .gitignore` + `MD` (kun hvis mindst én matchende fil findes; ellers kun `.gitignore`). (6) `commit --no-verify --allow-empty -m "Start versionsstyring"` |
+| Aktivér | Før ændringer: kontrollér staged stier og attributter. (1) hvis intet arkiv: `init`. (2) skriv `.gitignore` hvis den mangler (atomisk, UTF-8 uden BOM, indhold nedenfor), uden at stage den. (3) hvis `config --get user.name` er tom: `config user.name Slægtsassistent` og `config user.email slaegtsassistent@localhost`. (4) `config core.autocrlf false`. (5) `add -A -- MD` (kun hvis mindst én dokumentfil findes). (6) ved dokumenter: `commit --only -m "Start versionsstyring" -- MD`; ved ingen dokumenter: `commit --allow-empty -m "Start versionsstyring"` kun med tomt indeks |
 | Status | `status --porcelain=v1 -z --untracked-files=all` + `MD` |
 | Historik | `log -n <max+1> --no-color --format=%H%x1f%cI%x1f%s%x1e` |
-| Commit alle | Kun hvis status har ændringer: `add -A` + `MD`; derefter `commit --no-verify -m <besked>` (+ identitetsargumenter, se nedenfor) |
+| Commit alle | Før ændringer: kontrollér hele indekset og attributter. Kun hvis status har dokumentændringer: `add -A -- MD`; derefter `commit --only -m <besked> -- MD` (+ identitetsargumenter, se nedenfor) |
 | Ændringer (ikke committet) | `add -N` + `MD`; derefter `diff --no-color --no-ext-diff --no-textconv --find-renames HEAD` + `MD` (maks. 8 000 000 tegn output) |
 | Ændringer (commit) | `show --no-color --no-ext-diff --no-textconv --format= --find-renames <id>` + `MD` (samme maks.) |
 | Tilbagerulning | se nedenfor |
@@ -161,14 +164,15 @@ Test `git check-ignore` mod filerne `.slaegtsassistent/manifest.json` (ignoreret
 
 **Tilbagerulning `RollbackToAsync(workspace, id)`:**
 
-1. Valider `CommitIdValidator.IsValid(id)`; `cat-file -e <id>^{commit}` skal give exit 0, ellers fejl "Versionen findes ikke længere."
-2. Hent status. Er der ændringer: `CommitAllAsync(workspace, "Automatisk version før tilbagerulning", ct)`; ved fejl afbrydes uden yderligere ændringer.
+1. Valider `CommitIdValidator.IsValid(id)`; `cat-file -e <id>^{commit}` skal give exit 0, ellers fejl "Versionen findes ikke længere." Kontrollér staged stier og attributter; ved fejl afbrydes uden ændringer.
+2. Opret et bytepræcist øjebliksbillede af alle Markdown-filer direkte i arbejdsroden (stier og bytes) og sammenlign det med målets Markdown-træ før en sikkerhedsversion oprettes. Sammenligningen skal medtage nye filer, sletninger og ændrede bytes; `diff HEAD <id>` alene er ikke tilstrækkelig. Er tilstanden identisk, returnér `Success` med "Dokumenterne er allerede i denne tilstand." uden commit.
 3. Hent målets tid og besked: `log -1 --format=%cI%x1f%s <id>`.
-4. Sammenlign: `diff --quiet HEAD <id>` + `MD`. Exit 0 ⇒ returnér `Success` med besked "Dokumenterne er allerede i denne tilstand." (ingen commit).
-5. `restore --source=<id> --staged --worktree` + `MD`. Ved fejl: forsøg `restore --source=HEAD --staged --worktree` + `MD` og returnér fejl med teksten "Tilbagerulningen mislykkedes; dokumenterne er ført tilbage til den seneste version."
-6. `commit --no-verify -m "Rul tilbage til <dd-MM-yyyy HH:mm>: <besked>"` (+ identitetsargumenter). Tiden formateres i lokal tid.
+4. Er dokumenttilstanden forskellig fra målet, inspicer status. Ved ændringer oprettes den automatiske sikkerhedsversion med dokument-pathspec; ved fejl afbrydes uden at begynde gendannelsen.
+5. Gem snapshot af den aktuelle HEAD og dets Markdown-filmanifest/bytes som genoprettelsespunkt. Gendan til `id` med en sti-afgrænset `restore --source=<id> --staged --worktree -- MD`, og fjern kun rodfiler `*.md`, der ikke findes i måltræet. Verificér efterfølgende både filmanifest/-bytes og det afgrænsede indeks mod målet.
+6. Commit med `commit --only -m "Rul tilbage til <dd-MM-yyyy HH:mm>: <besked>" -- MD` (+ identitetsargumenter). Tiden formateres i lokal tid. Ved succesfuldt procesexit verificeres HEAD-commit og dets dokumenttræ. Ved timeout/annullering eller tvetydigt udfald kontrolleres HEAD uafhængigt: hvis committen faktisk findes med forventet forælder, besked og målets dokumenttræ, behandles handlingen som fuldført; ellers genoprettes snapshot af genoprettelsespunktet med dokumentafgrænsning, og resultatet verificeres.
+7. Fejl i gendannelse, commit eller genopretning udløser genopretning af dokumentfiler og indeks til genoprettelsespunktet med en ikke-annullerbar, tidsbegrænset oprydning. Kontrollér både filmanifest/-bytes og indeks efter genopretning. Vis aldrig succes eller lov, at dokumenterne er ført tilbage, hvis kontrollen fejler; vis i stedet en dansk fejl, der præcist siger, at tilstanden ikke kunne bekræftes. Genindlæs arbejdsområdet efter fuldført rollback eller efter genopretning, mens arbejdsområdespærringen stadig holdes.
 
-Testen skal bevise, at `restore` i trin 5 (a) gendanner slettede filer, (b) fjerner filer der ikke findes i målversionen, og (c) gendanner ændret indhold byte-for-byte. Fungerer (b) ikke med installeret Git, erstattes trin 5 med `read-tree --reset -u <id>` (index og arbejdstræ) — dokumentér afvigelsen i Validation.md.
+Der må ikke bruges en uafgrænset `read-tree`-reservevej. Hvis sti-afgrænset gendannelse eller verificeret genopretning ikke kan gennemføres sikkert, afbrydes handlingen uden at ændre andre filer eller indeksstier.
 
 ## Tilstande og knapper
 
@@ -189,19 +193,19 @@ Al flowlogik ligger i **én** klasse, `VersioningWorkflow` (`Services/Versioning
 **Commit (flowet i `VersioningWorkflow.CommitAllAsync`):**
 
 1. Er `IsImporting`: afbryd med besked.
-2. Status. `GitMangler`/`ForkertArkiv`: vis `Message` via `IUserDialogService`. `IkkeAktiveret`: `ConfirmAsync("Slå versionsstyring til", "Versionsstyring er ikke slået til for denne mappe. Vil du slå det til nu? Der oprettes en skjult mappe .git, og dine Markdown-dokumenter får en startversion.", "Slå til")`; ved ja: `EnableAsync`; derefter fortsætter flowet kun hvis der er ændringer (ellers meddelelse "Versionsstyring er slået til.").
-3. `host.SaveAllEditors()` hvis nødvendigt; mislykkes den ⇒ stop (fejlen vises allerede af `TrySaveAll`).
-4. Opdatér status. 0 ændringer ⇒ "Der er ingen ændringer at committe."
+2. Status. `GitMangler`/`ForkertArkiv`: vis `Message` via `IUserDialogService`. `IkkeAktiveret`: vis bekræftelse; ved afslag intet ændres. Ved ja gemmes alle editorer først; gemmefejl afbryder aktivering. Kald derefter `EnableAsync`, som opretter startversionen af den gemte disktilstand; opdatér status og stop med besked, hvis der ikke er ændringer.
+3. For et allerede aktiveret arkiv gemmes editorer før status, beskeddialog og commit; gemmefejl afbryder flowet.
+4. Kontrollér staged stier uden for dokumentomfanget; fejl eller udenforliggende staged ændringer stopper før stage/commit. Opdatér status. 0 ændringer ⇒ "Der er ingen ændringer at committe."
 5. `AskCommitMessageAsync(CommitMessageSuggester.Suggest(now))`; `null` eller blank ⇒ stop.
 6. `CommitAllAsync`; vis fejl ved mislykkes; opdatér historik/status ved succes.
 
-**Rul tilbage her:** `ConfirmAsync("Rul tilbage", "Dokumenterne gendannes til versionen fra <dato tid> (<besked>). Dine nuværende ændringer gemmes først som en ny version, så du kan fortryde. Fortsæt?", "Rul tilbage")` ⇒ `SaveAllEditors()` ⇒ `RollbackToAsync` ⇒ ved succes `ReloadWorkspace()`, derefter opdatér historik/status og vis resultatbesked i vinduet.
+**Rul tilbage her:** Efter bekræftelse erhverves en fælles arbejdsområdespærring, som holdes under gemning, tilbagerulning/genopretning og indtil `ReloadWorkspace()` er afsluttet. Spærringen forhindrer redigering, gemning, import, mappeskift, skabelonanvendelse og andre dokumentændringer; ventende skrivehandlinger skal afsluttes før låsen erhverves. Kald derefter `SaveAllEditors()`; fejl afbryder før Git-operationer. Kald `RollbackToAsync`; hvis dokumenterne allerede er i måltilstanden, vis beskeden uden commit eller genindlæsning. Ellers genindlæs efter gennemført tilbagerulning eller verificeret genopretning, mens spærringen stadig holdes. Opdatér historik/status og vis resultatet; ved genoprettelsesfejl må UI'et ikke foregive succes.
 
 **Vis ændringer:** hent diff (commit eller ikke committet) ⇒ `IVersionDiffWindowService.Show(titel, filer, notits)`. Notits ved afkortning: "Visningen er afkortet. Åbn dokumentet eller brug Git til at se resten." Ved `VersionControlException` vises beskeden i historikvinduets fejllinje. Diffvinduet afkorter til 20 000 linjer samlet.
 
 ## Hvordan ændringer i hovedvinduet hænger sammen
 
-- `MainWindowViewModel.IsImporting` findes. `HasDirtyEditors` findes. `TrySaveAll()` og `ActivateWorkspace()` findes (`ViewModels/MainWindowViewModel.cs`). `ActivateWorkspace()` rydder editorcache, genindlæser snapshot og dokumentkatalog og vælger første person — den må kun kaldes efter at ugemte editorer er gemt (garanteret af flowet).
+- `MainWindowViewModel.IsImporting` findes. `HasDirtyEditors` findes. `TrySaveAll()` og `ActivateWorkspace()` findes (`ViewModels/MainWindowViewModel.cs`). `ActivateWorkspace()` rydder editorcache, genindlæser snapshot og dokumentkatalog og vælger første person — den må kun kaldes efter at ugemte editorer er gemt (garanteret af flowet). Den fælles arbejdsområdespærring skal dække også hovedvinduets redigering/gemning, import, skabelonanvendelse, mappeskift og alle øvrige skriveflows fra før gemning til genindlæsningens afslutning.
 - Rejs `DocumentsSaved` fra `TrySaveAll()` efter succes, så et åbent historikvindue opdaterer status.
 - Arbejdsmappen er `StandardMarkdownOutputFolder`. Er den tom/ikke sat ⇒ meddelelse "Vælg først en arbejdsmappe i Indstillinger." og ingen kald til servicen. Versionsknapperne er aktive, men viser denne besked.
 
@@ -209,6 +213,9 @@ Al flowlogik ligger i **én** klasse, `VersioningWorkflow` (`Services/Versioning
 
 - **Core:** rene tabeltests for de fire parsere og validatoren (se Plan V1). Ingen mocks.
 - **App – integration med rigtig Git:** en `GitFact`-attribut (`FactAttribute` med `Skip` sat, hvis `GitLocator` ikke finder Git) bruges til tests der opretter midlertidige mapper under `Path.GetTempPath()` og rydder op i `finally`. Manglende Git registreres som *ikke kørt*, aldrig som succes. Testene må ikke røre brugerens globale Git-konfiguration: sæt `HOME`/`USERPROFILE`/`XDG_CONFIG_HOME`/`GIT_CONFIG_GLOBAL` til en tom testmappe i testprocessens miljø, eller test på en måde hvor identitet mangler.
+- Integrationstest opretter hooks i arkivet og sætter global `core.hooksPath` til hooks, der skriver markørfiler for `pre-commit`, `prepare-commit-msg`, `commit-msg` og `post-commit`; samtlige aktiverings-, almindelige commit- og rollback-commits skal lykkes uden markører.
+- Integrationstest stage'r med force en ændring uden for dokumentomfanget (fx `git add -f -- .slaegtsassistent/manifest.json`) og beviser, at aktivering, almindelig commit og rollback afvises uden commit, uden ændring af indeksindhold og uden ændring af filen.
+- Integrationstest dækker aktuelle dokumenter allerede lig målet trods forskellig HEAD (inkl. nye filer og sletninger) uden automatisk sikkerhedsversion; rollbackfejl, timeout og annullering med verificeret genopretning; forsinket rollback mens UI-redigering, gemning, import og mappeskift er spærret; og aktiv `*.md text eol=lf`-attribut, som afvises før byte-round-trip.
 - **App – ViewModels:** `FakeVersionControlService`, `FakeVersionDialogService`, `FakeVersioningHost` (implementeres i testprojektet). Test observerbar adfærd: kommando kaldt/ikke kaldt, tekster, knapstater, rækkefølge (gem → commit).
 - **Headless:** mindst én test pr. nyt vindue, der åbner det med fakes og kontrollerer at bindinger ikke fejler (efter mønstret i `AvaloniaHeadlessRegressionTests`).
 - Kør målrettet: `dotnet test tests/SlaegtsAssistent.Core.Tests --filter "FullyQualifiedName~Versioning"` og `dotnet test tests/SlaegtsAssistent.App.Tests --filter "FullyQualifiedName~Version"`. Fuld `dotnet test` ved pakkeafslutning V3, V4 og V5.
@@ -217,11 +224,13 @@ Al flowlogik ligger i **én** klasse, `VersioningWorkflow` (`Services/Versioning
 
 | Risiko | Håndtering |
 | --- | --- |
-| `git restore` fjerner ikke filer, der ikke findes i målet | Test (b) i tilbagerulningen; fald tilbage til `read-tree --reset -u` |
+| Dokumenter ændres af attributter | Tøm app-ejet `core.attributesFile`; inspicér aktive konverteringsattributter og afvis før ændring; test `text`/`eol` og filter |
+| Staged filer uden for dokumentomfanget kommer med i commit | Inspicér hele indekset før hver commitopskrift; afvis uden at ændre indeks eller filer; test aktivering, commit og rollback |
+| Fejl/timeout efter rollback-restore efterlader en ucommittet måltilstand | Begræns commits med `--only -- MD`; kontrollér commitresultatet uafhængigt; genopret snapshot af seneste HEAD og verificér filer og indeks før resultat vises |
 | Tegnsæt for æøå i stier og beskeder | `core.quotepath=false`, UTF-8-output, test med `Åse Østergård.md` og besked med `æøå` |
-| Windows-linjeskift ændres af Git | `core.autocrlf=false` pr. kommando og i arkivet; test round-trip med CRLF-fil |
+| Windows-linjeskift ændres af Git | `core.autocrlf=false` pr. kommando og i arkivet; afvis aktive konverteringsattributter; test round-trip med CRLF-fil |
 | Parallelle kald låser `index.lock` | Serialisering, `GIT_OPTIONAL_LOCKS=0` til status, venlig fejltekst |
 | Store diff (> 1 MB) | `MaximumOutputCharacters` hævet til 8 mio. for diff; derefter venlig fejl |
 | macOS `/usr/bin/git`-stub åbner installationsdialog | Homebrew-stier først; `--version` verificerer; negativt resultat caches ikke |
-| Git-hooks eller brugerkonfiguration giver overraskelser | `--no-verify`, `commit.gpgsign=false`, ingen kald mod andre arkiver |
+| Git-hooks eller brugerkonfiguration giver overraskelser | App-ejet tom `core.hooksPath` på alle Git-kald, `commit.gpgsign=false`, ingen kald mod andre arkiver |
 | Vis ændringer ændrer indekset (`add -N` indekserer også sletninger) | Kun indeks, aldrig arbejdstræ; næste `add -A`/`restore --staged` normaliserer. Verificeret manuelt med Git 2.51: status-antal er uændret (`" A"` og `"D "` tælles som Ny/Slettet). Dækkes af test |
