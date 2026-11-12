@@ -72,6 +72,9 @@ public sealed class Sprint04bTests
             2 DATE 01 JAN 1918
             2 PLAC Aarhus
             2 NOTE Værnepligtig
+            1 RESI
+            2 DATE 01 JAN 1920
+            2 PLAC Aarhus
             1 CUSTOM Special hændelse
             2 NOTE Ukendt tag
             0 TRLR
@@ -87,9 +90,13 @@ public sealed class Sprint04bTests
                 .Equal(
                     GedcomEventCategory.Confirmation,
                     GedcomEventCategory.MilitaryService,
+                    GedcomEventCategory.Residence,
                     GedcomEventCategory.Other);
             person.Events[1].Type.Should().Be("Lægdsrulle");
-            person.Events[2].Note.Should().Be("Ukendt tag");
+            person.Events[2].Date.Should().Be("01 JAN 1920");
+            new BiographyTemplateMarkdownGenerator().Generate(person)
+                .Should().Contain("**Bopæl**");
+            person.Events[3].Note.Should().Be("Ukendt tag");
             tree.Diagnostics.Should().ContainSingle(diagnostic => diagnostic.Tag == "CUSTOM");
         }
         finally

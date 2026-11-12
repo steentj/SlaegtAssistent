@@ -185,6 +185,7 @@ public sealed class BiographyTemplateRenderer
         GedcomEventCategory.Burial => "Begravelse",
         GedcomEventCategory.Census => "Folketælling",
         GedcomEventCategory.MilitaryService => "Militærtjeneste",
+        GedcomEventCategory.Residence => "Bopæl",
         _ => "Anden hændelse",
     };
 
