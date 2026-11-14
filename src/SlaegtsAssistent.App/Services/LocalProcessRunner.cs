@@ -8,7 +8,15 @@ using System.Threading.Tasks;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed record LocalProcessRequest(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, TimeSpan Timeout, IReadOnlyDictionary<string, string?>? EnvironmentVariables = null);
+public sealed record LocalProcessRequest(
+    string Executable,
+    IReadOnlyList<string> Arguments,
+    string WorkingDirectory,
+    TimeSpan Timeout,
+    IReadOnlyDictionary<string, string?>? EnvironmentVariables = null,
+    IReadOnlyDictionary<string, string>? Environment = null,
+    bool Utf8Output = false,
+    int MaximumOutputCharacters = 1_048_576);
 public sealed record LocalProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
 public interface ILocalProcessRunner
@@ -36,12 +44,16 @@ public sealed class LocalProcessRunner : ILocalProcessRunner
         foreach (var argument in request.Arguments) start.ArgumentList.Add(argument);
         if (request.EnvironmentVariables is not null)
             foreach (var variable in request.EnvironmentVariables) start.Environment[variable.Key] = variable.Value;
+        if (request.Environment is not null)
+            foreach (var variable in request.Environment) start.Environment[variable.Key] = variable.Value;
+        if (request.Utf8Output)
+            start.StandardOutputEncoding = start.StandardErrorEncoding = new UTF8Encoding(false);
         using var process = new Process { StartInfo = start };
         process.Start();
         using var kill = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });
         try
         {
-            var stdout = ReadBoundedAsync(process.StandardOutput.BaseStream, 1024 * 1024, timeout.Token);
+            var stdout = ReadBoundedAsync(process.StandardOutput.BaseStream, request.MaximumOutputCharacters, timeout.Token);
             var stderr = ReadBoundedAsync(process.StandardError.BaseStream, 4 * 1024 * 1024, timeout.Token);
             var exited = process.WaitForExitAsync(timeout.Token);
             var completed = await Task.WhenAny(stdout, stderr, exited).ConfigureAwait(false);

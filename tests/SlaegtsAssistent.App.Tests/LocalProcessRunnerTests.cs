@@ -25,6 +25,21 @@ public sealed class LocalProcessRunnerTests
     }
 
     [Fact]
+    public async Task Utf8OutputOgNytMiljoeVirkerSammen()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/usr/bin/perl")) return;
+        var result = await new LocalProcessRunner().RunAsync(
+            new LocalProcessRequest(
+                "/usr/bin/perl",
+                ["-e", "print qq{$ENV{SLAEGTSASSISTENT_UTF8}}"],
+                Path.GetTempPath(),
+                TimeSpan.FromSeconds(5),
+                Environment: new Dictionary<string, string> { ["SLAEGTSASSISTENT_UTF8"] = "æøå" },
+                Utf8Output: true), CancellationToken.None);
+        result.StandardOutput.Should().Be("æøå");
+    }
+
+    [Fact]
     public async Task TidsgrænseStopperProcessen()
     {
         if (OperatingSystem.IsWindows()) return;

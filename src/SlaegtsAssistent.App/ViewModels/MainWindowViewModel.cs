@@ -13,10 +13,11 @@ using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.Core.Biography;
 using SlaegtsAssistent.Core.Domain;
 using SlaegtsAssistent.Core.Gedcom;
+using SlaegtsAssistent.Core.Versioning;
 
 namespace SlaegtsAssistent.App.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 {
     private readonly IGedcomLoader _gedcomLoader;
     private readonly IGedcomFilePickerService _gedcomFilePickerService;
@@ -35,6 +36,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ITemplateCheatSheetService _templateCheatSheetService;
     private readonly IGedcomHelpService _gedcomHelpService;
     private readonly IPartialImportDialogService _partialImportDialogService;
+    private readonly IVersionControlService _versionControlService;
+    private readonly VersioningWorkflow _versioningWorkflow;
+    private readonly IVersionHistoryWindowService _versionHistoryWindowService;
     private readonly List<PersonListItemViewModel> _documentPeople = [];
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly List<GedcomDiagnosticViewModel> _allImportDiagnostics = [];
@@ -42,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private FamilyTree? _familyTree;
     private bool _isReplacingPeople;
     private CancellationTokenSource? _importCancellation;
+    public event EventHandler? DocumentsSaved;
 
     public MainWindowViewModel()
         : this(
@@ -75,7 +80,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ITemplateCheatSheetService? templateCheatSheetService = null,
         IGedcomSnapshotStore? gedcomSnapshotStore = null,
         IPartialImportDialogService? partialImportDialogService = null,
-        IGedcomHelpService? gedcomHelpService = null)
+        IGedcomHelpService? gedcomHelpService = null,
+        IVersionControlService? versionControlService = null,
+        VersioningWorkflow? versioningWorkflow = null,
+        IVersionHistoryWindowService? versionHistoryWindowService = null,
+        IVersionDiffWindowService? versionDiffWindowService = null)
     {
         _gedcomLoader = gedcomLoader;
         _gedcomFilePickerService = gedcomFilePickerService;
@@ -94,6 +103,14 @@ public partial class MainWindowViewModel : ViewModelBase
         _templateCheatSheetService = templateCheatSheetService ?? new NullTemplateCheatSheetService();
         _gedcomHelpService = gedcomHelpService ?? new NullGedcomHelpService();
         _partialImportDialogService = partialImportDialogService ?? new RejectingPartialImportDialogService();
+        _versionControlService = versionControlService ?? new NullVersionControlService();
+        var diffService = versionDiffWindowService ?? new NullVersionDiffWindowService();
+        _versioningWorkflow = versioningWorkflow ?? new VersioningWorkflow(
+            _versionControlService,
+            new NullVersionDialogService(),
+            _userDialogService,
+            diffService);
+        _versionHistoryWindowService = versionHistoryWindowService ?? new NullVersionHistoryWindowService();
 
         var settings = _applicationSettingsService.Load();
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
@@ -487,6 +504,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _gedcomHelpService.Show();
     }
 
+    string? IVersioningHost.WorkspaceFolder => StandardMarkdownOutputFolder;
+    bool IVersioningHost.IsBusyWithImport => IsImporting;
+    bool IVersioningHost.HasUnsavedEditors => HasDirtyEditors;
+    bool IVersioningHost.SaveAllEditors() => TrySaveAll();
+    void IVersioningHost.ReloadWorkspace() => ActivateWorkspace();
+
     public async Task<bool> ConfirmCloseAsync()
     {
         if (!HasDirtyEditors)
@@ -509,6 +532,18 @@ public partial class MainWindowViewModel : ViewModelBase
         TrySaveAll();
     }
 
+    [RelayCommand(CanExecute = nameof(CanUseVersioning))]
+    private async Task CommitAsync()
+    {
+        await _versioningWorkflow.CommitAllAsync(this);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUseVersioning))]
+    private void ShowVersionHistory()
+    {
+        _versionHistoryWindowService.Show(this);
+    }
+
     private bool TrySaveAll()
     {
         try
@@ -520,6 +555,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             UpdateDirtyState();
             ErrorMessage = null;
+            DocumentsSaved?.Invoke(this, EventArgs.Empty);
             return true;
         }
         catch (UnauthorizedAccessException exception)
@@ -1488,8 +1524,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private bool CanSaveAll()
     {
-        return HasDirtyEditors;
+        return HasDirtyEditors && !IsImporting;
     }
+
+    private bool CanUseVersioning() => !IsImporting;
 
     private void EditorOnPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
@@ -1529,6 +1567,9 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyBiographyTemplateCommand.NotifyCanExecuteChanged();
         CancelImportCommand.NotifyCanExecuteChanged();
         OpenSettingsCommand.NotifyCanExecuteChanged();
+        SaveAllCommand.NotifyCanExecuteChanged();
+        CommitCommand.NotifyCanExecuteChanged();
+        ShowVersionHistoryCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnImportPhaseTextChanged(string value)
@@ -1677,6 +1718,57 @@ public partial class MainWindowViewModel : ViewModelBase
             IReadOnlyList<GedcomDifferenceReviewItem> differences)
         {
             return Task.FromResult<IReadOnlyDictionary<string, bool>?>(null);
+        }
+    }
+
+    private sealed class NullVersionDialogService : IVersionDialogService
+    {
+        public Task<string?> AskCommitMessageAsync(string suggestedMessage)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        public Task<bool> ConfirmAsync(string title, string message, string confirmText)
+        {
+            return Task.FromResult(false);
+        }
+    }
+
+    private sealed class NullVersionControlService : IVersionControlService
+    {
+        public Task<VersionStatus> GetStatusAsync(string workspace, CancellationToken ct)
+        {
+            return Task.FromResult(new VersionStatus(VersionControlState.GitMangler, "Versionsstyring er ikke tilgængelig.", [], null));
+        }
+
+        public Task<VersionOperationResult> EnableAsync(string workspace, CancellationToken ct)
+        {
+            return Task.FromResult(new VersionOperationResult(false, "Versionsstyring er ikke tilgængelig."));
+        }
+
+        public Task<VersionHistory> GetHistoryAsync(string workspace, int maxEntries, CancellationToken ct)
+        {
+            return Task.FromResult(new VersionHistory([], false));
+        }
+
+        public Task<VersionOperationResult> CommitAllAsync(string workspace, string message, CancellationToken ct)
+        {
+            return Task.FromResult(new VersionOperationResult(false, "Versionsstyring er ikke tilgængelig."));
+        }
+
+        public Task<IReadOnlyList<DiffFile>> GetWorkingChangesAsync(string workspace, CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<DiffFile>>([]);
+        }
+
+        public Task<IReadOnlyList<DiffFile>> GetCommitChangesAsync(string workspace, string commitId, CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<DiffFile>>([]);
+        }
+
+        public Task<VersionOperationResult> RollbackToAsync(string workspace, string commitId, CancellationToken ct)
+        {
+            return Task.FromResult(new VersionOperationResult(false, "Versionsstyring er ikke tilgængelig."));
         }
     }
 }

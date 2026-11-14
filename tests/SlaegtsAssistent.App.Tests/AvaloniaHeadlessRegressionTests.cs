@@ -58,6 +58,10 @@ public sealed class AvaloniaHeadlessRegressionTests
             window.DataContext.Should().BeSameAs(viewModel);
             Descendants<Button>(window).Should().Contain(button =>
                 button.Content as string == "Anvend skabelon" && button.Command == viewModel.ApplyBiographyTemplateCommand);
+            Descendants<Button>(window).Should().Contain(button =>
+                button.Content as string == "Commit" && button.Command == viewModel.CommitCommand);
+            Descendants<Button>(window).Should().Contain(button =>
+                button.Content as string == "Versionshistorik" && button.Command == viewModel.ShowVersionHistoryCommand);
             return Task.CompletedTask;
         });
 

@@ -67,6 +67,13 @@ public partial class App : Application
         services.AddSingleton<IMarkdownDocumentCatalog, FileSystemMarkdownDocumentCatalog>();
         services.AddSingleton<IGedcomSnapshotStore, FileSystemGedcomSnapshotStore>();
         services.AddSingleton<IGedcomDifferenceDialogService, AvaloniaGedcomDifferenceDialogService>();
+        services.AddSingleton<ILocalProcessRunner, LocalProcessRunner>();
+        services.AddSingleton<IGitLocator, GitLocator>();
+        services.AddSingleton<IVersionControlService, GitVersionControlService>();
+        services.AddSingleton<IVersionDialogService, AvaloniaVersionDialogService>();
+        services.AddSingleton<IVersionDiffWindowService, AvaloniaVersionDiffWindowService>();
+        services.AddSingleton<VersioningWorkflow>();
+        services.AddSingleton<IVersionHistoryWindowService, AvaloniaVersionHistoryWindowService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>(provider => new MainWindow(
             provider.GetRequiredService<MainWindowViewModel>()));

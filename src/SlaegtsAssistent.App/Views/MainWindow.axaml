@@ -73,6 +73,11 @@
                             IsVisible="{Binding IsImporting}" />
                     <Button Content="Gem"
                             Command="{Binding SaveAllCommand}" />
+                    <Button Content="Commit"
+                            Command="{Binding CommitCommand}"
+                            ToolTip.Tip="Gem og commit alle ændringer i alle dokumenter som en ny version." />
+                    <Button Content="Versionshistorik"
+                            Command="{Binding ShowVersionHistoryCommand}" />
                     <Button Content="Indstillinger"
                             Command="{Binding OpenSettingsCommand}" />
                 </StackPanel>
