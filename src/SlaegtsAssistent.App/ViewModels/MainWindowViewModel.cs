@@ -1085,8 +1085,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             $"Oversprungne: {report.SkippedRecords} · " +
             $"Fatale: {report.FatalErrors}";
         _allImportDiagnostics.Clear();
-        _allImportDiagnostics.AddRange(report.Diagnostics.Select(diagnostic =>
-            new GedcomDiagnosticViewModel(diagnostic)));
+        _allImportDiagnostics.AddRange(GedcomDiagnosticViewModel.CreateSummaries(report.Diagnostics));
         ApplyDiagnosticFilter();
         OnPropertyChanged(nameof(HasImportDiagnostics));
     }

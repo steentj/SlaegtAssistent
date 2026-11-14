@@ -139,6 +139,39 @@ public sealed class GedcomFaultToleranceTests
     }
 
     [Theory]
+    [InlineData("_LABL")]
+    [InlineData("_PLAC")]
+    [InlineData("_PTE")]
+    [InlineData("_PTF")]
+    [InlineData("_STE")]
+    [InlineData("_STF")]
+    public void Load_MacFamilyTreeMetadataBevarerIndividuelleDiagnostikker(string tag)
+    {
+        var path = CreateFixture(
+            $"0 HEAD\n1 CHAR UTF-8\n0 @X1@ {tag}\n0 @X2@ {tag}\n0 @X1@ {tag}\n" +
+            "0 @I1@ INDI\n1 NAME Anna /Jensen/\n0 TRLR\n");
+
+        try
+        {
+            var tree = new GedcomLoader().Load(path);
+
+            tree.ImportReport.SkippedRecords.Should().Be(1);
+            tree.ImportReport.IsPartial.Should().BeTrue();
+            tree.ImportReport.Diagnostics.Should().HaveCount(3);
+            tree.ImportReport.Diagnostics.Select(diagnostic => diagnostic.Line).Should().Equal(3, 4, 5);
+            tree.ImportReport.Diagnostics.Select(diagnostic => diagnostic.RecordId).Should().Equal("@X1@", "@X2@", "@X1@");
+            tree.ImportReport.Diagnostics.Select(diagnostic => diagnostic.Kind).Should().Equal(
+                GedcomDiagnosticKind.IgnoredMacFamilyTreeMetadata,
+                GedcomDiagnosticKind.IgnoredMacFamilyTreeMetadata,
+                GedcomDiagnosticKind.DuplicateMacFamilyTreeMetadata);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
     [InlineData("1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anna /Jensen/\n0 TRLR\n", "HEAD")]
     [InlineData("0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anna /Jensen/\n", "TRLR")]
     public void Load_FatalFilstrukturAfvisesMedStruktureretRapport(string content, string tag)

@@ -2714,6 +2714,81 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task ImportDiagnostics_ShouldSummarizeMacFamilyTreeMetadataInDialogAndReport()
+    {
+        using var gedcom = CreateTemporaryGedcomFile(
+            "0 HEAD",
+            "1 CHAR UTF-8",
+            "0 @TF1@ _PTF",
+            "0 @TF2@ _PTF",
+            "0 @P1@ _PLAC",
+            "0 @P2@ _PLAC",
+            "0 @T1@ _STE",
+            "0 @T2@ _STE",
+            "0 @T1@ _STE",
+            "0 @T2@ _STE",
+            "0 @F1@ _STF",
+            "0 @F2@ _STF",
+            "0 @F1@ _STF",
+            "0 @F2@ _STF",
+            "0 @I1@ INDI",
+            "1 NAME Anna /Jensen/",
+            "0 @I1@ INDI",
+            "1 NAME Første /Dublet/",
+            "0 @I1@ INDI",
+            "1 NAME Anden /Dublet/",
+            "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var partialDialog = new RecordingPartialImportDialogService(true);
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                gedcomLoader: new GedcomLoader(),
+                gedcomFilePickerService: new FakeGedcomFilePickerService(gedcom.Path),
+                settingsService: new RecordingApplicationSettingsService(new AppSettings
+                {
+                    DefaultMarkdownOutputFolder = outputFolder,
+                }),
+                partialImportDialogService: partialDialog);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            partialDialog.Calls.Should().Be(1);
+            partialDialog.LastReport!.SkippedRecords.Should().Be(6);
+            partialDialog.LastReport.Diagnostics.Should().HaveCount(14);
+            viewModel.People.Should().ContainSingle(person => person.RecordId == "@I1@");
+            viewModel.ImportDiagnostics.Should().HaveCount(8);
+
+            var summaries = GedcomDiagnosticViewModel.CreateSummaries(partialDialog.LastReport.Diagnostics);
+            summaries.Select(item => item.DialogText).Should().Equal(viewModel.ImportDiagnostics.Select(item => item.DialogText));
+            summaries.Should().ContainSingle(item =>
+                item.DialogText == "_PTF: MacFamilyTree-metadatafeltet '_PTF' blev sprunget over; det påvirker ikke personposterne. Antal forekomster: 2. Konsekvens: Metadatafeltet blev ikke importeret; øvrige poster blev bevaret.");
+            summaries.Should().ContainSingle(item =>
+                item.DialogText == "_STE: Record-id forekommer flere gange i GEDCOM-filen. Antal forekomster: 2. Konsekvens: Den senere dubletpost blev sprunget over; den første post blev bevaret.");
+            summaries.Should().ContainSingle(item =>
+                item.Diagnostic.Tag == "_STF"
+                && item.Diagnostic.Kind == GedcomDiagnosticKind.DuplicateMacFamilyTreeMetadata
+                && item.Occurrences == 2);
+            summaries.Where(item => item.Occurrences > 1).Should().OnlyContain(item =>
+                item.RecordId == null && !item.LocationText.Contains("linje") && !item.DialogText.Contains("Linje"));
+            summaries.Where(item => item.Diagnostic.Tag == "INDI").Should().HaveCount(2)
+                .And.OnlyContain(item => item.RecordId == "@I1@" && item.Occurrences == 1);
+
+            viewModel.SelectedDiagnosticSeverityFilter = "Advarsler";
+            viewModel.ImportDiagnostics.Should().HaveCount(4);
+            viewModel.SelectedDiagnosticSeverityFilter = "Fejl";
+            viewModel.ImportDiagnostics.Should().HaveCount(4);
+            viewModel.ImportDiagnostics.Count(item => item.Diagnostic.Tag == "INDI").Should().Be(2);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ShowGedcomHelpCommand_ShouldOpenGedcomHelp()
     {
         var helpService = new RecordingGedcomHelpService();
