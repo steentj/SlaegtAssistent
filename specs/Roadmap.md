@@ -147,21 +147,35 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Beslutning:** Git CLI findes lokalt (privat pakke, kendte stier eller `PATH`); mangler Git, deaktiveres funktionen tydeligt. Medpakning af Git og automatisk commit før import er opfølgning.
 *   **Specifikation:** [Analyse](sprints/sprint-07d-versionsstyring/Analyse.md), [implementeringsvejledning](sprints/sprint-07d-versionsstyring/Implementeringsvejledning.md), [plan](sprints/sprint-07d-versionsstyring/Plan.md), [krav](sprints/sprint-07d-versionsstyring/Requirements.md) og [validering](sprints/sprint-07d-versionsstyring/Validation.md).
 
-### Trin 14: Den Lokale AI-Assistent SPRINT 8
+### Trin 14: Separat mediemappe og manuelt billedvalg SPRINT 7E
+*   **Status:** Planlagt; der er endnu ikke implementeret funktionalitet som del af dette sprint.
+*   **Mål:** Angiv en separat mappe til GEDCOM-medier i Indstillinger, vælg ét topbillede pr. persondokument, og indsæt billeder ved markøren i livsforløbet via en miniaturevælger. Den genererede medieoversigt forbliver en liste eller tabel uden automatisk billedindsættelse.
+*   **Feature-rækkefølge:**
+    1. Mediemappe, entydigt stiopslag og fælles lokale rødder.
+    2. Medieoversigt som liste/tabel og kontrolleret håndtering af eksisterende skabeloner.
+    3. Fælles billedvælger med miniaturevisninger, søgning og status.
+    4. Vælg, skift og fjern ét brugerejet topbillede før den genererede sektion.
+    5. Indsæt billeder i fri livsforløbstekst med korrekt markør, fortryd og beskyttelse mod teksttab.
+    6. Preview, PDF/DOCX/ODT, versionsintegration, platformprøver og dokumentation.
+*   **Afgrænsning:** PNG/JPEG i første version. Originalerne bliver i mediemappen; billedvalgene gemmes som relative Markdown-henvisninger. Ingen automatisk portrætudvælgelse eller billedredigering.
+*   **Estimat:** 15–21 effektive udviklingsdage for én udvikler.
+*   **Specifikation:** [Analyse](sprints/sprint-07e-medier-og-billedvalg/Analyse.md), [sprintplan](sprints/sprint-07e-medier-og-billedvalg/Plan.md), [mediekontrakt](sprints/sprint-07e-medier-og-billedvalg/Mediekontrakt.md), [krav](sprints/sprint-07e-medier-og-billedvalg/Requirements.md) og [validering](sprints/sprint-07e-medier-og-billedvalg/Validation.md).
+
+### Trin 15: Den Lokale AI-Assistent SPRINT 8
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 15: Lokale Bøger som Sandhed (RAG) SPRINT 9
+### Trin 16: Lokale Bøger som Sandhed (RAG) SPRINT 9
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 16: Transkriberings-modulet (HTR) SPRINT 10
+### Trin 17: Transkriberings-modulet (HTR) SPRINT 10
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.
