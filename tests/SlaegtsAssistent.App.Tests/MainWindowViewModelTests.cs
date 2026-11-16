@@ -2080,8 +2080,8 @@ public partial class MainWindowViewModelTests
                 item.Severity == GedcomDiagnosticSeverity.Warning &&
                 item.Message.Contains("mangler.jpg", StringComparison.Ordinal));
             var markdown = File.ReadAllText(viewModel.People.Single().MarkdownFilePath);
-            markdown.Should().Contain("../gedcom/medier/anna%20foto.jpg");
-            BiographyDocumentParser.Parse(markdown).Body.Should().NotContain("mangler.jpg");
+            var body = BiographyDocumentParser.Parse(markdown).Body;
+            body.Should().Contain("medier/anna foto.jpg").And.Contain("medier/mangler.jpg").And.NotContain("![");
         }
         finally
         {

@@ -44,7 +44,9 @@ public sealed class BiographyTemplateContext
         Submitter? submitter = null,
         string? mediaBaseDirectory = null,
         string? gedcomSourceDirectory = null,
-        BiographyPersonLinks? personLinks = null)
+        BiographyPersonLinks? personLinks = null,
+        string? mediaDirectory = null,
+        MediaFileIndex? mediaIndex = null)
     {
         ArgumentNullException.ThrowIfNull(person);
 
@@ -69,7 +71,7 @@ public sealed class BiographyTemplateContext
             .Select(item => MediaTemplateContext.FromMedia(
                 item,
                 mediaBaseDirectory,
-                gedcomSourceDirectory))
+                gedcomSourceDirectory, mediaDirectory, mediaIndex))
             .ToArray();
 
         return new BiographyTemplateContext(
@@ -87,7 +89,9 @@ public sealed class BiographyTemplateContext
         string? mediaBaseDirectory = null,
         IReadOnlyDictionary<string, string?>? personNames = null,
         string? gedcomSourceDirectory = null,
-        BiographyPersonLinks? personLinks = null)
+        BiographyPersonLinks? personLinks = null,
+        string? mediaDirectory = null,
+        MediaFileIndex? mediaIndex = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -114,7 +118,7 @@ public sealed class BiographyTemplateContext
                 : new BiographyMediaResolver().Resolve(
                     item.File,
                     gedcomSourceDirectory,
-                    mediaBaseDirectory);
+                    mediaBaseDirectory, mediaDirectory, mediaIndex);
             var relativeFile = string.IsNullOrWhiteSpace(mediaBaseDirectory)
                 ? item.File?.Replace('\\', '/')
                 : resolution?.RelativePath;
@@ -361,7 +365,9 @@ public sealed record MediaTemplateContext(
     public static MediaTemplateContext FromMedia(
         Media media,
         string? mediaBaseDirectory,
-        string? gedcomSourceDirectory = null)
+        string? gedcomSourceDirectory = null,
+        string? mediaDirectory = null,
+        MediaFileIndex? mediaIndex = null)
     {
         BiographyMediaResolution? resolution = null;
         if (!string.IsNullOrWhiteSpace(mediaBaseDirectory))
@@ -369,7 +375,7 @@ public sealed record MediaTemplateContext(
             resolution = new BiographyMediaResolver().Resolve(
                 media.File,
                 gedcomSourceDirectory,
-                mediaBaseDirectory);
+                mediaBaseDirectory, mediaDirectory, mediaIndex);
         }
 
         var relativeFile = string.IsNullOrWhiteSpace(mediaBaseDirectory)

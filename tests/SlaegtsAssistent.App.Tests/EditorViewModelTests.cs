@@ -8,6 +8,29 @@ namespace SlaegtsAssistent.App.Tests;
 public class EditorViewModelTests
 {
     [Fact]
+    public void SkiftAfPreviewroedderBevarerBufferOgDirtyStatus()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var document = Directory.CreateDirectory(Path.Combine(root, "dokumenter")).FullName;
+        var media = Directory.CreateDirectory(Path.Combine(root, "medier")).FullName;
+        try
+        {
+            File.WriteAllBytes(Path.Combine(media, "foto.png"), [1, 2, 3]);
+            var editor = new EditorViewModel(Path.Combine(document, "person.md"), new RecordingMarkdownFileStore());
+            editor.MarkdownText = "![Foto](../medier/foto.png)";
+            editor.PreviewHtml.Should().NotContain("data:image/png");
+            editor.SetPreviewRoots([media]);
+            editor.PreviewHtml.Should().Contain("data:image/png");
+            editor.MarkdownText.Should().Be("![Foto](../medier/foto.png)");
+            editor.IsDirty.Should().BeTrue();
+            editor.SetPreviewRoots([]);
+            editor.PreviewHtml.Should().NotContain("data:image/png");
+            editor.IsDirty.Should().BeTrue();
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void PreviewHtml_ShouldReflectMarkdownText()
     {
         var viewModel = new EditorViewModel("/tmp/person.md", new RecordingMarkdownFileStore());

@@ -226,6 +226,12 @@
                         </TabItem>
                         <TabItem Header="Editor">
                             <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                                <StackPanel Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanEditImages}">
+                                    <Button Content="Vælg eller skift topbillede…" Click="ChoosePortraitClick" />
+                                    <Button Content="Fjern topbillede" Click="RemovePortraitClick" />
+                                    <Button Content="Indsæt billede…" Click="InsertBiographyImageClick" />
+                                </StackPanel>
                                 <StackPanel IsVisible="{Binding Editor.HasPersonLinks}" Spacing="4">
                                     <TextBlock Text="Gå til person" FontWeight="SemiBold" />
                                     <ScrollViewer MaxHeight="100" HorizontalScrollBarVisibility="Disabled">
@@ -242,7 +248,8 @@
                                         </ItemsControl>
                                     </ScrollViewer>
                                 </StackPanel>
-                            <TextBox Grid.Row="1" Text="{Binding Editor.MarkdownText, Mode=TwoWay}"
+                                </StackPanel>
+                            <TextBox x:Name="BiographyEditor" Grid.Row="1" Text="{Binding Editor.MarkdownText, Mode=TwoWay}"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      Padding="12"

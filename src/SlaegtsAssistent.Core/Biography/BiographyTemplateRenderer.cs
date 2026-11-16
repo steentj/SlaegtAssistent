@@ -158,6 +158,7 @@ public sealed class BiographyTemplateRenderer
                 "title" => media.Title,
                 "type" => media.Type,
                 "note" => media.Note,
+                "diagnostic" => media.Diagnostic,
                 _ => null,
             },
             SubmitterTemplateContext submitter => name switch

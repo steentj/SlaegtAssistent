@@ -20,6 +20,20 @@ public sealed class BiographyPersonLinkTests : IDisposable
     }
 
     [Fact]
+    public async Task BatchgenereringBrugerIndeksetTilFlyttetMedie()
+    {
+        var media = Directory.CreateDirectory(Path.Combine(_folder, "medier")).FullName;
+        var nested = Directory.CreateDirectory(Path.Combine(media, "flyttet", "familie")).FullName;
+        File.WriteAllText(Path.Combine(nested, "foto.jpg"), "foto");
+        _tree.FindPerson("@I1@")!.Media.Add(new Media("@M1@") { File = @"C:\tidligere\familie\foto.jpg" });
+        var service = new MarkdownBiographyExportService(new Settings { MediaFolder = media });
+        var index = await MediaFileIndex.BuildAsync(media, StringComparer.Ordinal);
+        var result = service.GenerateBiographies(_tree, _folder, index, CancellationToken.None);
+        var body = BiographyDocumentParser.Parse(result["@I1@"]).Body;
+        body.Should().Contain("foto.jpg").And.NotContain("kan ikke åbnes lokalt").And.NotContain("findes ikke");
+    }
+
+    [Fact]
     public void BatchExport_LinksForwardAndBackwardAndPreservesExistingCustomFilename()
     {
         var father = _tree.FindPerson("@I1@")!;
@@ -69,7 +83,8 @@ public sealed class BiographyPersonLinkTests : IDisposable
 
     private sealed class Settings : IApplicationSettingsService
     {
-        public AppSettings Load() => new();
+        public string? MediaFolder { get; init; }
+        public AppSettings Load() => new() { DefaultMediaFolder = MediaFolder };
         public void Save(AppSettings settings) { }
     }
 }

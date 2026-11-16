@@ -47,6 +47,7 @@ public partial class App : Application
 
         services.AddSingleton(desktop);
         services.AddSingleton<IGedcomLoader, GedcomLoader>();
+        services.AddSingleton<IMediaCatalogService, MediaCatalogService>();
         services.AddSingleton<IGedcomFilePickerService, AvaloniaGedcomFilePickerService>();
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
         services.AddSingleton<ITemplateFilePickerService, AvaloniaTemplateFilePickerService>();

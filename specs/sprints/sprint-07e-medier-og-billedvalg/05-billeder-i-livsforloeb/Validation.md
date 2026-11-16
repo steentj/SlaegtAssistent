@@ -1,6 +1,6 @@
 # Validering: Billeder ved markøren i livsforløbet
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist implementeret; ikke godkendt**. Core-tekstoperationer og editorintegration er prøvet automatisk; manuel validering mangler.
 
 ## Automatiserede prøver
 
@@ -23,4 +23,6 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Indsættelse og beskyttede områder | Automatiske prøver af markering, revision, CRLF, emoji og ødelagte markører | Øvrige forløb og manuel prøve mangler. |
+
+| 16. november 2026, macOS | Indsæt og fortryd | Headless-prøve af billedvalg ved markøren og fortryd | Native platformprøver og samlet accept mangler. |

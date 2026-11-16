@@ -5,6 +5,40 @@ namespace SlaegtsAssistent.App.Tests;
 
 public sealed class SafeMarkdownPreviewServiceTests
 {
+    [Theory]
+    [InlineData(25)]
+    [InlineData(50)]
+    public void ValgtStoerrelseVisesProportionaltIPreview(int percent)
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(root, "foto.png"), [1, 2, 3]);
+            var body = $"![Foto](foto.png \"SlaegtsAssistent:width={percent}\")";
+            var result = new SafeMarkdownPreviewService().Render(body, Path.Combine(root, "person.md"));
+            result.Html.Should().Contain($"max-width:{percent}%").And.Contain("height:auto");
+            result.Html.Should().NotContain("SlaegtsAssistent:width");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void TopbilledmarkoerIEksempelkodeForbliverSynlig()
+    {
+        const string body = "```markdown\n<!-- SlaegtsAssistent:portrait:start -->\n```";
+        var result = new SafeMarkdownPreviewService().Render(body, "/tmp/person.md");
+        result.Html.Should().Contain("SlaegtsAssistent:portrait:start");
+    }
+
+    [Fact]
+    public void InterneTopbilledmarkoererVisesIkke()
+    {
+        const string body = "<!-- SlaegtsAssistent:portrait:start -->\n![Foto](mangler.png)\n<!-- SlaegtsAssistent:portrait:end -->\n\n# Anna";
+        var result = new SafeMarkdownPreviewService().Render(body, "/tmp/person.md");
+        result.Html.Should().NotContain("SlaegtsAssistent:portrait").And.Contain("Anna");
+    }
+
     [Fact]
     public void Render_ShouldBlockAllRemoteAndActiveContentWithoutNetworkAttempts()
     {

@@ -15,7 +15,10 @@ using SlaegtsAssistent.Core.Export;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed record BiographyExportHtmlResult(string Html, IReadOnlyList<string> Warnings);
+public sealed record BiographyExportHtmlResult(string Html, IReadOnlyList<string> Warnings)
+{
+    public IReadOnlyList<string> SourceHashes { get; init; } = [];
+}
 
 public sealed class BiographyExportHtmlBuilder
 {
@@ -25,6 +28,9 @@ public sealed class BiographyExportHtmlBuilder
         return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(html)));
     }
 
+    public static string ComputeFingerprint(BiographyExportHtmlResult result) =>
+        ComputeFingerprint(result.Html + "\0" + string.Join("", result.SourceHashes));
+
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UsePipeTables().UseEmphasisExtras().UseFootnotes().UseAutoIdentifiers().Build();
 
@@ -32,6 +38,7 @@ public sealed class BiographyExportHtmlBuilder
     {
         ArgumentNullException.ThrowIfNull(items);
         var warnings = new List<string>();
+        var sourceHashes = new List<string>();
         var ordered = items.OrderBy(x => x.DisplayName, StringComparer.Create(CultureInfo.GetCultureInfo("da-DK"), false))
             .ThenBy(x => x.RecordId, StringComparer.Ordinal).ToArray();
         if (ordered.Select(x => x.RecordId).Distinct(StringComparer.Ordinal).Count() != ordered.Length)
@@ -55,7 +62,10 @@ public sealed class BiographyExportHtmlBuilder
                 attributes.Id = bookmarks[item.RecordId] + "-" + original;
                 anchors.TryAdd(original, attributes.Id);
             }
-            var first = document.FirstOrDefault(block => !IsInternalMarker(block)) as HeadingBlock;
+            var blocks = document.ToArray();
+            var portraitEnd = blocks.Length > 0 && IsMarker(blocks[0], BiographyImageEditService.PortraitStartMarker)
+                ? Array.FindIndex(blocks, block => IsMarker(block, BiographyImageEditService.PortraitEndMarker)) : -1;
+            var first = blocks.Skip(portraitEnd + 1).FirstOrDefault(block => !IsInternalMarker(block)) as HeadingBlock;
             var sameHeading = first is { Level: 1 } && string.Equals(NormalizeName(PlainText(first.Inline)), NormalizeName(item.DisplayName), StringComparison.Ordinal);
             foreach (var heading in document.Descendants<HeadingBlock>())
                 if (sameHeading)
@@ -68,7 +78,7 @@ public sealed class BiographyExportHtmlBuilder
             var renderer = new HtmlRenderer(writer);
             Pipeline.Setup(renderer);
             if (sameHeading) renderer.ObjectRenderers.Replace<HeadingRenderer>(new ExportHeadingRenderer(first!, bookmarks[item.RecordId]));
-            renderer.ObjectRenderers.Replace<LinkInlineRenderer>(new ExportLinkRenderer(item, ordered, bookmarks, mode, warnings, resources, anchors));
+            renderer.ObjectRenderers.Replace<LinkInlineRenderer>(new ExportLinkRenderer(item, ordered, bookmarks, mode, warnings, resources, anchors, sourceHashes));
             renderer.ObjectRenderers.Replace<HtmlFootnoteGroupRenderer>(new ExportFootnoteGroupRenderer(bookmarks[item.RecordId]));
             renderer.ObjectRenderers.Replace<HtmlFootnoteLinkRenderer>(new ExportFootnoteLinkRenderer(bookmarks[item.RecordId]));
             renderer.ObjectRenderers.Replace<HtmlBlockRenderer>(new ExportHtmlBlockRenderer(warnings));
@@ -77,26 +87,36 @@ public sealed class BiographyExportHtmlBuilder
             writer.Write("</section>");
         }
         writer.Write("</body></html>");
-        return new(writer.ToString(), warnings.Distinct(StringComparer.Ordinal).ToArray());
+        return new(writer.ToString(), warnings.Distinct(StringComparer.Ordinal).ToArray()) { SourceHashes = sourceHashes.ToArray() };
     }
 
     private static string NormalizeName(string name) =>
         string.Join(' ', name.Normalize(System.Text.NormalizationForm.FormC).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
+    private static bool IsMarker(Block block, string marker) => block is HtmlBlock html &&
+        string.Equals(html.Lines.ToString().Trim(), marker, StringComparison.Ordinal);
+
     private static bool IsInternalMarker(Block block) => block is HtmlBlock html &&
-        html.Lines.ToString().Trim() is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker;
+        html.Lines.ToString().Trim() is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker
+            or BiographyImageEditService.PortraitStartMarker or BiographyImageEditService.PortraitEndMarker;
 
     private static string PlainText(ContainerInline? inline) => inline is null ? "" :
         string.Concat(inline.Descendants<LiteralInline>().Select(x => x.Content.ToString()));
 
     private sealed class ExportLinkRenderer(BiographyExportItem source, IReadOnlyList<BiographyExportItem> items,
-        IReadOnlyDictionary<string, string> bookmarks, BiographyExportMode mode, List<string> warnings, ExportResourceCollector? resources, IReadOnlyDictionary<string, string> anchors) : HtmlObjectRenderer<LinkInline>
+        IReadOnlyDictionary<string, string> bookmarks, BiographyExportMode mode, List<string> warnings, ExportResourceCollector? resources, IReadOnlyDictionary<string, string> anchors, List<string> sourceHashes) : HtmlObjectRenderer<LinkInline>
     {
         protected override void Write(HtmlRenderer renderer, LinkInline link)
         {
             if (link.IsImage)
             {
-                var image = resources?.Collect(link.Url ?? "", source.SourcePath);
+                var widthPercent = link.Title switch
+                {
+                    "SlaegtsAssistent:width=50" => 50,
+                    "SlaegtsAssistent:width=25" => 25,
+                    _ => 100,
+                };
+                var image = resources?.Collect(link.Url ?? "", source.SourcePath, widthPercent, sourceHashes.Add);
                 if (image is not null)
                 {
                     renderer.Write("<img src=\""); renderer.WriteEscape(image); renderer.Write("\" alt=\"");
@@ -282,7 +302,7 @@ public sealed class BiographyExportHtmlBuilder
         protected override void Write(HtmlRenderer renderer, HtmlBlock block)
         {
             var text = block.Lines.ToString().Trim();
-            if (text is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker) return;
+            if (text is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker or BiographyImageEditService.PortraitStartMarker or BiographyImageEditService.PortraitEndMarker) return;
             if (IsRawImage(text))
             {
                 WriteRawImagePlaceholder(renderer, text, warnings);
@@ -298,7 +318,7 @@ public sealed class BiographyExportHtmlBuilder
     {
         protected override void Write(HtmlRenderer renderer, HtmlInline inline)
         {
-            if (inline.Tag is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker) return;
+            if (inline.Tag is BiographyGeneratedSectionMerger.StartMarker or BiographyGeneratedSectionMerger.EndMarker or BiographyImageEditService.PortraitStartMarker or BiographyImageEditService.PortraitEndMarker) return;
             if (IsRawImage(inline.Tag)) { WriteRawImagePlaceholder(renderer, inline.Tag, warnings); return; }
             warnings.Add("Rå HTML vises som tekst i eksporten.");
             renderer.WriteEscape(inline.Tag);

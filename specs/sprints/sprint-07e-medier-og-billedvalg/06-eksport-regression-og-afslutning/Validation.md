@@ -1,6 +1,6 @@
 # Validering: Eksport, platforme og samlet accept
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist prøvet; ikke godkendt**. HTML-ressourcer er prøvet automatisk; dokumentformater og native platforme mangler validering.
 
 ## Automatiserede prøver
 
@@ -23,4 +23,7 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Eksport-HTML med separat mediemappe | Automatisk prøve for topbillede og livsforløbsbillede med én deduplikeret ressource | Visuel kontrol samt native platformprøver mangler. |
+
+| 16. november 2026, macOS arm64 | Pakket eksport | Automatisk prøve af PDF-billedobjekt og to billedhenvisninger i DOCX/ODT fra separat mediemappe; de øvrige pakketests består | Visuel kontrol mangler; `pdftoppm` er ikke tilgængelig lokalt. |
+| 16. november 2026, macOS arm64 | Native AOT | Publicering lykkedes; den genererede binær blev afsluttet med kode 137 før begge røgtprøver gav output | Årsagen er ikke afklaret; røgtprøver og øvrige platforme er ikke godkendt. |

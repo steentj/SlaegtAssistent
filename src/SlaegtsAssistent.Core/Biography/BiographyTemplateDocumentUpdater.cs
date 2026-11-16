@@ -8,7 +8,9 @@ public sealed class BiographyTemplateDocumentUpdater
         string? mediaBaseDirectory = null,
         string? gedcomSourceDirectory = null,
         BiographyPersonLinks? personLinks = null,
-        IReadOnlyDictionary<string, string?>? personNames = null)
+        IReadOnlyDictionary<string, string?>? personNames = null,
+        string? mediaDirectory = null,
+        MediaFileIndex? mediaIndex = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         if (document.Metadata is not { } metadata ||
@@ -40,7 +42,9 @@ public sealed class BiographyTemplateDocumentUpdater
             templateSource,
             mediaBaseDirectory: mediaBaseDirectory,
             gedcomSourceDirectory: gedcomSourceDirectory,
-            personLinks: personLinks).Generate(approved, baseline.Imported, personNames);
+            personLinks: personLinks,
+            mediaDirectory: mediaDirectory,
+            mediaIndex: mediaIndex).Generate(approved, baseline.Imported, personNames);
         var renderedDocument = BiographyDocumentParser.Parse(rendered);
         var merged = BiographyGeneratedSectionMerger.CreateCandidate(document.Body, renderedDocument.Body);
         return BiographyDocumentSerializer.Serialize(metadata with

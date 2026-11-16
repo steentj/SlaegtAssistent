@@ -31,7 +31,10 @@ public partial class MarkdownCheatSheetViewModel : ViewModelBase
         "[Slægtsassistent](https://example.dk)\n\n" +
         "## Billeder\n\n" +
         "![Beskrivelse](medier/billede.jpg)\n\n" +
-        "Brug relative stier til billeder i persondokumenterne.\n\n" +
+        "Angiv eventuelt mappen med GEDCOM-medier i Indstillinger. I editoren kan du vælge eller fjerne et topbillede og indsætte billeder ved markøren i livsforløbet. Billedvælgeren understøtter PNG og JPEG.\n\n" +
+        "Ved billedvalget kan du vælge højst en hel, halv eller kvart sidebredde. Billedets proportioner bevares, og små billeder forstørres ikke automatisk.\n\n" +
+        "Billeder gemmes som relative henvisninger i Markdown. Hvis mediemappen flyttes, skal billedstierne fortsat pege på filerne. Originalfilerne bliver i mediemappen og indgår ikke i dokumenternes versionshistorik.\n\n" +
+        "Den genererede medieoversigt er en liste eller tabel; den indsætter ikke billeder automatisk.\n\n" +
         "## Tabeller\n\n" +
         "| Navn | År |\n" +
         "| --- | ---: |\n" +

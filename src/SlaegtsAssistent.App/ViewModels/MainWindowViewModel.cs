@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     private readonly List<PersonListItemViewModel> _allPeople = [];
     private readonly List<GedcomDiagnosticViewModel> _allImportDiagnostics = [];
     private readonly Dictionary<string, EditorViewModel> _editors = new(StringComparer.Ordinal);
+    private readonly MediaWorkspaceIndex _mediaWorkspaceIndex = new();
     private FamilyTree? _familyTree;
     private bool _isReplacingPeople;
     private CancellationTokenSource? _importCancellation;
@@ -113,6 +114,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         _versionHistoryWindowService = versionHistoryWindowService ?? new NullVersionHistoryWindowService();
 
         var settings = _applicationSettingsService.Load();
+        StandardMediaFolder = NormalizeFolder(settings.DefaultMediaFolder);
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
         GlobalBiographyTemplatePath = NormalizePath(settings.GlobalBiographyTemplatePath);
@@ -147,6 +149,9 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     private string? selectedGedcomFilePath;
 
     [ObservableProperty]
+    private string? standardMediaFolder;
+
+    [ObservableProperty]
     private string? standardGedcomInputFolder;
 
     [ObservableProperty]
@@ -160,6 +165,10 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     [ObservableProperty]
     private EditorViewModel? editor;
+
+    public bool CanEditImages => Editor is not null && SelectedPerson is not null && !IsImporting;
+
+    partial void OnEditorChanged(EditorViewModel? value) => OnPropertyChanged(nameof(CanEditImages));
 
     [ObservableProperty]
     private string personFilterText = string.Empty;
@@ -240,6 +249,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             }
 
             SetImportPhase("Forhåndskontrol", 15);
+            var mediaIndex = await GetMediaIndexAsync(cancellationToken);
             var preflight = await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -247,7 +257,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                 cancellationToken.ThrowIfCancellationRequested();
                 var documents = _markdownDocumentCatalog.Load(outputFolder);
                 var existingSnapshot = _gedcomSnapshotStore.Load(outputFolder);
-                var generatedBiographies = _markdownBiographyExportService.GenerateBiographies(tree, outputFolder, cancellationToken);
+                var generatedBiographies = _markdownBiographyExportService.GenerateBiographies(tree, outputFolder, mediaIndex, cancellationToken);
                 foreach (var content in generatedBiographies.Values)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -256,7 +266,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                         throw new FormatException("Den genererede kandidat mangler dokumentmetadata.");
                     }
                 }
-                var importReport = AddMediaDiagnostics(tree, outputFolder);
+                var importReport = AddMediaDiagnostics(tree, outputFolder, mediaIndex);
                 return new ImportPreflight(
                     tree,
                     documents,
@@ -281,6 +291,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                 preflight.Documents,
                 preflight.GeneratedBiographies,
                 outputFolder,
+                mediaIndex,
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -428,6 +439,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             : _familyTree?.FindPerson(SelectedPerson.RecordId);
         var updatedSettings = await _settingsDialogService.EditSettingsAsync(new AppSettings
         {
+            DefaultMediaFolder = StandardMediaFolder,
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
@@ -442,6 +454,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         var previousSettings = CreateCurrentSettings();
         var proposedSettings = new AppSettings
         {
+            DefaultMediaFolder = NormalizeFolder(updatedSettings.DefaultMediaFolder),
             DefaultGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder),
             DefaultMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder),
             GlobalBiographyTemplatePath = NormalizePath(updatedSettings.GlobalBiographyTemplatePath),
@@ -462,9 +475,16 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             return;
         }
 
+        if (!string.Equals(previousSettings.DefaultMediaFolder, proposedSettings.DefaultMediaFolder, StringComparison.Ordinal))
+            _mediaWorkspaceIndex.Invalidate();
+
         if (changesWorkspace)
         {
             ActivateWorkspace();
+        }
+        else
+        {
+            RefreshEditorPreviewRoots();
         }
     }
 
@@ -609,6 +629,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         IReadOnlyList<MarkdownDocumentInfo> documents,
         IReadOnlyDictionary<string, string> generatedBiographies,
         string outputFolder,
+        MediaFileIndex? mediaIndex,
         CancellationToken cancellationToken)
     {
         var reviewItems = new List<GedcomDifferenceReviewItem>();
@@ -751,7 +772,8 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                     selectedChoices,
                     documentInfo.FilePath,
                     outputFolder,
-                    personLinks);
+                    personLinks,
+                    mediaIndex);
             var defaultChoices = structuredDifferences.ToDictionary(
                 item => $"{documentInfo.FilePath}|{item.Path}",
                 _ => true,
@@ -846,7 +868,8 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         IReadOnlyDictionary<string, bool> choices,
         string filePath,
         string outputFolder,
-        BiographyPersonLinks personLinks)
+        BiographyPersonLinks personLinks,
+        MediaFileIndex? mediaIndex)
     {
         bool IsSelected(string path) =>
             choices.TryGetValue($"{filePath}|{path}", out var selected) && selected;
@@ -885,11 +908,13 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         var rendered = new BiographyTemplateMarkdownGenerator(
             templateSource,
             familyTree.Submitter,
-            outputFolder,
+            Path.GetDirectoryName(filePath) ?? outputFolder,
             string.IsNullOrWhiteSpace(familyTree.SourceFilePath)
                 ? null
                 : Path.GetDirectoryName(familyTree.SourceFilePath),
-            personLinks).Generate(
+            personLinks,
+            StandardMediaFolder,
+            mediaIndex).Generate(
                 selectedSnapshot,
                 importedSnapshot,
                 familyTree.People.ToDictionary(
@@ -1090,9 +1115,10 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         OnPropertyChanged(nameof(HasImportDiagnostics));
     }
 
-    private static GedcomImportReport AddMediaDiagnostics(
+    private GedcomImportReport AddMediaDiagnostics(
         FamilyTree tree,
-        string outputFolder)
+        string outputFolder,
+        MediaFileIndex? mediaIndex)
     {
         var resolver = new BiographyMediaResolver();
         var gedcomDirectory = string.IsNullOrWhiteSpace(tree.SourceFilePath)
@@ -1104,7 +1130,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         {
             foreach (var media in person.Media)
             {
-                var result = resolver.Resolve(media.File, gedcomDirectory, outputFolder);
+                var result = resolver.Resolve(media.File, gedcomDirectory, outputFolder, StandardMediaFolder, mediaIndex);
                 if (result.Diagnostic is null)
                 {
                     continue;
@@ -1120,7 +1146,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                     Tag: "OBJE",
                     Consequence: result.RequiresApproval
                         ? "Mediet medtages ikke uden manuel godkendelse."
-                        : "Øvrigt indhold renderes, men mediet udelades.",
+                        : "Mediehenvisningen vises, men filen kan ikke bruges endnu.",
                     FilePath: tree.SourceFilePath);
                 if (!diagnostics.Contains(diagnostic))
                 {
@@ -1183,6 +1209,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     partial void OnSelectedPersonChanged(PersonListItemViewModel? value)
     {
+        OnPropertyChanged(nameof(CanEditImages));
         NotifyStatusProperties();
 
         if (value is null && _isReplacingPeople)
@@ -1219,6 +1246,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                 Path.GetDirectoryName(value.MarkdownFilePath),
                 StandardMarkdownOutputFolder,
                 Path.GetDirectoryName(SelectedGedcomFilePath),
+                StandardMediaFolder,
             }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Select(path => path!)
@@ -1257,6 +1285,38 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         Editor = editor;
         ErrorMessage = null;
         UpdateDirtyState();
+    }
+
+    public Task<MediaFileIndex?> GetMediaIndexAsync(CancellationToken cancellationToken) =>
+        _mediaWorkspaceIndex.GetAsync(StandardMediaFolder, cancellationToken);
+
+    public Task<MediaFileIndex?> RefreshMediaIndexAsync(CancellationToken cancellationToken)
+    {
+        _mediaWorkspaceIndex.Invalidate();
+        return GetMediaIndexAsync(cancellationToken);
+    }
+
+    public IReadOnlyList<MediaCatalogItem> CreateMediaCatalog()
+    {
+        var sources = new List<MediaCatalogSource>();
+        foreach (var group in _documentPeople.GroupBy(person => person.RecordId, StringComparer.Ordinal))
+        {
+            if (group.Count() != 1 || group.First().HasDocumentDiagnostic) continue;
+            var person = group.First();
+            try
+            {
+                var document = _editors.TryGetValue(person.MarkdownFilePath, out var editor)
+                    ? editor.CreateDocument()
+                    : BiographyDocumentParser.Parse(_markdownFileStore.Read(person.MarkdownFilePath));
+                if (document.Metadata is not null && document.Metadata.RecordId != person.RecordId) continue;
+                sources.Add(new MediaCatalogSource(person.RecordId, document, null));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
+            {
+                ErrorMessage = $"Et dokument kunne ikke læses til medieoversigten: {exception.Message}";
+            }
+        }
+        return new MediaCatalogService().Build(sources);
     }
 
     private void OpenPersonDocument(PersonDocumentLink link)
@@ -1379,6 +1439,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         {
             _applicationSettingsService.Save(new AppSettings
             {
+                DefaultMediaFolder = StandardMediaFolder,
                 DefaultGedcomInputFolder = StandardGedcomInputFolder,
                 DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
                 GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
@@ -1446,10 +1507,22 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         ErrorMessage = snapshotError;
     }
 
+    private void RefreshEditorPreviewRoots()
+    {
+        foreach (var (path, editor) in _editors)
+        {
+            var roots = new[] { Path.GetDirectoryName(path), StandardMarkdownOutputFolder,
+                Path.GetDirectoryName(SelectedGedcomFilePath ?? string.Empty), StandardMediaFolder }
+                .Where(root => !string.IsNullOrWhiteSpace(root)).Select(root => root!).ToArray();
+            editor.SetPreviewRoots(roots);
+        }
+    }
+
     private AppSettings CreateCurrentSettings()
     {
         return new AppSettings
         {
+            DefaultMediaFolder = StandardMediaFolder,
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
@@ -1459,6 +1532,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     private void ApplySettings(AppSettings settings)
     {
+        StandardMediaFolder = settings.DefaultMediaFolder;
         StandardGedcomInputFolder = settings.DefaultGedcomInputFolder;
         StandardMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder;
         GlobalBiographyTemplatePath = settings.GlobalBiographyTemplatePath;
@@ -1555,6 +1629,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     partial void OnIsImportingChanged(bool value)
     {
+        OnPropertyChanged(nameof(CanEditImages));
         if (value)
         {
             _graphDebounce?.Cancel();

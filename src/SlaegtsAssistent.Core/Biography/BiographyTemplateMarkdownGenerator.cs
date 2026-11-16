@@ -12,6 +12,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
     private readonly Submitter? _submitter;
     private readonly string? _mediaBaseDirectory;
     private readonly string? _gedcomSourceDirectory;
+    private readonly string? _mediaDirectory;
+    private readonly MediaFileIndex? _mediaIndex;
     private readonly string _templateHash;
     private readonly BiographyPersonLinks? _personLinks;
 
@@ -20,7 +22,9 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         Submitter? submitter = null,
         string? mediaBaseDirectory = null,
         string? gedcomSourceDirectory = null,
-        BiographyPersonLinks? personLinks = null)
+        BiographyPersonLinks? personLinks = null,
+        string? mediaDirectory = null,
+        MediaFileIndex? mediaIndex = null)
     {
         _template = new BiographyTemplateLoader().Parse(template ?? DefaultTemplate);
         _renderer = new BiographyTemplateRenderer();
@@ -28,6 +32,8 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
         _mediaBaseDirectory = mediaBaseDirectory;
         _gedcomSourceDirectory = gedcomSourceDirectory;
         _personLinks = personLinks;
+        _mediaDirectory = mediaDirectory;
+        _mediaIndex = mediaIndex;
         _templateHash = BiographyTemplateIdentity.ComputeHash(_template.Source);
     }
 
@@ -40,7 +46,9 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
             _submitter,
             _mediaBaseDirectory,
             _gedcomSourceDirectory,
-            _personLinks);
+            _personLinks,
+            _mediaDirectory,
+            _mediaIndex);
         var body = _renderer.Render(_template, context);
         var facts = BiographyFactsSnapshot.FromPerson(person);
         var canonicalSnapshot = CanonicalBiographySnapshot.Create(person, _submitter);
@@ -72,7 +80,9 @@ public sealed class BiographyTemplateMarkdownGenerator : IBiographyMarkdownGener
             _mediaBaseDirectory,
             personNames,
             _gedcomSourceDirectory,
-            _personLinks);
+            _personLinks,
+            _mediaDirectory,
+            _mediaIndex);
         var body = _renderer.Render(_template, context);
         var facts = new BiographyFactsSnapshot(
             person.FullName,

@@ -79,7 +79,7 @@ public sealed record BiographyTemplateEditorModel
                 BiographyTemplateBlockType.Media,
                 true,
                 "Medier",
-                BiographyTemplatePresentation.Standard,
+                BiographyTemplatePresentation.List,
                 [BiographyTemplateField.MediaTitle, BiographyTemplateField.MediaRelativeFile]),
             new(
                 BiographyTemplateBlockType.Submitter,

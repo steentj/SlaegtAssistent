@@ -25,7 +25,7 @@ Persondokumenter skal kunne vise de strukturerede GEDCOM-oplysninger, som bruger
 
 - begivenheder, herunder fødsel, dåb, vielse, konfirmation, død, begravelse, folketællinger og lægdsruller
 - kilder med både lokale henvisninger og en samlet kildeliste
-- medier som lokale, relative Markdown-billedehenvisninger
+- medier som en oversigt med lokale filhenvisninger; billeder placeres manuelt i dokumentet
 - GEDCOM-filens ejer eller afsender (`SUBM`) som valgfri header eller footer
 
 Strukturen og formatteringen styres af en global Markdown-skabelon med sikre felter, betingelser og løkker. Skabelonen må ikke kunne udføre vilkårlig programkode. Ukendte hændelser bevares og kan vises under en samlet kategori for andre hændelser.

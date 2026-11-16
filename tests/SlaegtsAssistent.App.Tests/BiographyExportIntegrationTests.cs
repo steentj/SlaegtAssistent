@@ -1,5 +1,8 @@
 using System.IO.Compression;
 using System.Text;
+using System.Xml.Linq;
+using System.Globalization;
+using SkiaSharp;
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.Core.Export;
@@ -8,6 +11,100 @@ namespace SlaegtsAssistent.App.Tests;
 
 public class BiographyExportIntegrationTests
 {
+    [BundledExportIntegrationFact]
+    public async Task ValgteStoerrelserBevaresIAlleEksportformater()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "stoerrelsesproeve-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var file = Path.Combine(root, "foto.png");
+            using (var bitmap = new SKBitmap(1600, 800))
+            using (var canvas = new SKCanvas(bitmap))
+            {
+                canvas.Clear(SKColors.CornflowerBlue);
+                using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+                await File.WriteAllBytesAsync(file, data.ToArray());
+            }
+            var original = await File.ReadAllBytesAsync(file);
+            using (var small = new SKBitmap(250, 125))
+            {
+                using var data = small.Encode(SKEncodedImageFormat.Png, 100);
+                await File.WriteAllBytesAsync(Path.Combine(root, "lille.png"), data.ToArray());
+            }
+            var body = "# Anna\n\n![Hel](foto.png)\n\n![Halv](foto.png \"SlaegtsAssistent:width=50\")\n\n![Kvart](foto.png \"SlaegtsAssistent:width=25\")\n\n![Lille](lille.png \"SlaegtsAssistent:width=50\")";
+            BiographyExportItem[] items = [new("a", "Anna", Path.Combine(root, "anna.md"), body)];
+            var sidecar = new LocalExportSidecar(new LocalProcessRunner(), Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"), Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+            foreach (var format in new[] { BiographyExportFormat.Pdf, BiographyExportFormat.Docx, BiographyExportFormat.Odt })
+            {
+                var result = await sidecar.RenderBiographyAsync(items, BiographyExportMode.Combined, format, [root], CancellationToken.None);
+                result.Warnings.Should().BeEmpty();
+                if (format == BiographyExportFormat.Pdf)
+                {
+                    var pdf = Encoding.Latin1.GetString(result.Content);
+                    pdf.Should().Contain("/Width 642").And.Contain("/Width 321").And.Contain("/Width 160").And.Contain("/Width 250");
+                    continue;
+                }
+                using var archive = new ZipArchive(new MemoryStream(result.Content));
+                using var reader = new StreamReader(archive.GetEntry(format == BiographyExportFormat.Docx ? "word/document.xml" : "content.xml")!.Open());
+                var xml = XDocument.Parse(await reader.ReadToEndAsync());
+                double[] widths = format == BiographyExportFormat.Docx
+                    ? xml.Descendants(XName.Get("extent", "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"))
+                        .Select(e => double.Parse(e.Attribute("cx")!.Value, CultureInfo.InvariantCulture)).ToArray()
+                    : xml.Descendants(XName.Get("frame", "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"))
+                        .Select(e => double.Parse(e.Attribute(XName.Get("width", "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"))!.Value.TrimEnd('i', 'n', 'p', 't', 'c', 'm'), CultureInfo.InvariantCulture)).ToArray();
+                widths.Should().HaveCount(4);
+                (widths[1] / widths[0]).Should().BeApproximately(0.5, 0.01);
+                (widths[2] / widths[0]).Should().BeApproximately(0.25, 0.01);
+                (widths[3] / widths[0]).Should().BeApproximately(250.0 / 642, 0.01);
+            }
+            (await File.ReadAllBytesAsync(file)).Should().Equal(original);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [BundledExportIntegrationFact]
+    public async Task SeparatMediemappeMedtagesIPdfDocxOgOdt()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "medieeksport-" + Guid.NewGuid().ToString("N"));
+        var docs = Directory.CreateDirectory(Path.Combine(root, "dokumenter")).FullName;
+        var media = Directory.CreateDirectory(Path.Combine(root, "medier")).FullName;
+        try
+        {
+            await File.WriteAllBytesAsync(Path.Combine(media, "foto.png"), Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAALQAAAB4CAIAAADUhU+qAAACoElEQVR4nO3cwU1rQRAF0WdEXGRAJhOOM2HtDRE4AXJhj2hkIdtTt7vOEv3FdFMzRuiL09f1cki/efn1q5Jx6C++HCoZh0rGoZJxqGQcKhmHSsahknGoZBwqGYdKxqGScaj0egx2/vi85Z+t97djpNOo/89xYw1/W2NaGRHHXZoYWEnnOB7UxJxKesbxtCx6J9Itji1ZdE2kTxzbs+iXSJPfc6DKOHjnGfpywL8NK/kJyX454GUcCSfsGUfK3s8h52zysRK67pX2EZP3coSWcQSePCyOuP1Gnz8pjqzNNpgiJo6gnbaZJSYOPV9GHClXrdlEAXFE7LHlXPQ4+BtsPB09Dm2EjgN+sdrPyI2DvLUhk3Lj0HbQOLCXadS80DhEQIyDeY0GTk2MQxC4OIAXaOzsuDjEYRwKiYP2rg7fACsOoRiHEuJAvagbcfYAikM0xqGScahkHMLHwfkpjODM2AYlDgEZh0rGoZJxqGQcKhmHSsahknGoZBwqGYdKxqGScQgfR9wfcJ2wDUocAjIOlYxDJeNQQhyQn8K2W5g9gOIQjXEoJA7Oi7oLagOsOIRiHMqJA/WuDp8dF4c4iHHQLtDYqYlxCAIaB/AaDZwXGocIuHEwL9OoSblxkLc2ZEZ0HNqLHgf5YrWfjh4Hf4ON5wqII2KPLSfKiENbxMQRcdWazRITR9BO20yRFEfWZhucPyyOuP1Gn/z0db0cmSB/ybVlFqkvR9zGV8g5W8URsfeFP2HPjxX4R8xKzqLDy4H9TizYeUa/HJwnZLXIomccGxNZjbLoHMeTE1ntsugfx6MrWU2bmBXHfStZ3ZsYGsf/WlljavhhdBwa8XsOPYJxqGQcKhmHSsahknGoZBwqGYdKxqGScahkHCoZh0rGoaPyDcy1y1V3NQcDAAAAAElFTkSuQmCC"));
+            var body = "<!-- SlaegtsAssistent:portrait:start -->\n![Portræt](../medier/foto.png)\n<!-- SlaegtsAssistent:portrait:end -->\n\n<!-- SlaegtsAssistent:generated:start -->\n# Anna\n<!-- SlaegtsAssistent:generated:end -->\n\n## Biografi\n\n![Billede](../medier/foto.png)";
+            BiographyExportItem[] items = [new("a", "Anna", Path.Combine(docs, "anna.md"), body)];
+            var sidecar = new LocalExportSidecar(new LocalProcessRunner(), Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"), Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+            foreach (var format in new[] { BiographyExportFormat.Pdf, BiographyExportFormat.Docx, BiographyExportFormat.Odt })
+            {
+                var result = await sidecar.RenderBiographyAsync(items, BiographyExportMode.Combined, format, [media], CancellationToken.None);
+                result.Warnings.Should().BeEmpty();
+                var outputDirectory = Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_GOLDEN_OUTPUT");
+                if (!string.IsNullOrWhiteSpace(outputDirectory))
+                {
+                    Directory.CreateDirectory(outputDirectory);
+                    await File.WriteAllBytesAsync(Path.Combine(outputDirectory, "medieproeve." + format.ToString().ToLowerInvariant()), result.Content);
+                }
+                if (format == BiographyExportFormat.Pdf)
+                {
+                    result.Content.Should().StartWith("%PDF-"u8.ToArray());
+                    Encoding.Latin1.GetString(result.Content).Should().Contain("/Subtype /Image");
+                    continue;
+                }
+                using var archive = new ZipArchive(new MemoryStream(result.Content));
+                archive.Entries.Should().Contain(item => item.FullName.StartsWith(format == BiographyExportFormat.Docx ? "word/media/" : "Pictures/", StringComparison.Ordinal));
+                using var reader = new StreamReader(archive.GetEntry(format == BiographyExportFormat.Docx ? "word/document.xml" : "content.xml")!.Open());
+                var xml = await reader.ReadToEndAsync();
+                xml.Should().Contain("Anna").And.NotContain("SlaegtsAssistent:portrait").And.NotContain("SlaegtsAssistent:generated");
+                var marker = format == BiographyExportFormat.Docx ? "r:embed=" : "<draw:image";
+                xml.Split(marker, StringSplitOptions.None).Length.Should().Be(3);
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [BundledExportIntegrationFact]
     public async Task PakketVaerktoejEksportererBiografierMedTabelBilledeOgLinks()
     {

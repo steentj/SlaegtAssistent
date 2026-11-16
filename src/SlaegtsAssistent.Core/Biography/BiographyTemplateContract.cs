@@ -175,7 +175,7 @@ public static class BiographyTemplateContract
             [Context.Event] = ScalarFields("tag", "category", "value", "date", "place", "type", "note", ("sources", Collection(Context.Source))),
             [Context.Census] = ScalarFields("date", "place", "note", ("sources", Collection(Context.Source))),
             [Context.Source] = ScalarFields("key", "recordId", "title", "author", "publication", "text", "repository", "page", "data", "date", "note"),
-            [Context.Media] = ScalarFields("recordId", "file", "relativeFile", "form", "title", "type", "note"),
+            [Context.Media] = ScalarFields("recordId", "file", "relativeFile", "form", "title", "type", "note", "diagnostic"),
         };
 
     private static IReadOnlyDictionary<string, Field> ScalarFields(params object[] names)

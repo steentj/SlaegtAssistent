@@ -1,6 +1,6 @@
 # Plan: sprint 7E – medier og manuelt billedvalg
 
-Status: **planlagt**. Der er kun udarbejdet specifikationer; ingen produktionskode er ændret.
+Status: **påbegyndt**. Medieoversigten er delvist implementeret; de øvrige leverancer og samlet accept mangler.
 
 ## Mål
 

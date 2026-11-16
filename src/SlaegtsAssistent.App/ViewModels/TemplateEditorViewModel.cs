@@ -47,7 +47,10 @@ public partial class TemplateEditorViewModel : ViewModelBase
         TimeSpan? previewDelay = null)
     {
         ArgumentNullException.ThrowIfNull(model);
-        _model = Clone(model);
+        _model = Clone(new BiographyTemplateEditorModel(model.Version, model.Blocks.Select(block =>
+            block.Type == BiographyTemplateBlockType.Media && block.Presentation == BiographyTemplatePresentation.Standard
+                ? block with { Presentation = BiographyTemplatePresentation.List }
+                : block).ToArray()));
         _confirmationService = confirmationService ?? new AcceptResetConfirmationService();
         _previewService = previewService ?? new TemplateEditorPreviewService();
         _previewDelay = previewDelay ?? TimeSpan.FromMilliseconds(250);

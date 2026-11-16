@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using System;
 using System.ComponentModel;
 using SlaegtsAssistent.App.ViewModels;
@@ -8,11 +9,88 @@ using Avalonia.Platform.Storage;
 using SlaegtsAssistent.Core.Graph.Export;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using System.IO;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Views;
 
 public partial class MainWindow : Window
 {
+    private async void ChoosePortraitClick(object? sender, RoutedEventArgs e) => await ChooseImageAsync(true);
+    private async void InsertBiographyImageClick(object? sender, RoutedEventArgs e) => await ChooseImageAsync(false);
+
+    private void RemovePortraitClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { Editor: { } editor, IsImporting: false } model) return;
+        var result = new BiographyImageEditService().RemovePortrait(editor.MarkdownText);
+        ApplyImageEdit(model, editor, result);
+    }
+
+    private async Task ChooseImageAsync(bool portrait)
+    {
+        if (DataContext is not MainWindowViewModel { Editor: { } editor, SelectedPerson: { } person, IsImporting: false } model) return;
+        var path = person.MarkdownFilePath;
+        var revision = editor.BufferRevision;
+        var originalText = editor.MarkdownText;
+        var mediaFolder = model.StandardMediaFolder;
+        var gedcomPath = model.SelectedGedcomFilePath;
+        var selection = new EditorSelection(Math.Min(BiographyEditor.SelectionStart, BiographyEditor.SelectionEnd),
+            Math.Max(BiographyEditor.SelectionStart, BiographyEditor.SelectionEnd), revision);
+        bool IsCurrent() => IsVisible && !model.IsImporting && ReferenceEquals(model.Editor, editor) &&
+            model.SelectedPerson?.RecordId == person.RecordId && model.SelectedPerson.MarkdownFilePath == path &&
+            editor.BufferRevision == revision && editor.MarkdownText == originalText &&
+            model.StandardMediaFolder == mediaFolder && model.SelectedGedcomFilePath == gedcomPath;
+        try
+        {
+            var catalog = model.CreateMediaCatalog();
+            var index = await model.GetMediaIndexAsync(CancellationToken.None);
+            if (!IsCurrent()) { model.ErrorMessage = "Dokumentet eller mediemappen er ændret. Åbn billedvælgeren igen."; return; }
+            var cache = new MediaThumbnailCache();
+            var inspection = new LocalMediaInspectionService(Path.GetDirectoryName(path)!,
+                string.IsNullOrWhiteSpace(gedcomPath) ? null : Path.GetDirectoryName(gedcomPath), mediaFolder, index, cache);
+            var pickerModel = new MediaPickerViewModel(catalog, person.RecordId, inspection);
+            var picker = new MediaPickerWindow(pickerModel, inspection, cache, portrait, model.RefreshMediaIndexAsync);
+            var settingsRequested = false;
+            picker.SettingsRequested += (_, _) => settingsRequested = true;
+            var selected = await picker.ShowDialog<MediaSelectionResult?>(this);
+            if (settingsRequested) { await model.OpenSettingsCommand.ExecuteAsync(null); return; }
+            if (selected is null) return;
+            if (!IsCurrent()) { model.ErrorMessage = "Dokumentet eller mediemappen er ændret. Åbn billedvælgeren igen."; return; }
+            var image = new BiographyImageSelection(selected.Reference, selected.AlternativeText, selected.Caption, selected.Width);
+            var service = new BiographyImageEditService();
+            var result = portrait ? service.SetPortrait(originalText, image)
+                : service.InsertInBiography(originalText, selection, editor.BufferRevision, image);
+            ApplyImageEdit(model, editor, result);
+        }
+        catch (OperationCanceledException)
+        {
+            if (IsVisible) model.ErrorMessage = "Mediemappen blev ændret. Åbn billedvælgeren igen.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            model.ErrorMessage = $"Billedvælgeren kunne ikke åbnes: {exception.Message}";
+        }
+    }
+
+    private void ApplyImageEdit(MainWindowViewModel model, EditorViewModel editor, BiographyImageEditResult result)
+    {
+        if (!result.IsSuccess) { model.ErrorMessage = result.Diagnostic; return; }
+        if (result.Body == editor.MarkdownText) return;
+        if (BiographyEditor.Text != editor.MarkdownText)
+        {
+            model.ErrorMessage = "Editorens indhold er ændret. Prøv billedvalget igen.";
+            return;
+        }
+        BiographyEditor.SelectionStart = 0;
+        BiographyEditor.SelectionEnd = BiographyEditor.Text?.Length ?? 0;
+        BiographyEditor.SelectedText = result.Body;
+        BiographyEditor.SelectionStart = result.CaretPosition;
+        BiographyEditor.SelectionEnd = result.CaretPosition;
+        BiographyEditor.Focus();
+        model.ErrorMessage = null;
+    }
+
     private void ShowBiographyExport(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel model) new BiographyExportWindow(model).Show(this);

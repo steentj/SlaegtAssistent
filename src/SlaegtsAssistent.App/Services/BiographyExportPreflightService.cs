@@ -29,7 +29,7 @@ public sealed class BiographyExportPreflightService
             cancellationToken.ThrowIfCancellationRequested();
             var html = builder.Build(documents, mode, collector);
             warnings.AddRange(html.Warnings);
-            fingerprints.Add(BiographyExportHtmlBuilder.ComputeFingerprint(html.Html));
+            fingerprints.Add(BiographyExportHtmlBuilder.ComputeFingerprint(html));
         }
         if (mode == BiographyExportMode.Combined) Add(items);
         else foreach (var item in items) Add([item]);

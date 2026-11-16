@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:SlaegtsAssistent.App.Views"
+        x:Class="SlaegtsAssistent.App.Views.MediaPickerWindow"
+        Width="960" Height="700" MinWidth="680" MinHeight="480"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <Grid Margin="16" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+        <StackPanel Spacing="8">
+            <TextBlock Text="Vælg et billede fra de godkendte mediehenvisninger." TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBox x:Name="SearchBox" PlaceholderText="Søg efter titel eller filnavn" TextChanged="SearchChanged" AutomationProperties.Name="Søg efter titel eller filnavn" />
+                <CheckBox x:Name="ShowAllBox" Grid.Column="1" Content="Alle refererede medier" IsCheckedChanged="ScopeChanged" AutomationProperties.Name="Vis alle refererede medier" />
+            </Grid>
+        </StackPanel>
+        <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="16">
+            <ListBox x:Name="Gallery" SelectionChanged="SelectionChanged" AutomationProperties.Name="Medier">
+                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="views:MediaPickerCard">
+                        <StackPanel Width="170" Margin="4" Spacing="3">
+                            <Border Height="120" Background="{DynamicResource AppSurfaceMutedBrush}">
+                                <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="8">
+                    <Image x:Name="LargePreview" Height="240" Stretch="Uniform" />
+                    <TextBlock x:Name="Details" Text="Vælg et medie for at se oplysninger." TextWrapping="Wrap" />
+                    <TextBlock Text="Billedstørrelse" FontWeight="SemiBold" />
+                    <ComboBox x:Name="ImageWidthBox" SelectedIndex="0" AutomationProperties.Name="Billedstørrelse">
+                        <ComboBoxItem Content="Højst en sidebredde" />
+                        <ComboBoxItem Content="Højst en halv sidebredde" />
+                        <ComboBoxItem Content="Højst en kvart sidebredde" />
+                    </ComboBox>
+                    <TextBlock Text="Billedets proportioner bevares." TextWrapping="Wrap" />
+                    <TextBlock Text="Alternativ tekst" FontWeight="SemiBold" />
+                    <TextBox x:Name="AlternativeTextBox" AutomationProperties.Name="Alternativ tekst" />
+                    <TextBlock Text="Billedtekst (valgfri)" FontWeight="SemiBold" />
+                    <TextBox x:Name="CaptionBox" AutomationProperties.Name="Billedtekst" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+            <Button x:Name="PreviousButton" Content="Forrige" Click="PreviousClick" />
+            <Button x:Name="NextButton" Grid.Column="1" Content="Næste" Click="NextClick" />
+            <Button x:Name="RefreshButton" Grid.Column="2" Content="Opdatér" Click="RefreshClick" />
+            <Button Grid.Column="3" Content="Indstillinger…" Click="SettingsClick" />
+            <TextBlock x:Name="PageText" Grid.Column="4" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Column="5" Content="Annullér" Click="CancelClick" IsCancel="True" />
+            <Button x:Name="ConfirmButton" Grid.Column="6" Click="ConfirmClick" IsEnabled="False" IsDefault="True" />
+        </Grid>
+    </Grid>
+</Window>

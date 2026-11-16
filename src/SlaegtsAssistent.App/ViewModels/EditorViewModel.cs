@@ -15,7 +15,7 @@ public partial class EditorViewModel : ViewModelBase
     private bool _suppressDirtyTracking;
     private BiographyDocumentMetadata? _metadata;
     private readonly SafeMarkdownPreviewService _previewService = new();
-    private readonly IReadOnlyCollection<string> _allowedPreviewRoots;
+    private IReadOnlyCollection<string> _allowedPreviewRoots;
     private string? _cachedPreviewSource;
     private SafeMarkdownPreviewResult? _cachedPreview;
     private readonly Func<string, PersonDocumentLink?>? _resolvePersonLink;
@@ -43,6 +43,8 @@ public partial class EditorViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool isDirty;
+
+    public long BufferRevision { get; private set; }
 
     public string PreviewHtml => string.IsNullOrWhiteSpace(MarkdownText)
         ? string.Empty
@@ -72,6 +74,19 @@ public partial class EditorViewModel : ViewModelBase
         if (link is null || _openPersonLink is null) return false;
         _openPersonLink(link);
         return true;
+    }
+
+    public void SetPreviewRoots(IReadOnlyCollection<string> roots)
+    {
+        _allowedPreviewRoots = roots.ToArray();
+        _cachedPreview = null;
+        OnPropertyChanged(nameof(PreviewHtml));
+        OnPropertyChanged(nameof(PreviewWebUri));
+        OnPropertyChanged(nameof(PreviewHtmlDocument));
+        OnPropertyChanged(nameof(PreviewSecurityMessage));
+        OnPropertyChanged(nameof(HasPreviewSecurityMessage));
+        OnPropertyChanged(nameof(PersonLinks));
+        OnPropertyChanged(nameof(HasPersonLinks));
     }
 
     public void RefreshPersonLinks()
@@ -163,6 +178,7 @@ public partial class EditorViewModel : ViewModelBase
 
     partial void OnMarkdownTextChanged(string value)
     {
+        BufferRevision++;
         _cachedPreviewSource = null;
         _cachedPreview = null;
         OnPropertyChanged(nameof(PersonLinks));

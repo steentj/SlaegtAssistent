@@ -1,6 +1,6 @@
 # Validering: Mediemappe og entydigt stiopslag
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist implementeret og automatisk prøvet; ikke godkendt**. Indekset bruges ved import; fælles kontekst og manuel validering mangler.
 
 ## Automatiserede prøver
 
@@ -22,4 +22,7 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Indstillinger, direkte opslag, symbolske links og previewrødder | Automatiske regressioner kørt med `dotnet test` | Fuld kontekstintegration og manuel prøve mangler. |
+| 16. november 2026, macOS | Indeks og import | Automatiske prøver for længste stiafslutning, dubletter, afbrydelse, ufuldstændigt indeks og symbolsk mappe | Øvrige adgangsveje og manuel prøve mangler. |
+
+| 16. november 2026, macOS | Genbrug af medieindeks | Automatisk prøve for genbrug og eksplicit invalidering | Filsystemets casefølsomhed og øvrige platforme mangler validering. |

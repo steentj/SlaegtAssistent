@@ -1,6 +1,6 @@
 # Validering: Ét topbillede pr. persondokument
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist implementeret; ikke godkendt**. Tekstoperationer, dialog og editorintegration er prøvet automatisk; manuel validering mangler.
 
 ## Automatiserede prøver
 
@@ -22,4 +22,6 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Topblok og kandidatbevaring | Automatiske prøver af indsæt, skift, fjern, ødelagte markører, preview og eksport-HTML | Øvrige kandidatveje og manuel prøve mangler. |
+
+| 16. november 2026, macOS | Valg og fortryd | Headless-prøver for topbillede, fortryd/gentag og ændret buffer under dialog | Native platformprøver og samlet accept mangler. |

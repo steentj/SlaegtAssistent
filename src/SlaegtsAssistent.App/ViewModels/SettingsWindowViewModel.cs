@@ -14,6 +14,7 @@ namespace SlaegtsAssistent.App.ViewModels;
 public partial class SettingsWindowViewModel : ViewModelBase
 {
     private readonly IFolderPickerService _folderPickerService;
+    private readonly string? _originalMediaFolder;
     private readonly ITemplateFilePickerService _templateFilePickerService;
     private readonly Person? _previewPerson;
     private readonly string? _gedcomFilePath;
@@ -42,6 +43,9 @@ public partial class SettingsWindowViewModel : ViewModelBase
         _templateEditorDialogService = templateEditorDialogService;
         _templateStorage = templateStorage ?? new TemplateEditorStorageService();
         _previewPeople = previewPeople?.ToArray() ?? (previewPerson is null ? [] : [previewPerson]);
+        _originalMediaFolder = NormalizeFolder(currentSettings.DefaultMediaFolder);
+        DefaultMediaFolder = _originalMediaFolder;
+        UpdateMediaFolderMessage();
         DefaultGedcomInputFolder = currentSettings.DefaultGedcomInputFolder;
         DefaultMarkdownOutputFolder = currentSettings.DefaultMarkdownOutputFolder;
         GlobalBiographyTemplatePath = currentSettings.GlobalBiographyTemplatePath;
@@ -54,6 +58,12 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? defaultMarkdownOutputFolder;
+
+    [ObservableProperty]
+    private string? defaultMediaFolder;
+
+    [ObservableProperty]
+    private string? mediaFolderMessage;
 
     [ObservableProperty]
     private string? globalBiographyTemplatePath;
@@ -119,6 +129,34 @@ public partial class SettingsWindowViewModel : ViewModelBase
         {
             DefaultMarkdownOutputFolder = selectedFolder;
         }
+    }
+
+    [RelayCommand]
+    private async Task SelectMediaFolderAsync()
+    {
+        var folder = await _folderPickerService.PickFolderAsync(
+            "Vælg mappe med GEDCOM-medier", DefaultMediaFolder ?? DefaultGedcomInputFolder);
+        if (!string.IsNullOrWhiteSpace(folder)) DefaultMediaFolder = folder;
+    }
+
+    [RelayCommand]
+    private void ClearMediaFolder() => DefaultMediaFolder = null;
+
+    partial void OnDefaultMediaFolderChanged(string? value) => UpdateMediaFolderMessage();
+
+    private void UpdateMediaFolderMessage()
+    {
+        var folder = NormalizeFolder(DefaultMediaFolder);
+        MediaFolderMessage = folder is not null && !Directory.Exists(folder)
+            ? "Mappen er ikke tilgængelig. Vælg en eksisterende mappe eller ryd feltet."
+            : null;
+    }
+
+    private bool ValidateMediaFolder()
+    {
+        UpdateMediaFolderMessage();
+        var folder = NormalizeFolder(DefaultMediaFolder);
+        return MediaFolderMessage is null || string.Equals(folder, _originalMediaFolder, StringComparison.Ordinal);
     }
 
     [RelayCommand]
@@ -227,7 +265,8 @@ public partial class SettingsWindowViewModel : ViewModelBase
                     mediaBaseDirectory: _previewOutputFolder,
                     gedcomSourceDirectory: string.IsNullOrWhiteSpace(_gedcomFilePath)
                         ? null
-                        : Path.GetDirectoryName(_gedcomFilePath)));
+                        : Path.GetDirectoryName(_gedcomFilePath),
+                    mediaDirectory: NormalizeFolder(DefaultMediaFolder)));
             TemplateErrorMessage = null;
         }
         catch (Exception exception) when (
@@ -255,6 +294,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
     private async Task SaveSettingsAsync(bool saveAs)
     {
+        if (!ValidateMediaFolder()) return;
         if (_pendingTemplate is not null || saveAs)
         {
             try
@@ -290,6 +330,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
         CloseRequested?.Invoke(this, new AppSettings
         {
+            DefaultMediaFolder = NormalizeFolder(DefaultMediaFolder),
             DefaultGedcomInputFolder = NormalizeFolder(DefaultGedcomInputFolder),
             DefaultMarkdownOutputFolder = NormalizeFolder(DefaultMarkdownOutputFolder),
             GlobalBiographyTemplatePath = NormalizePath(GlobalBiographyTemplatePath),

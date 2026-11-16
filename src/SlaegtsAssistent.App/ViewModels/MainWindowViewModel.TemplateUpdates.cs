@@ -51,12 +51,15 @@ public partial class MainWindowViewModel
                 .ToDictionary(item => item.Metadata!.RecordId, item => item.Metadata!.Facts.FullName, StringComparer.Ordinal);
             var gedcomDirectory = string.IsNullOrWhiteSpace(SelectedGedcomFilePath)
                 ? null : Path.GetDirectoryName(SelectedGedcomFilePath);
+            var mediaFolder = StandardMediaFolder;
+            var mediaIndex = await GetMediaIndexAsync(cancellationToken);
             var reviewItems = await Task.Run(() => documents.Select(info =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var document = originals[info.FilePath];
                 var candidate = new BiographyTemplateDocumentUpdater().CreateCandidate(
-                    document, source, outputFolder, gedcomDirectory, personLinks, names);
+                    document, source, Path.GetDirectoryName(info.FilePath) ?? outputFolder,
+                    gedcomDirectory, personLinks, names, mediaFolder, mediaIndex);
                 var parsed = BiographyDocumentParser.Parse(candidate);
                 if (document.Metadata!.TemplateHash == parsed.Metadata!.TemplateHash &&
                     string.Equals(document.Body.TrimEnd('\r', '\n'), parsed.Body.TrimEnd('\r', '\n'), StringComparison.Ordinal))

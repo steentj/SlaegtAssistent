@@ -1,6 +1,6 @@
 # Validering: Fælles billedvælger med miniaturevisninger
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist implementeret; ikke godkendt**. Dialog, katalog, miniaturer og billedkontrol er implementeret og delvist prøvet; manuel validering mangler.
 
 ## Automatiserede prøver
 
@@ -23,4 +23,8 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Godkendte snapshots, søgning, sidevisning og billedkontrol | Automatiske prøver af katalog, forældede resultater, samtidighed og dekodning | Native platformprøver og manuel prøve mangler. |
+
+| 16. november 2026, macOS | Dialog, cache og genindeksering | Headless-prøver for valg, fejlstatus, cachebudget og genindeksering | Native prøver og øvrige EXIF-varianter mangler. |
+
+| 16. november 2026, macOS | EXIF og forhåndsvisning | Automatisk prøve af EXIF-orientering 6 og separat større forhåndsvisning | Øvrige orienteringer og visuel kontrol mangler. |

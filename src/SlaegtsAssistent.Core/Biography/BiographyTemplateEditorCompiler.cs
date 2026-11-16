@@ -91,7 +91,8 @@ public sealed class BiographyTemplateEditorCompiler
         var allowed = BiographyTemplateEditorCatalog.GetPresentations(block.Type)
             .Any(item => item.Presentation == block.Presentation);
 
-        if (!allowed)
+        if (!allowed && !(block.Type == BiographyTemplateBlockType.Media &&
+            block.Presentation == BiographyTemplatePresentation.Standard))
         {
             throw new BiographyTemplateEditorException(
                 $"Visningen `{block.Presentation}` kan ikke bruges til blokken {BiographyTemplateEditorCatalog.GetBlock(block.Type).Label}.");
@@ -230,21 +231,29 @@ public sealed class BiographyTemplateEditorCompiler
     private static void AppendMedia(StringBuilder result, BiographyTemplateBlock block)
     {
         AppendHeading(result, block);
-        var title = block.Fields.Contains(BiographyTemplateField.MediaTitle) ? "{{ title }}" : string.Empty;
-        if (block.Fields.Contains(BiographyTemplateField.MediaRelativeFile))
+        if (block.Presentation == BiographyTemplatePresentation.Table)
         {
-            result.Append("{{#each media }}{{#if relativeFile }}![")
-                .Append(title)
-                .Append("]({{ relativeFile }})\n{{/if}}{{/each}}\n");
+            AppendTable(result, "media", block.Fields, MediaColumns);
+            return;
         }
-        else if (block.Fields.Contains(BiographyTemplateField.MediaTitle))
-        {
-            result.Append("{{#each media }}- {{ title }}\n{{/each}}\n");
-        }
-        else
+
+        if (block.Fields.Count == 0)
         {
             result.Append('\n');
+            return;
         }
+
+        result.Append("{{#each media }}-");
+        foreach (var field in block.Fields)
+        {
+            result.Append(field switch
+            {
+                BiographyTemplateField.MediaTitle => " {{ title }}",
+                BiographyTemplateField.MediaRelativeFile => " {{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}",
+                _ => throw UnexpectedField(block, field),
+            });
+        }
+        result.Append("\n{{/each}}\n");
     }
 
     private static void AppendSubmitter(StringBuilder result, BiographyTemplateBlock block)
@@ -273,7 +282,9 @@ public sealed class BiographyTemplateEditorCompiler
         result.Append("| ").AppendJoin(" | ", fields.Select(field => columns[field].Heading)).Append(" |\n");
         result.Append("| ").AppendJoin(" | ", fields.Select(_ => "---")).Append(" |\n");
         result.Append("{{#each ").Append(collection).Append(" }}| ")
-            .AppendJoin(" | ", fields.Select(field => $"{{{{ {columns[field].Path} }}}}"))
+            .AppendJoin(" | ", fields.Select(field => collection == "media" && field == BiographyTemplateField.MediaRelativeFile
+                ? "{{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}"
+                : $"{{{{ {columns[field].Path} }}}}"))
             .Append(" |\n{{/each}}\n");
     }
 
@@ -306,6 +317,13 @@ public sealed class BiographyTemplateEditorCompiler
             [BiographyTemplateField.SourceTitle] = new("Titel", "title"),
             [BiographyTemplateField.SourceAuthor] = new("Forfatter", "author"),
             [BiographyTemplateField.SourcePage] = new("Side", "page"),
+        };
+
+    private static readonly IReadOnlyDictionary<BiographyTemplateField, TableColumn> MediaColumns =
+        new Dictionary<BiographyTemplateField, TableColumn>
+        {
+            [BiographyTemplateField.MediaTitle] = new("Titel", "title"),
+            [BiographyTemplateField.MediaRelativeFile] = new("Lokal fil", "file"),
         };
 
     private sealed record TableColumn(string Heading, string Path);

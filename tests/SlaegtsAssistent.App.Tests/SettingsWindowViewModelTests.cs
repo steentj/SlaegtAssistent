@@ -9,6 +9,93 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class SettingsWindowViewModelTests
 {
     [Fact]
+    public async Task ValgtMediemappeGemmesOgFinderEksporteretGedcomFil()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gedcom = Directory.CreateDirectory(Path.Combine(root, "gedcom")).FullName;
+        var media = Directory.CreateDirectory(Path.Combine(root, "Medier")).FullName;
+        var docs = Directory.CreateDirectory(Path.Combine(root, "dokumenter")).FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(media, "anna.jpg"), "syntetisk fil");
+            var settingsPath = Path.Combine(root, "indstillinger.json");
+            var settingsService = new JsonApplicationSettingsService(settingsPath, new AtomicFileWriter());
+            var viewModel = new SettingsWindowViewModel(settingsService.Load(), new ChosenFolderPicker(media));
+            AppSettings? saved = null;
+            viewModel.CloseRequested += (_, settings) => saved = settings;
+            await viewModel.SelectMediaFolderCommand.ExecuteAsync(null);
+            await viewModel.SaveCommand.ExecuteAsync(null);
+            saved.Should().NotBeNull();
+            settingsService.Save(saved!);
+            var reopened = settingsService.Load();
+            reopened.DefaultMediaFolder.Should().Be(media);
+            var index = await MediaFileIndex.BuildAsync(reopened.DefaultMediaFolder!, StringComparer.Ordinal);
+            var resolved = new BiographyMediaResolver().Resolve("Medier/anna.jpg", gedcom, docs, reopened.DefaultMediaFolder, index);
+            resolved.ResolvedPath.Should().Be(Path.Combine(media, "anna.jpg"));
+            resolved.Diagnostic.Should().BeNull();
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private sealed class ChosenFolderPicker(string folder) : IFolderPickerService
+    {
+        public Task<string?> PickFolderAsync(string title, string? suggestedStartFolder) => Task.FromResult<string?>(folder);
+    }
+
+    [Fact]
+    public void IndstillingerKanLaeseTidligereJsonOgGemmeMediemappe()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "indstillinger.json");
+        try
+        {
+            File.WriteAllText(path, "{\"DefaultGedcomInputFolder\":null}");
+            var service = new JsonApplicationSettingsService(path, new AtomicFileWriter());
+            var settings = service.Load();
+            settings.DefaultMediaFolder.Should().BeNull();
+            settings.DefaultMediaFolder = directory;
+            service.Save(settings);
+            service.Load().DefaultMediaFolder.Should().Be(directory);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public async Task MediemappeKanGemmesOgRyddes()
+    {
+        var folder = Path.GetTempPath();
+        var viewModel = new SettingsWindowViewModel(new AppSettings(), new StubFolderPickerService());
+        AppSettings? saved = null;
+        viewModel.CloseRequested += (_, settings) => saved = settings;
+        viewModel.DefaultMediaFolder = folder;
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        saved!.DefaultMediaFolder.Should().Be(folder);
+        viewModel.ClearMediaFolderCommand.Execute(null);
+        viewModel.DefaultMediaFolder.Should().BeNull();
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        saved!.DefaultMediaFolder.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NyUgyldigMediemappeAfvisesMenTidligereUtilgaengeligBevares()
+    {
+        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var viewModel = new SettingsWindowViewModel(new AppSettings(), new StubFolderPickerService());
+        AppSettings? saved = null;
+        viewModel.CloseRequested += (_, settings) => saved = settings;
+        viewModel.DefaultMediaFolder = missing;
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        saved.Should().BeNull();
+        viewModel.MediaFolderMessage.Should().NotBeNullOrWhiteSpace();
+        var reopened = new SettingsWindowViewModel(new AppSettings { DefaultMediaFolder = missing }, new StubFolderPickerService());
+        reopened.CloseRequested += (_, settings) => saved = settings;
+        await reopened.SaveCommand.ExecuteAsync(null);
+        saved!.DefaultMediaFolder.Should().Be(missing);
+        reopened.MediaFolderMessage.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public void Save_PersistsTemplatePathAndCancelDoesNotProduceSettings()
     {
         var templatePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.md");

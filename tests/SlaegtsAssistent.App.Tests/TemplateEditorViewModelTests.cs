@@ -8,6 +8,24 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class TemplateEditorViewModelTests
 {
     [Fact]
+    public void TidligereMedievisningAabnesSomListeUdenAtAendreOriginalen()
+    {
+        var standard = BiographyTemplateEditorModel.CreateDefault();
+        var blocks = standard.Blocks.Select(block => block.Type == BiographyTemplateBlockType.Media
+            ? block with { Presentation = BiographyTemplatePresentation.Standard } : block).ToArray();
+        var model = new BiographyTemplateEditorModel(standard.Version, blocks);
+        var viewModel = new TemplateEditorViewModel(model);
+        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Media);
+
+        viewModel.SelectedPresentation!.Presentation.Should().Be(BiographyTemplatePresentation.List);
+        viewModel.AvailablePresentations.Select(item => item.Presentation).Should().Equal(
+            BiographyTemplatePresentation.List, BiographyTemplatePresentation.Table);
+        model.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Media).Presentation
+            .Should().Be(BiographyTemplatePresentation.Standard);
+        viewModel.StopPreview();
+    }
+
+    [Fact]
     public void ContextualHelp_ShouldFollowTheSelectedBlock()
     {
         var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());

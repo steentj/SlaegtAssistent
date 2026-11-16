@@ -33,6 +33,17 @@ public sealed class MarkdownBiographyExportService : IMarkdownBiographyExportSer
         }, StringComparer.Ordinal);
     }
 
+    public IReadOnlyDictionary<string, string> GenerateBiographies(FamilyTree familyTree, string outputDirectory,
+        MediaFileIndex? mediaIndex, CancellationToken cancellationToken)
+    {
+        var generator = CreateGenerator(familyTree, outputDirectory, mediaIndex);
+        return familyTree.People.ToDictionary(person => person.RecordId, person =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return generator.Generate(person);
+        }, StringComparer.Ordinal);
+    }
+
     public string GenerateBiography(
         FamilyTree familyTree,
         Person person,
@@ -46,7 +57,8 @@ public sealed class MarkdownBiographyExportService : IMarkdownBiographyExportSer
 
     private IBiographyMarkdownGenerator CreateGenerator(
         FamilyTree familyTree,
-        string outputDirectory)
+        string outputDirectory,
+        MediaFileIndex? mediaIndex = null)
     {
         var settings = _applicationSettingsService.Load();
         var personLinks = BiographyPersonLinkFactory.Create(familyTree, outputDirectory,
@@ -57,7 +69,9 @@ public sealed class MarkdownBiographyExportService : IMarkdownBiographyExportSer
                 submitter: familyTree.Submitter,
                 mediaBaseDirectory: outputDirectory,
                 gedcomSourceDirectory: GetGedcomDirectory(familyTree),
-                personLinks: personLinks);
+                personLinks: personLinks,
+                mediaDirectory: settings.DefaultMediaFolder,
+                mediaIndex: mediaIndex);
         }
 
         var template = new BiographyTemplateLoader().Load(settings.GlobalBiographyTemplatePath);
@@ -66,7 +80,9 @@ public sealed class MarkdownBiographyExportService : IMarkdownBiographyExportSer
             familyTree.Submitter,
             outputDirectory,
             GetGedcomDirectory(familyTree),
-            personLinks);
+            personLinks,
+            settings.DefaultMediaFolder,
+            mediaIndex);
     }
 
     private static string? GetGedcomDirectory(FamilyTree familyTree) =>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Markdig;
+using SlaegtsAssistent.Core.Biography;
 
 namespace SlaegtsAssistent.App.Services;
 
@@ -37,6 +38,9 @@ public sealed class SafeMarkdownPreviewService
     private static readonly Regex LinkRegex = new(
         "<a\\b[^>]*href=\"(?<href>[^\"]*)\"[^>]*>",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex ImageWidthTitleRegex = new(
+        " title=\"SlaegtsAssistent:width=(?<width>25|50)\"",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex SourceRegex = new(
         "\\bsrc=\"(?<src>[^\"]*)\"",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -79,7 +83,7 @@ public sealed class SafeMarkdownPreviewService
             diagnostics.Add("Rå HTML vises som tekst og udføres ikke i previewet.");
         }
 
-        var html = Markdown.ToHtml(markdown, Pipeline);
+        var html = Markdown.ToHtml(HidePortraitMarkers(markdown), Pipeline);
 
         html = ImageRegex.Replace(html, match => ResolveImage(
             match.Value,
@@ -112,6 +116,30 @@ public sealed class SafeMarkdownPreviewService
     {
         var syntheticPath = Path.Combine(Path.GetTempPath(), "slaegtsassistent-hjaelp.md");
         return Render(markdown, syntheticPath, []);
+    }
+
+    private static string HidePortraitMarkers(string markdown)
+    {
+        var lines = Regex.Split(markdown, "(?<=\n)");
+        char fence = '\0';
+        var fenceLength = 0;
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index].TrimEnd('\r', '\n');
+            var trimmed = line.TrimStart(' ');
+            var indentation = line.Length - trimmed.Length;
+            var markerLength = trimmed.Length == 0 ? 0 : trimmed.TakeWhile(c => c == trimmed[0]).Count();
+            if (indentation <= 3 && trimmed.Length > 0 && trimmed[0] is '`' or '~' && markerLength >= 3)
+            {
+                if (fence == '\0') { fence = trimmed[0]; fenceLength = markerLength; }
+                else if (trimmed[0] == fence && markerLength >= fenceLength && string.IsNullOrWhiteSpace(trimmed[markerLength..])) fence = '\0';
+                continue;
+            }
+            if (fence == '\0' && indentation == 0 &&
+                line is BiographyImageEditService.PortraitStartMarker or BiographyImageEditService.PortraitEndMarker)
+                lines[index] = lines[index][line.Length..];
+        }
+        return string.Concat(lines);
     }
 
     private static string ResolveImage(
@@ -195,6 +223,12 @@ public sealed class SafeMarkdownPreviewService
             }
 
             var data = Convert.ToBase64String(File.ReadAllBytes(physicalPath));
+            var width = ImageWidthTitleRegex.Match(imageTag);
+            if (width.Success)
+            {
+                imageTag = ImageWidthTitleRegex.Replace(imageTag, string.Empty, 1);
+                imageTag = imageTag.Insert(4, $" style=\"max-width:{width.Groups["width"].Value}%;height:auto;\"");
+            }
             return SourceRegex.Replace(imageTag, $"src=\"data:{mimeType};base64,{data}\"", 1);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

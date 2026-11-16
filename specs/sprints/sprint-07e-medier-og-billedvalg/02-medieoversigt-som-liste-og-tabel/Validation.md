@@ -1,6 +1,6 @@
 # Validering: Medieoversigt uden automatiske billeder
 
-Status: **ikke kørt; featureen er ikke implementeret**.
+Status: **delvist implementeret og automatisk prøvet; ikke godkendt**. Manuel prøve og de øvrige specificerede regressioner mangler.
 
 ## Automatiserede prøver
 
@@ -21,4 +21,4 @@ Assertions bruger FluentAssertions. Regressioner skal påvise de konkrete krav i
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke kørt | Alle | Afventer implementering | – |
+| 16. november 2026, macOS | Liste, tabel, tidligere Standard, import | Automatiske regressioner kørt med `dotnet test` | Øvrige scenarier og manuel prøve mangler. |

@@ -13,6 +13,21 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class AvaloniaHeadlessRegressionTests
 {
     [Fact]
+    public Task MediemappenErSynligSammenMedGedcomIndstillingerne() =>
+        HeadlessTestApplication.RunAsync(() =>
+        {
+            var viewModel = new SettingsWindowViewModel(new AppSettings(), new EmptyFolderPicker());
+            var window = new SettingsWindow { DataContext = viewModel };
+            var media = window.FindControl<StackPanel>("MediaFolderSection");
+            var output = window.FindControl<TextBlock>("OutputFolderLabel");
+            media.Should().NotBeNull();
+            output.Should().NotBeNull();
+            Grid.GetRow(media!).Should().BeLessThan(Grid.GetRow(output!));
+            Descendants<Button>(media!).Should().Contain(button => button.Command == viewModel.SelectMediaFolderCommand);
+            return Task.CompletedTask;
+        });
+
+    [Fact]
     public Task TemplateHeading_ShouldKeepKeyboardFocusAndCaretWhileTyping() =>
         HeadlessTestApplication.RunAsync(() =>
         {

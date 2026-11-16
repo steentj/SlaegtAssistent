@@ -161,7 +161,7 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
             throw new InvalidDataException("Eksportværktøjet gav en ugyldig eller for stor fil.");
         var bytes = await File.ReadAllBytesAsync(output, cancellationToken).ConfigureAwait(false);
         ValidateBiographyOutput(bytes, format);
-        return new(bytes, html.Warnings.Concat(response.Warnings).Distinct(StringComparer.Ordinal).ToArray(), BiographyExportHtmlBuilder.ComputeFingerprint(html.Html));
+        return new(bytes, html.Warnings.Concat(response.Warnings).Distinct(StringComparer.Ordinal).ToArray(), BiographyExportHtmlBuilder.ComputeFingerprint(html));
     }
 
     private static void ValidateBiographyOutput(byte[] bytes, BiographyExportFormat format)

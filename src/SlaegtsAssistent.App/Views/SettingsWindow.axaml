@@ -13,23 +13,34 @@
         WindowStartupLocation="CenterOwner">
     <Grid Margin="16" RowDefinitions="*,Auto" RowSpacing="12">
         <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="12" ColumnSpacing="8">
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Standardmappe for GEDCOM-filer (input)" FontWeight="SemiBold" />
         <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding DefaultGedcomInputFolder, Mode=TwoWay}" automation:AutomationProperties.Name="Standardmappe for GEDCOM-filer" />
         <Button Grid.Row="1" Grid.Column="1" Content="Vælg…" Command="{Binding SelectGedcomInputFolderCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg GEDCOM-mappe" />
 
-        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="Standardmappe for Markdown-filer (output)" FontWeight="SemiBold" VerticalAlignment="Top" />
-        <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,24,0,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <StackPanel x:Name="MediaFolderSection" Grid.Row="2" Grid.ColumnSpan="2" Spacing="6">
+            <TextBlock Text="Mediemappe til GEDCOM" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBox Text="{Binding DefaultMediaFolder, Mode=TwoWay}" automation:AutomationProperties.Name="Mappe med GEDCOM-medier" />
+                <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectMediaFolderCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg mediemappe" />
+                <Button Grid.Column="2" Content="Ryd" Command="{Binding ClearMediaFolderCommand}" automation:AutomationProperties.Name="Ryd mediemappe" />
+            </Grid>
+            <TextBlock Text="Vælg mappen med billeder og andre filer, der blev eksporteret sammen med GEDCOM-filen. Lad feltet være tomt, hvis filerne ligger i GEDCOM-mappen." TextWrapping="Wrap" />
+            <TextBlock Text="{Binding MediaFolderMessage}" Foreground="{DynamicResource AppDangerBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <TextBlock x:Name="OutputFolderLabel" Grid.Row="3" Grid.ColumnSpan="2" Text="Standardmappe for Markdown-filer (output)" FontWeight="SemiBold" VerticalAlignment="Top" />
+        <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Grid.Column="0" Text="{Binding DefaultMarkdownOutputFolder, Mode=TwoWay}" automation:AutomationProperties.Name="Standardmappe for persondokumenter" />
             <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectMarkdownOutputFolderCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg dokumentmappe" />
         </Grid>
 
-        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="Global persondokumentskabelon" FontWeight="SemiBold" />
-        <Grid Grid.Row="5" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="Global persondokumentskabelon" FontWeight="SemiBold" />
+        <Grid Grid.Row="6" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Grid.Column="0" Text="{Binding GlobalBiographyTemplatePath, Mode=TwoWay}" automation:AutomationProperties.Name="Fil med persondokumentskabelon" />
             <Button Grid.Column="1" Content="Vælg…" Command="{Binding SelectBiographyTemplateCommand}" MinWidth="90" automation:AutomationProperties.Name="Vælg persondokumentskabelon" />
         </Grid>
-        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Spacing="6">
+        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Spacing="6">
             <Button Content="Rediger skabelon…" Command="{Binding EditBiographyTemplateCommand}" HorizontalAlignment="Left" />
             <TextBlock Text="Editoren starter med standarden, hvis den valgte fil ikke understøttes." TextWrapping="Wrap" />
             <TextBlock Text="{Binding TemplateStatusMessage}" TextWrapping="Wrap" />
@@ -38,18 +49,18 @@
                     HorizontalAlignment="Left" />
         </StackPanel>
 
-        <TextBlock Grid.Row="7" Grid.ColumnSpan="2" Text="Tema" FontWeight="SemiBold" />
-        <ComboBox Grid.Row="8" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="Tema" FontWeight="SemiBold" />
+        <ComboBox Grid.Row="9" Grid.ColumnSpan="2"
                   automation:AutomationProperties.Name="Appens tema"
                   ItemsSource="{Binding ThemeOptions}"
                   SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
 
-        <TextBlock Grid.Row="10" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="11" Grid.ColumnSpan="2"
                    Text="{Binding TemplateErrorMessage}"
                    automation:AutomationProperties.Name="Fejl i persondokumentskabelonen"
                    Foreground="{DynamicResource AppDangerBrush}"
                    TextWrapping="Wrap" />
-        <TextBox Grid.Row="11" Grid.ColumnSpan="2"
+        <TextBox Grid.Row="12" Grid.ColumnSpan="2"
                  automation:AutomationProperties.Name="Skabelonstatus og forhåndsvisning"
                  Height="140"
                  Text="{Binding PreviewText}"

@@ -158,7 +158,7 @@ public sealed class Sprint04bTests
         markdown.Should().Contain("## Folketællinger");
         markdown.Should().Contain("## Kilder");
         markdown.Should().Contain("Kirkebog");
-        markdown.Should().Contain("![");
+        markdown.Should().Contain("anna.jpg").And.NotContain("![");
         markdown.Should().Contain("Kilde/afsender: Arkivet");
         markdown.Should().Contain(BiographyGeneratedSectionMerger.StartMarker);
     }

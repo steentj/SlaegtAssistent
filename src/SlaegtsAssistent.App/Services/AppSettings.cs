@@ -6,6 +6,8 @@ public sealed class AppSettings
 
     public string? DefaultMarkdownOutputFolder { get; set; }
 
+    public string? DefaultMediaFolder { get; set; }
+
     public string? GlobalBiographyTemplatePath { get; set; }
 
     public ThemePreference Theme { get; set; } = ThemePreference.System;

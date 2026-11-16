@@ -1,4 +1,5 @@
 using SlaegtsAssistent.Core.Domain;
+using SlaegtsAssistent.Core.Biography;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -16,6 +17,10 @@ public interface IMarkdownBiographyExportService
                 cancellationToken.ThrowIfCancellationRequested();
                 return GenerateBiography(familyTree, person, outputDirectory);
             });
+
+    IReadOnlyDictionary<string, string> GenerateBiographies(FamilyTree familyTree, string outputDirectory,
+        MediaFileIndex? mediaIndex, CancellationToken cancellationToken) =>
+        GenerateBiographies(familyTree, outputDirectory, cancellationToken);
 
     string GenerateBiography(FamilyTree familyTree, Person person, string outputDirectory);
 }

@@ -50,7 +50,7 @@ public partial class BiographyExportWindow : Window
         }
         var format = print ? BiographyExportFormat.Pdf : _model.Format;
         var mode = print ? BiographyExportMode.Combined : _model.Mode;
-        var roots = new[] { _main.StandardMarkdownOutputFolder, Path.GetDirectoryName(_main.SelectedGedcomFilePath ?? "") }
+        var roots = new[] { _main.StandardMarkdownOutputFolder, Path.GetDirectoryName(_main.SelectedGedcomFilePath ?? ""), _main.StandardMediaFolder }
             .Where(path => !string.IsNullOrWhiteSpace(path)).Select(path => path!).ToArray();
         var cancellation = _cancellation = new CancellationTokenSource();
         _model.IsExporting = true;

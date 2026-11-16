@@ -105,6 +105,31 @@ public sealed class BiographyTemplateContractTests
     }
 
     [Fact]
+    public void MediemappeHarForrangOgSymbolskeLinksUdenforAfvises()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var media = Directory.CreateDirectory(Path.Combine(root, "medier")).FullName;
+        var gedcom = Directory.CreateDirectory(Path.Combine(root, "gedcom")).FullName;
+        var document = Directory.CreateDirectory(Path.Combine(root, "dokumenter")).FullName;
+        var outside = Directory.CreateDirectory(Path.Combine(root, "andet")).FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(media, "foto.jpg"), "medie");
+            File.WriteAllText(Path.Combine(gedcom, "foto.jpg"), "gedcom");
+            File.WriteAllText(Path.Combine(outside, "hemmelig.jpg"), "hemmelig");
+            var resolver = new BiographyMediaResolver();
+            resolver.Resolve("foto.jpg", gedcom, document, media).ResolvedPath.Should().Be(Path.Combine(media, "foto.jpg"));
+            if (!OperatingSystem.IsWindows())
+            {
+                File.CreateSymbolicLink(Path.Combine(media, "link.jpg"), Path.Combine(outside, "hemmelig.jpg"));
+                resolver.Resolve("link.jpg", gedcom, document, media).RelativePath.Should().BeNull();
+            }
+            resolver.Resolve("https://example.com/foto.jpg", gedcom, document, media).RelativePath.Should().BeNull();
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void MediaResolver_ShouldResolveRelativePathFromGedcomFolderToDocumentFolder()
     {
         using var area = new TemporaryDirectory();

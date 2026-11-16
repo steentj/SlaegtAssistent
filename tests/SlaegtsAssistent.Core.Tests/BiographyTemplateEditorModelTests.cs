@@ -83,6 +83,26 @@ public sealed class BiographyTemplateEditorModelTests
         rendered.Should().NotContain("Kategori");
     }
 
+    [Theory]
+    [InlineData(BiographyTemplatePresentation.Standard)]
+    [InlineData(BiographyTemplatePresentation.List)]
+    [InlineData(BiographyTemplatePresentation.Table)]
+    public void MedieoversigtViserTekstUdenAutomatiskeBilleder(BiographyTemplatePresentation presentation)
+    {
+        var block = new BiographyTemplateBlock(BiographyTemplateBlockType.Media, true, "Medier", presentation,
+            [BiographyTemplateField.MediaTitle, BiographyTemplateField.MediaRelativeFile]);
+        var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, [block]);
+        var person = new Person("@I1@");
+        person.Media.Add(new Media("@M1@") { Title = "Familie | foto", File = "foto.jpg" });
+        var template = new BiographyTemplateLoader().Parse(new BiographyTemplateEditorCompiler().Compile(model));
+
+        var result = new BiographyTemplateRenderer().Render(template, BiographyTemplateContext.FromPerson(person));
+
+        result.Should().Contain("Familie \\| foto").And.Contain("foto.jpg").And.NotContain("![");
+        if (presentation == BiographyTemplatePresentation.Table)
+            result.Should().Contain("| Titel | Lokal fil |");
+    }
+
     [Fact]
     public void SerializeAndDeserialize_ShouldPreserveTheModelDeterministically()
     {
@@ -195,7 +215,7 @@ public sealed class BiographyTemplateEditorModelTests
         "## Kilder\n" +
         "{{#each sources }}- {{ title }}{{#if author }} ({{ author }}){{/if}}{{#if page }}, side {{ page }}{{/if}}\n{{/each}}\n" +
         "## Medier\n" +
-        "{{#each media }}{{#if relativeFile }}![{{ title }}]({{ relativeFile }})\n{{/if}}{{/each}}\n" +
+        "{{#each media }}- {{ title }} {{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}\n{{/each}}\n" +
         "{{#if submitter}}---\nKilde/afsender: {{ submitter.name }}\n{{/if}}" +
         "## Biografi\n\n_Skriv den fulde livshistorie her._\n";
 }
