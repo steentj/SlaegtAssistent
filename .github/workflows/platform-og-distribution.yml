@@ -40,6 +40,11 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Installér Python til genskabelse af værktøjer
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Vis valgt .NET SDK
         run: dotnet --version
 
@@ -64,6 +69,17 @@ jobs:
       - name: Test
         run: dotnet test --configuration Release --no-build --no-restore
 
+      - name: Test den medleverede eksportsidecar
+        shell: bash
+        run: |
+          pakke="$GITHUB_WORKSPACE/tools/export/${{ matrix.rid }}/slaegt-export"
+          program="$pakke/slaegt-export"
+          if [[ "${{ matrix.rid }}" == "win-x64" ]]; then program="$program.exe"; fi
+          export SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE="$program"
+          export SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES="$pakke/_internal"
+          export SLAEGTSASSISTENT_TEST_EXPORT_FONTS="$pakke/_internal/fonts.conf"
+          dotnet test --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~BiographyExportIntegrationTests|FullyQualifiedName~LocalExportIntegrationTests|FullyQualifiedName~UgemteRedigeringerEksporteres'
+
       - name: Publicér Native AOT-distribution
         run: dotnet publish src/SlaegtsAssistent.App/SlaegtsAssistent.App.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --no-restore -p:DistributionBuild=true -p:IncludeNativeLibrariesForSelfExtract=true -p:StripSymbols=true -p:DebugType=None --output artifacts/${{ matrix.rid }}
 
@@ -81,6 +97,13 @@ jobs:
             program="artifacts/${{ matrix.rid }}/SlaegtsAssistent.App.exe"
           fi
           "$program" --release-smoke-test
+
+      - name: Test biografieksport i distributionsartefakten
+        shell: bash
+        run: |
+          program="artifacts/${{ matrix.rid }}/SlaegtsAssistent.App"
+          if [[ "${{ matrix.rid }}" == "win-x64" ]]; then program="$program.exe"; fi
+          "$program" --release-biography-export-smoke-test
 
       - name: Gem distributionsartefakt
         uses: actions/upload-artifact@v4

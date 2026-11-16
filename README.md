@@ -50,7 +50,7 @@ SlaegtAssistent/
 | **Grafisk visualisering** | Graphviz → SVG (via Python-sidecar) |
 | **Lokal AI** | Ollama + Microsoft.Extensions.AI |
 | **PDF-behandling** | PdfPig (C#) + Pandoc (Python) |
-| **Dokumenteksport** | python-docx, weasyprint |
+| **Dokumenteksport** | Markdig, privat Pandoc og WeasyPrint |
 | **OCR/HTR** | HuggingFace Transformers (TrOCR, Nougat) |
 | **Test** | xUnit |
 
@@ -61,7 +61,7 @@ SlaegtAssistent/
 - **.NET 10 SDK**: Den præcise version er angivet i `global.json`.
 - **Avalonia UI**-afhængigheder (inkluderet via NuGet)
 - **Ollama** installeret og kørende lokalt (til AI-funktioner)
-- Valgfrit: **Python 3.10+** (til avanceret eksport og handskriftgenkendelse)
+- Python 3.12+ kan bruges til at genskabe de lokale værktøjspakker ved udvikling. Eksport kræver ikke en systeminstalleret Python eller Pandoc, når værktøjspakken er til stede.
 
 ### .NET SDK på macOS
 
@@ -105,6 +105,12 @@ dotnet build
 cd src/SlaegtsAssistent.App
 dotnet run
 ```
+
+### Eksportér biografier
+
+Vælg **Fil → Eksportér biografier…**, og markér op til 100 personer. Vælg Word, PDF eller OpenDocument og enten ét samlet dokument eller én fil pr. person. Dialogen viser mål, advarsler og eventuelle filer, der skal overskrives, før eksporten starter. Ugemte editorændringer medtages uden at gemme Markdown-filerne. **Udskriv…** danner en samlet PDF og åbner den i systemets PDF-fremviser.
+
+De lokale værktøjspakker kan genskabes fra projektets arkiver på macOS arm64, Linux x64 og Windows x64. Mac-pakken er afprøvet lokalt; Linux- og Windows-pakkerne er foreløbigt afprøvet under emulering. Native platformprøver og samlet distributionsaccept mangler fortsat. Se [valideringsjournalen](specs/sprints/sprint-07c-biografieksport/Validation.md).
 
 ### Test
 

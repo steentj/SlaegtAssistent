@@ -17,7 +17,9 @@ public sealed class LocalExportIntegrationTests
             <html><body><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><line x1="10" y1="10" x2="70" y2="70" stroke="#777777"/><circle cx="10" cy="10" r="5" fill="#d84444"/><circle cx="70" cy="70" r="8" fill="#4488dd"/><text x="10" y="25" font-size="10">Åse Østergaard</text></svg></body></html>
             """;
 
-        var pdf = await new LocalExportSidecar(new LocalProcessRunner(), executable, script)
+        var pdf = await new LocalExportSidecar(new LocalProcessRunner(), executable, script,
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"),
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"))
             .RenderGraphPdfAsync(html, "A4", "landscape", CancellationToken.None);
 
         pdf.Should().StartWith("%PDF-"u8.ToArray());

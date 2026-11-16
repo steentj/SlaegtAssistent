@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SlaegtsAssistent.App.Services;
 
-public sealed class AtomicFileWriter : IAtomicFileWriter
+public sealed class AtomicFileWriter : INoOverwriteAtomicFileWriter
 {
     private const int BufferSize = 81920;
     private readonly Action<AtomicWriteStage>? _stageCallback;
@@ -33,7 +33,13 @@ public sealed class AtomicFileWriter : IAtomicFileWriter
         Write(path, stream => stream.Write(content));
     }
 
-    private void Write(string path, Action<FileStream> writeContent)
+    public void WriteNewBytes(string path, byte[] content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        Write(path, stream => stream.Write(content), overwrite: false);
+    }
+
+    private void Write(string path, Action<FileStream> writeContent, bool overwrite = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
@@ -70,7 +76,7 @@ public sealed class AtomicFileWriter : IAtomicFileWriter
 
             _stageCallback?.Invoke(AtomicWriteStage.AfterTemporaryFileFlush);
             _stageCallback?.Invoke(AtomicWriteStage.BeforeDestinationReplace);
-            File.Move(temporaryPath, destinationPath, overwrite: true);
+            File.Move(temporaryPath, destinationPath, overwrite);
             committed = true;
         }
         catch (Exception exception) when (exception is IOException

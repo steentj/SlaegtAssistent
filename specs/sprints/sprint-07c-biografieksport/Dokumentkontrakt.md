@@ -64,3 +64,11 @@ Ved samlet dokument ændres målet først, når hele filen er valideret. Udskriv
 ## Layout- og kompatibilitetsaccept
 
 En fast testbiografi indeholder flere sider, æ/ø/å, lange navne/URL'er, niveau-overskrifter, fri tekst, hændelser, noter, kilder, tabel med mindst 60 rækker, billede med billedtekst, manglende billede, kode og personlinks. Eksportér også to personer med ens navn og forskelligt id. Kontrollér tekstindhold, links/bogmærker, billedindhold og sidelayout i PDF-rendering og i faktisk Word eller LibreOffice. Biblioteksinspektion af DOCX/ODT-zip er nødvendig, men beviser ikke alene visuelt korrekt kontorlayout.
+
+### Afgrænset adapter til sideskift
+
+En lokal prøve med Pandoc 3.13 viste, at HTML-sektionernes CSS-sideskift ikke blev overført til DOCX eller ODT. Sidecaren indsætter derfor en tilfældig intern markør før hvert efterfølgende kapitel og erstatter efter Pandoc-konverteringen netop disse markører med formatets sideskift. Antallet kontrolleres, og dokumentet afvises, hvis en markør ikke findes. Adapteren ændrer kun det genererede joboutput; ingen persondokumenter berøres. Automatiseret XML-inspektion med lokal Pandoc viser ét sideskift mellem to kapitler i begge formater. Visuel kontrol i kontorprogrammer og afprøvning med den private distribuerede Pandoc mangler fortsat.
+
+### Kontrol mellem gennemgang og publicering
+
+Forhåndskontrollen beregner et SHA-256-fingeraftryk af den kontrollerede HTML for hvert planlagt output. Billedstierne i HTML er genereret ud fra billedindholdets SHA-256, så et ændret billede ændrer dokumentgrundlagets fingeraftryk. Efter hver konvertering sammenlignes fingeraftrykket med den gennemgåede version, og nye advarsler sammenlignes med de viste advarsler. Ved forskelle gemmes ingen mål; brugeren skal gennemgå eksporten igen. For udskrift kontrolleres fingeraftrykket før PDF-fremviseren åbnes.

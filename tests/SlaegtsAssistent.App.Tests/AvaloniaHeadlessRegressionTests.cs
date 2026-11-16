@@ -58,6 +58,7 @@ public sealed class AvaloniaHeadlessRegressionTests
             window.DataContext.Should().BeSameAs(viewModel);
             Descendants<Button>(window).Should().Contain(button =>
                 button.Content as string == "Anvend skabelon" && button.Command == viewModel.ApplyBiographyTemplateCommand);
+            Descendants<MenuItem>(window).Should().Contain(item => item.Header as string == "Eksportér biografier…");
             return Task.CompletedTask;
         });
 

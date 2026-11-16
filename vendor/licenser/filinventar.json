@@ -5,7 +5,9 @@
     "oplysteVersioner": {
       "python": "3.13.1",
       "weasyprint": "66.0",
-      "pyinstaller": "6.22.3"
+      "pyinstaller": "6.22.3",
+      "pandoc": "3.13",
+      "gmp": "6.3.0"
     },
     "filer": [
       {
@@ -90,7 +92,7 @@
       },
       {
         "sti": "_internal/base_library.zip",
-        "sha256": "c23edde3d8bf8bffdc34f073bb914820e57c8a6828f39385dce68ccdd948a3d5"
+        "sha256": "7d14d289d587ef4e5bb200bc7504a81518a4acbba80b96bddbfdb33283d41db2"
       },
       {
         "sti": "_internal/fontTools/misc/bezierTools.cpython-313-darwin.so",
@@ -171,6 +173,10 @@
       {
         "sti": "_internal/libgmodule-2.0.0.dylib",
         "sha256": "e71e5955cb921602b2523608bb1a58d7c6afee308d911d204f6698cd2b3a9f49"
+      },
+      {
+        "sti": "_internal/libgmp.10.dylib",
+        "sha256": "14123464af436d67ef69114810aa9e1e74de50e4097166fe8c110397b3ba6961"
       },
       {
         "sti": "_internal/libgobject-2.0.0.dylib",
@@ -785,6 +791,10 @@
         "sha256": "f216cba01804fe99e2d2c002d68f72280b3250fb7a14113cdfb4cbb496bfaff0"
       },
       {
+        "sti": "_internal/python3.13/lib-dynload/_uuid.cpython-313-darwin.so",
+        "sha256": "db8933435b7f8f162b7a49cd462c441ef3993a715e17a75e8c171b7b433ca533"
+      },
+      {
         "sti": "_internal/python3.13/lib-dynload/array.cpython-313-darwin.so",
         "sha256": "54a8f1380b0a2112d7cea21f88d96b056bd3d95f7a4dfceb0e699150509cd268"
       },
@@ -1130,7 +1140,7 @@
       },
       {
         "sti": "_internal/weasyprint-66.0.dist-info/RECORD",
-        "sha256": "7c6a368829009c68a927fc9fc690666d3f0e66371895d236c21c279195ad77f3"
+        "sha256": "8abbf5a2b7bdc446193b3c1976ee2d4e202a2ca0c0ed55df5fea48c6f9c33cf4"
       },
       {
         "sti": "_internal/weasyprint-66.0.dist-info/REQUESTED",
@@ -1153,8 +1163,172 @@
         "sha256": "72e5c68fd9ec523315d7a29bd53073b43c701738a5b96a96936a30929facacb2"
       },
       {
+        "sti": "licenser/gmp-COPYING",
+        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+      },
+      {
+        "sti": "licenser/gmp-COPYING.LESSERv3",
+        "sha256": "a853c2ffec17057872340eee242ae4d96cbf2b520ae27d903e1b2fef1a5f9d1c"
+      },
+      {
+        "sti": "licenser/pandoc-AUTHORS.md",
+        "sha256": "84fd3d834841d8279dce4bd9456b9ab3f3d6c23cb3c03fc98548826d13aaa442"
+      },
+      {
+        "sti": "licenser/pandoc-COPYING.md",
+        "sha256": "3ebfbf9235b049d384cdba5a66a1a3434bb544391e720b76faa8e1b3ee61a4e5"
+      },
+      {
+        "sti": "licenser/pandoc-COPYRIGHT",
+        "sha256": "842e33ef01625e93f85bebb8bac83aa570186b7aa77a09971257cc29f8f60740"
+      },
+      {
+        "sti": "licenser/python/altgraph/LICENSE",
+        "sha256": "6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46"
+      },
+      {
+        "sti": "licenser/python/brotli/licenses/LICENSE",
+        "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94"
+      },
+      {
+        "sti": "licenser/python/cffi/licenses/LICENSE",
+        "sha256": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63"
+      },
+      {
+        "sti": "licenser/python/cssselect2/licenses/LICENSE",
+        "sha256": "6fd97229a1d1b0f6a8b41e109f413426dbc0874b1e03746d66cc33282601c2c2"
+      },
+      {
+        "sti": "licenser/python/fonttools/licenses/LICENSE",
+        "sha256": "6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383"
+      },
+      {
+        "sti": "licenser/python/fonttools/licenses/LICENSE.external",
+        "sha256": "94a83aaee0729a0f302d34acc4acecbd9d58366f262429075fe557e4a54b2e69"
+      },
+      {
+        "sti": "licenser/python/macholib/LICENSE",
+        "sha256": "47082ab2bc0184123ec9f10fdf80c70723ee68f07d44382e17615c2a6ba70b09"
+      },
+      {
+        "sti": "licenser/python/packaging/licenses/LICENSE",
+        "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48"
+      },
+      {
+        "sti": "licenser/python/packaging/licenses/LICENSE.APACHE",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+      },
+      {
+        "sti": "licenser/python/packaging/licenses/LICENSE.BSD",
+        "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+      },
+      {
+        "sti": "licenser/python/pakker.json",
+        "sha256": "07e5a88f0f84cc13c2605742a377921a7f6d473e2b24dc859cb10ead34069b43"
+      },
+      {
+        "sti": "licenser/python/pillow/licenses/LICENSE",
+        "sha256": "dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce"
+      },
+      {
+        "sti": "licenser/python/pillow/sboms/pillow-13.0.0.cdx.json",
+        "sha256": "fe1ca6e3a4f73e7018a3805a75a19377453f342d203712f37387ad6ee853fd44"
+      },
+      {
+        "sti": "licenser/python/pip/LICENSE.txt",
+        "sha256": "634300a669d49aeae65b12c6c48c924c51a4cdf3d1ff086dc3456dc8bcaa2104"
+      },
+      {
+        "sti": "licenser/python/pycparser/licenses/LICENSE",
+        "sha256": "0a9e78156ae8b96caf1b4f11ac2df424b83de29736f9e757630548a6272fdf90"
+      },
+      {
+        "sti": "licenser/python/pydyf/licenses/LICENSE",
+        "sha256": "75461e438973e1ba0f93a7de9e3fe5b2f49e1ab49251d392878a9cdae8ce7e47"
+      },
+      {
+        "sti": "licenser/python/pyinstaller/licenses/COPYING.txt",
+        "sha256": "0598064c7d2718e38d7914a7d08343b2fa008e3bea9ebba2aa7a6ffa5900dd64"
+      },
+      {
+        "sti": "licenser/python/pyinstaller-hooks-contrib/licenses/LICENSE",
+        "sha256": "91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0"
+      },
+      {
+        "sti": "licenser/python/pypdf/licenses/LICENSE",
+        "sha256": "a97ac230e5f33ef10a5367a850eb01f91f1a0b064e34742c7794d2294557f524"
+      },
+      {
+        "sti": "licenser/python/pyphen/licenses/COPYING.GPL",
+        "sha256": "2233a3eecf299bc271f1a9f57f0b3198343ad4ab16571d70320133002c51496b"
+      },
+      {
+        "sti": "licenser/python/pyphen/licenses/COPYING.LGPL",
+        "sha256": "5bbcbb737e60fe9deba08ecbd00920cfcc3403ba2e534c64fdeea49d6bb87509"
+      },
+      {
+        "sti": "licenser/python/pyphen/licenses/COPYING.MPL",
+        "sha256": "ad192a67649aa23ac9681939840f4f241643a98da9cd8aec8de28c3b8c6ee854"
+      },
+      {
+        "sti": "licenser/python/pyphen/licenses/LICENSE",
+        "sha256": "4fd1c78fcec632bc872ba7b42ba04be330029cfffa411039b48a4f2262bb8240"
+      },
+      {
+        "sti": "licenser/python/setuptools/LICENSE",
+        "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741"
+      },
+      {
+        "sti": "licenser/python/setuptools/licenses/LICENSE",
+        "sha256": "5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d"
+      },
+      {
+        "sti": "licenser/python/setuptools/licenses/LICENSE.APACHE",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+      },
+      {
+        "sti": "licenser/python/setuptools/licenses/LICENSE.BSD",
+        "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+      },
+      {
+        "sti": "licenser/python/setuptools/licenses/LICENSE.txt",
+        "sha256": "30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654"
+      },
+      {
+        "sti": "licenser/python/tinycss2/licenses/LICENSE",
+        "sha256": "6b94acee20ec9f2709333134f3ba70322535fb420af0ce8c1455d9cbe297f1d5"
+      },
+      {
+        "sti": "licenser/python/tinyhtml5/licenses/LICENSE",
+        "sha256": "16a39991619e92f18680932da2a9199fdf7d95df3ecaedc52ea06218aabafd6f"
+      },
+      {
+        "sti": "licenser/python/weasyprint/licenses/LICENSE",
+        "sha256": "bfd14eccfa6100575460e685556b183399d4bd335904e3c9521b0116d21c54da"
+      },
+      {
+        "sti": "licenser/python/webencodings/licenses/LICENSE",
+        "sha256": "e06ef33485e7498ad592887c41fa79cc8a7fecde576c7210e11bfdddef58040e"
+      },
+      {
+        "sti": "licenser/python/zopfli/licenses/COPYING",
+        "sha256": "018b1cb87efdf7a04c2fcc13d57ed63f62149113fb207b27ea13430d64f13513"
+      },
+      {
+        "sti": "pandoc",
+        "sha256": "5b09bc3b2c8da2c69d548bcdd45e52810baa9cd3192e08f8e1999094d538576e"
+      },
+      {
+        "sti": "reference.docx",
+        "sha256": "9882ebc14c2877f7f477283d88b3e9a1915c422894a4cda62a54cd9d801712ca"
+      },
+      {
+        "sti": "reference.odt",
+        "sha256": "53350f278a7044ecff896412077002f83d67af0b037b305c2f0fe485d0055b4e"
+      },
+      {
         "sti": "slaegt-export",
-        "sha256": "58ed607dae5cf778d7b0be0352f8654ca9c5e25f930c2e1583a3d4b14930e271"
+        "sha256": "d33bc922b0fd7185ca86ef7d2c2b3b402466e737d76da26c5584b2ce581f8b99"
       }
     ]
   },

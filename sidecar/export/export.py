@@ -3,9 +3,11 @@ import contextlib
 import json
 import os
 import sys
+from pathlib import Path
 
 from protocol import ProtocolError, read_request
 from pdf_renderer import render_pdf
+from biography_renderer import render_biography
 
 
 def main():
@@ -29,7 +31,10 @@ def main():
         job_id = data["jobId"]
         # Tredjepartsbiblioteker må ikke blande deres output med protokollens JSON.
         with open(os.devnull, "w", encoding="utf-8") as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
-            render_pdf(input_path, output_path, data["options"])
+            if data["operation"] == "graph-pdf":
+                render_pdf(input_path, output_path, data["options"])
+            else:
+                render_biography(input_path, output_path, Path(data["assetRoot"]), data["operation"])
         result = {"protocolVersion": 1, "jobId": job_id, "status": "ok", "outputPath": str(output_path), "warnings": []}
         code = 0
     except ProtocolError as error:

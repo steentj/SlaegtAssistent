@@ -18,6 +18,8 @@ def main():
     parser.add_argument("--skrifttype", type=Path, required=True, help="Lokal skrifttype med dansk tegnsæt")
     parser.add_argument("--skrifttypelicens", type=Path, required=True, help="Licens for skrifttypen")
     parser.add_argument("--maal", type=Path, required=True, help="Ny mappe til prøvepakken")
+    parser.add_argument("--pandoc", type=Path, help="Privat Pandoc 3.13")
+    parser.add_argument("--pandoc-licenser", type=Path, help="Pandocs licensmappe")
     args = parser.parse_args()
     if sys.platform != "linux":
         parser.error("Prøvepakken skal bygges på Linux.")
@@ -29,6 +31,8 @@ def main():
         parser.error("Python, biblioteker, skrifttype eller skrifttypelicens mangler.")
     if target.exists() or target.is_symlink():
         parser.error("Målmappen findes allerede; vælg en ny mappe.")
+    if bool(args.pandoc) != bool(args.pandoc_licenser):
+        parser.error("Pandoc og licensmappe skal angives samlet.")
     script = Path(__file__).resolve().parents[1] / "sidecar/export/export.py"
     with tempfile.TemporaryDirectory(prefix="slaegt-pdfpakke-") as temporary:
         root = Path(temporary)
@@ -37,6 +41,19 @@ def main():
             command.extend(["--add-binary", str(library) + ":."])
         subprocess.run([*command, str(script)], check=True)
         package = root / "dist/slaegt-export"
+        reference_root = Path(__file__).resolve().parents[1] / "sidecar/export/reference"
+        for reference in ("reference.docx", "reference.odt"):
+            shutil.copy2(reference_root / reference, package / reference)
+        if args.pandoc:
+            if subprocess.run([str(args.pandoc), "--version"], capture_output=True, text=True, check=True).stdout.splitlines()[0] != "pandoc 3.13":
+                raise ValueError("Pakken kræver Pandoc 3.13.")
+            shutil.copy2(args.pandoc, package / "pandoc")
+            shutil.copytree(args.pandoc_licenser, package / "licenser/pandoc", dirs_exist_ok=True)
+        license_script = Path(__file__).resolve().parent / "indsaml-pythonlicenser.py"
+        subprocess.run([str(python), str(license_script), str(package / "licenser/python")], check=True)
+        if shutil.which("dpkg-query"):
+            system_licenses = Path(__file__).resolve().parent / "indsaml-linuxlicenser.py"
+            subprocess.run([str(python), str(system_licenses), str(package / "licenser/linux")], check=True)
         fonts = package / "_internal/fonts"
         fonts.mkdir()
         shutil.copy2(args.skrifttype, fonts / ("graf" + args.skrifttype.suffix.lower()))
@@ -49,7 +66,7 @@ def main():
         (job / "input.html").write_text('<html><body><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="8" fill="#4488dd"/><text x="10" y="75" font-size="10">Søren Æble</text></svg></body></html>', encoding="utf-8")
         request = {"protocolVersion": 1, "jobId": "proeve", "operation": "graph-pdf", "inputPath": str(job / "input.html"), "outputPath": str(job / "result.pdf"), "assetRoot": str(job / "assets"), "options": {"paper": "A4", "orientation": "landscape"}}
         (job / "request.json").write_text(json.dumps(request), encoding="utf-8")
-        env = {"PATH": "/usr/bin:/bin", "HOME": str(root), "FONTCONFIG_FILE": str(fontconfig)}
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(root), "FONTCONFIG_FILE": str(fontconfig), "LD_LIBRARY_PATH": str(package / "_internal")}
         version_result = subprocess.run([str(package / "slaegt-export"), "--version"], capture_output=True, text=True, env=env, timeout=30, check=True)
         version = json.loads(version_result.stdout)
         if version.get("protocolVersion") != 1 or version.get("toolVersion") != "0.1.0" or not version.get("rendererVersion"):

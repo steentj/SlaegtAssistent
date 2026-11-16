@@ -17,6 +17,11 @@ def main():
     parser.add_argument("--skrifttype", type=Path, required=True, help="Lokal skrifttype med dansk tegnsæt")
     parser.add_argument("--skrifttypelicens", type=Path, required=True, help="Licens for skrifttypen")
     parser.add_argument("--maal", type=Path, required=True, help="Ny mappe til prøvepakken")
+    parser.add_argument("--pandoc", type=Path, help="Lokal Pandoc 3.13 til biografieksport")
+    parser.add_argument("--gmp", type=Path, help="GMP-bibliotek til Pandoc")
+    parser.add_argument("--gmp-install-name", default="/opt/homebrew/opt/gmp/lib/libgmp.10.dylib", help="Pandocs oprindelige sti til GMP")
+    parser.add_argument("--pandoc-licenser", type=Path, help="Mappe med Pandocs licenstekster")
+    parser.add_argument("--gmp-licenser", type=Path, help="Mappe med GMP-licenser")
     args = parser.parse_args()
     python = args.python.absolute()
     libraries = args.biblioteker.resolve(strict=True)
@@ -25,6 +30,8 @@ def main():
         parser.error("Python, biblioteker, skrifttype eller skrifttypelicens mangler.")
     if target.exists() or target.is_symlink():
         parser.error("Målmappen findes allerede; vælg en ny mappe.")
+    if any((args.pandoc, args.gmp, args.pandoc_licenser, args.gmp_licenser)) and not all((args.pandoc, args.gmp, args.pandoc_licenser, args.gmp_licenser)):
+        parser.error("Pandoc, GMP og begge licensmapper skal angives samlet.")
     script = Path(__file__).resolve().parents[1] / "sidecar/export/export.py"
     with tempfile.TemporaryDirectory(prefix="slaegt-pdfpakke-") as temporary:
         root = Path(temporary)
@@ -32,6 +39,29 @@ def main():
         env["DYLD_FALLBACK_LIBRARY_PATH"] = str(libraries)
         subprocess.run([str(python), "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--name", "slaegt-export", "--distpath", str(root / "dist"), "--workpath", str(root / "build"), "--specpath", str(root), "--collect-all", "weasyprint", "--add-binary", str(libraries / "*.dylib") + ":.", str(script)], check=True, env=env)
         package = root / "dist/slaegt-export"
+        reference_root = Path(__file__).resolve().parents[1] / "sidecar/export/reference"
+        for reference in ("reference.docx", "reference.odt"):
+            shutil.copy2(reference_root / reference, package / reference)
+        if args.pandoc:
+            version = subprocess.run([str(args.pandoc), "--version"], capture_output=True, text=True, check=True).stdout.splitlines()[0]
+            if version != "pandoc 3.13":
+                raise ValueError("Pakken kræver Pandoc 3.13.")
+            pandoc = package / "pandoc"
+            shutil.copy2(args.pandoc, pandoc)
+            pandoc.chmod(pandoc.stat().st_mode | 0o200)
+            shutil.copy2(args.gmp, package / "_internal/libgmp.10.dylib")
+            subprocess.run(["install_name_tool", "-change", args.gmp_install_name, "@executable_path/_internal/libgmp.10.dylib", str(pandoc)], check=True)
+            subprocess.run(["codesign", "--force", "--sign", "-", str(pandoc)], check=True)
+            licenses = package / "licenser"
+            licenses.mkdir()
+            for filename in ("COPYING.md", "COPYRIGHT", "AUTHORS.md"):
+                shutil.copy2(args.pandoc_licenser / filename, licenses / ("pandoc-" + filename))
+            for filename in ("COPYING", "COPYING.LESSERv3"):
+                shutil.copy2(args.gmp_licenser / filename, licenses / ("gmp-" + filename))
+            if subprocess.run([str(pandoc), "--version"], capture_output=True, text=True, check=True).stdout.splitlines()[0] != "pandoc 3.13":
+                raise ValueError("Den private Pandoc kunne ikke startes.")
+        license_script = Path(__file__).resolve().parent / "indsaml-pythonlicenser.py"
+        subprocess.run([str(python), str(license_script), str(package / "licenser/python")], check=True)
         fonts = package / "_internal/fonts"
         fonts.mkdir()
         shutil.copy2(args.skrifttype, fonts / ("graf" + args.skrifttype.suffix.lower()))

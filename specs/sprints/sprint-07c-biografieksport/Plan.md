@@ -1,6 +1,6 @@
 # Plan: Sprint 7C – biografieksport til DOCX, PDF og ODT
 
-Tredje og sidste del af roadmap-trin 12. Forudsætning: persondokumenter og godkendt synkronisering fra trin 5–11 samt lokal værktøjskæde fra 7B. Selve biografieksporten bruger ikke grafkoordinater. Status: planlagt.
+Tredje og sidste del af roadmap-trin 12. Forudsætning: persondokumenter og godkendt synkronisering fra trin 5–11 samt lokal værktøjskæde fra 7B. Selve biografieksporten bruger ikke grafkoordinater. Status: implementering pågår; samlet accept afventer platform-, distributions- og manuelle prøver.
 
 Læs [Dokumentkontrakt.md](Dokumentkontrakt.md) og [fælles eksportkontrakt](../sprint-07b-grafeksport-og-udskrift/Eksportkontrakt.md). Gennemfør:
 

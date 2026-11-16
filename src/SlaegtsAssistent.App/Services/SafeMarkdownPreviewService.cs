@@ -257,7 +257,7 @@ public sealed class SafeMarkdownPreviewService
         "a.person-link::after{content:\" ↗\";}a.person-link:focus{outline:2px solid #174a5b;outline-offset:3px;}" +
         "img{max-width:100%;height:auto;}</style></head><body>" + html + "</body></html>";
 
-    private static bool IsWithin(string path, string root)
+    internal static bool IsWithin(string path, string root)
     {
         var relative = Path.GetRelativePath(root, path);
         return !Path.IsPathRooted(relative) &&
@@ -266,7 +266,7 @@ public sealed class SafeMarkdownPreviewService
                !relative.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal);
     }
 
-    private static string ResolvePhysicalPath(string path)
+    internal static string ResolvePhysicalPath(string path)
     {
         var fullPath = Path.GetFullPath(path);
         var root = Path.GetPathRoot(fullPath)

@@ -8,3 +8,8 @@ public interface IAtomicFileWriter
 
     void WriteBytes(string path, byte[] content);
 }
+
+public interface INoOverwriteAtomicFileWriter : IAtomicFileWriter
+{
+    void WriteNewBytes(string path, byte[] content);
+}

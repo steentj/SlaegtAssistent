@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using SlaegtsAssistent.Core.Export;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,7 +17,7 @@ public interface ILocalExportSidecar
     Task<byte[]> RenderGraphPdfAsync(string html, string paper, string orientation, CancellationToken cancellationToken);
 }
 
-public sealed class LocalExportSidecar(ILocalProcessRunner runner, string executable, string? script, string? libraryDirectory = null, string? fontConfigFile = null) : ILocalExportSidecar
+public sealed class LocalExportSidecar(ILocalProcessRunner runner, string executable, string? script, string? libraryDirectory = null, string? fontConfigFile = null) : ILocalExportSidecar, IBiographyConverter
 {
     private const int MaximumOutput = 100 * 1024 * 1024;
     private const int MaximumInput = 20 * 1024 * 1024;
@@ -59,6 +62,8 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
             var arguments = script is null ? new[] { "--request", requestPath } : new[] { script, "--request", requestPath };
             var environment = new Dictionary<string, string?>();
             if (libraryDirectory is not null && OperatingSystem.IsMacOS()) environment["DYLD_FALLBACK_LIBRARY_PATH"] = libraryDirectory;
+            if (libraryDirectory is not null && OperatingSystem.IsLinux()) environment["LD_LIBRARY_PATH"] = libraryDirectory;
+            if (libraryDirectory is not null && OperatingSystem.IsWindows()) environment["PATH"] = libraryDirectory + Path.PathSeparator + Environment.GetFolderPath(Environment.SpecialFolder.System);
             if (fontConfigFile is not null) environment["FONTCONFIG_FILE"] = fontConfigFile;
             await EnsureVersionAsync(directory, environment, cancellationToken).ConfigureAwait(false);
             try { result = await runner.RunAsync(new(executable, arguments, directory, TimeSpan.FromSeconds(120), environment), cancellationToken).ConfigureAwait(false); }
@@ -92,6 +97,97 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
                 throw new InvalidDataException("PDF-værktøjet gav en ugyldig PDF-fil.");
             return bytes;
         }
+    }
+
+    public async Task<BiographyConversionResult> RenderBiographyAsync(
+        IReadOnlyList<BiographyExportItem> items, BiographyExportMode mode, BiographyExportFormat format,
+        IReadOnlyCollection<string> allowedRoots, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(allowedRoots);
+        if (items.Count is 0 or > 100) throw new ArgumentException("Vælg mellem 1 og 100 biografier.");
+        if (!Path.IsPathFullyQualified(executable) || !File.Exists(executable) ||
+            (script is not null && (!Path.IsPathFullyQualified(script) || !File.Exists(script))) ||
+            (libraryDirectory is not null && (!Path.IsPathFullyQualified(libraryDirectory) || !Directory.Exists(libraryDirectory))) ||
+            (fontConfigFile is not null && (!Path.IsPathFullyQualified(fontConfigFile) || !File.Exists(fontConfigFile))))
+            throw new InvalidOperationException("Det lokale eksportværktøj mangler i programpakken.");
+        var extension = format switch
+        {
+            BiographyExportFormat.Pdf => "pdf",
+            BiographyExportFormat.Docx => "docx",
+            BiographyExportFormat.Odt => "odt",
+            _ => throw new ArgumentOutOfRangeException(nameof(format))
+        };
+        cancellationToken.ThrowIfCancellationRequested();
+        var jobId = Guid.NewGuid().ToString("N");
+        using var job = new ExportJobDirectory(jobId);
+        var assets = Path.Combine(job.Path, "assets");
+        var html = new BiographyExportHtmlBuilder().Build(items, mode, new ExportResourceCollector(assets, allowedRoots));
+        if (Encoding.UTF8.GetByteCount(html.Html) > MaximumInput) throw new ArgumentException("Biografierne er for store til eksport.");
+        var input = Path.Combine(job.Path, "input.html");
+        var output = Path.Combine(job.Path, "result." + extension);
+        var requestPath = Path.Combine(job.Path, "request.json");
+        await File.WriteAllTextAsync(input, html.Html, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+        var request = new ExportRequest(1, jobId, "biography-" + extension, input, output, assets, new ExportOptions("A4", "portrait"));
+        await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(request, ExportJsonContext.Default.ExportRequest), cancellationToken).ConfigureAwait(false);
+        var environment = new Dictionary<string, string?>();
+        if (libraryDirectory is not null && OperatingSystem.IsMacOS()) environment["DYLD_FALLBACK_LIBRARY_PATH"] = libraryDirectory;
+        if (libraryDirectory is not null && OperatingSystem.IsLinux()) environment["LD_LIBRARY_PATH"] = libraryDirectory;
+        if (libraryDirectory is not null && OperatingSystem.IsWindows()) environment["PATH"] = libraryDirectory + Path.PathSeparator + Environment.GetFolderPath(Environment.SpecialFolder.System);
+        if (fontConfigFile is not null) environment["FONTCONFIG_FILE"] = fontConfigFile;
+        await EnsureVersionAsync(job.Path, environment, cancellationToken).ConfigureAwait(false);
+        var arguments = script is null ? new[] { "--request", requestPath } : new[] { script, "--request", requestPath };
+        LocalProcessResult result;
+        try { result = await runner.RunAsync(new(executable, arguments, job.Path, TimeSpan.FromSeconds(120), environment), cancellationToken).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw new TimeoutException("Biografieksporten overskred tidsgrænsen."); }
+        cancellationToken.ThrowIfCancellationRequested();
+        ExportResult? response;
+        try { response = ParseResponse(result.StandardOutput); }
+        catch (JsonException) { throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar."); }
+        if (response is null || response.ProtocolVersion != 1 || response.JobId != jobId || response.Warnings is null)
+            throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar.");
+        if (result.ExitCode != 0 && response.Status == "error" && response.OutputPath is null)
+            throw new InvalidOperationException(response.ErrorCode switch
+            {
+                "missing-tool" => "Det lokale eksportværktøj eller dets referencefiler mangler.",
+                "resource-blocked" => "En ressource blev blokeret under eksporten.",
+                "timeout" => "Biografieksporten overskred tidsgrænsen.",
+                _ => "Eksportværktøjet kunne ikke danne dokumentet."
+            });
+        if (result.ExitCode != 0 || response.Status != "ok" || response.OutputPath != output || response.ErrorCode is not null)
+            throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar.");
+        var file = new FileInfo(output);
+        if (!file.Exists || file.LinkTarget is not null || file.Length < 5 || file.Length > MaximumOutput)
+            throw new InvalidDataException("Eksportværktøjet gav en ugyldig eller for stor fil.");
+        var bytes = await File.ReadAllBytesAsync(output, cancellationToken).ConfigureAwait(false);
+        ValidateBiographyOutput(bytes, format);
+        return new(bytes, html.Warnings.Concat(response.Warnings).Distinct(StringComparer.Ordinal).ToArray(), BiographyExportHtmlBuilder.ComputeFingerprint(html.Html));
+    }
+
+    private static void ValidateBiographyOutput(byte[] bytes, BiographyExportFormat format)
+    {
+        if (bytes.Length > MaximumOutput) throw new InvalidDataException("Eksportfilen er for stor.");
+        if (format == BiographyExportFormat.Pdf)
+        {
+            if (!bytes.AsSpan().StartsWith("%PDF-"u8) ||
+                bytes.AsSpan(Math.Max(0, bytes.Length - 1024)).IndexOf("%%EOF"u8) < 0)
+                throw new InvalidDataException("Eksportfilen er ikke en gyldig PDF.");
+            return;
+        }
+        try
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            if (format == BiographyExportFormat.Docx &&
+                archive.GetEntry("[Content_Types].xml") is not null && archive.GetEntry("word/document.xml") is not null) return;
+            if (format == BiographyExportFormat.Odt && archive.GetEntry("content.xml") is not null && archive.GetEntry("mimetype") is { Length: < 100 } mimetype)
+            {
+                using var reader = new StreamReader(mimetype.Open(), Encoding.ASCII);
+                if (reader.ReadToEnd() == "application/vnd.oasis.opendocument.text") return;
+            }
+        }
+        catch (InvalidDataException) { }
+        throw new InvalidDataException("Eksportfilen er ikke et gyldigt kontordokument.");
     }
 
     private async Task EnsureVersionAsync(string directory, IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken)
@@ -142,6 +238,8 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
         return JsonSerializer.Deserialize(json, ExportJsonContext.Default.ExportResult);
     }
 }
+
+public sealed record BiographyConversionResult(byte[] Content, IReadOnlyList<string> Warnings, string? Fingerprint = null);
 
 internal sealed record ExportOptions([property: JsonPropertyName("paper")] string Paper, [property: JsonPropertyName("orientation")] string Orientation);
 internal sealed record ExportRequest(

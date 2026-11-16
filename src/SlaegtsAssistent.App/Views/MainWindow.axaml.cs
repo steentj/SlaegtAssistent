@@ -13,6 +13,10 @@ namespace SlaegtsAssistent.App.Views;
 
 public partial class MainWindow : Window
 {
+    private void ShowBiographyExport(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel model) new BiographyExportWindow(model).Show(this);
+    }
     private CancellationTokenSource? _exportCancellation;
     private void GraphCancelExport(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _exportCancellation?.Cancel();
     private CancellationTokenSource BeginGraphExport()

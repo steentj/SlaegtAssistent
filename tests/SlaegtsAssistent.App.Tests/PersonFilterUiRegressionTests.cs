@@ -1,4 +1,7 @@
 using Avalonia.Controls;
+using System.IO.Compression;
+using SlaegtsAssistent.Core.Export;
+using SlaegtsAssistent.Core.Biography;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
@@ -36,6 +39,97 @@ public sealed class PersonFilterUiRegressionTests
                 vm.SelectedPerson = anna;
                 vm.Editor!.MarkdownText.Should().Contain("Ugemt tekst");
                 vm.Editor.IsDirty.Should().BeTrue();
+            }
+            finally { window.Close(); }
+        });
+
+    [Fact]
+    public Task EksportsnapshotBrugerAabenUgemtEditorUdenAtGemmeAendringer() =>
+        HeadlessTestApplication.RunAsync(async () =>
+        {
+            using var workspace = await CreateWorkspaceAsync();
+            var window = ShowWindow(workspace.ViewModel);
+            try
+            {
+                var vm = workspace.ViewModel;
+                var anna = vm.People.Single(person => person.DisplayName == "Anna Jensen");
+                vm.SelectedPerson = anna;
+                var original = await File.ReadAllBytesAsync(anna.MarkdownFilePath);
+                vm.Editor!.MarkdownText += "\nUgemt fri biografi æøå";
+                var snapshot = vm.CreateBiographyExportSnapshot([anna.RecordId]);
+                snapshot.Errors.Should().BeEmpty();
+                snapshot.Items.Should().ContainSingle().Which.Body.Should().Contain("Ugemt fri biografi æøå");
+                (await File.ReadAllBytesAsync(anna.MarkdownFilePath)).Should().Equal(original);
+                vm.Editor.IsDirty.Should().BeTrue();
+            }
+            finally { window.Close(); }
+        });
+
+    [BundledExportIntegrationFact]
+    public Task UgemteRedigeringerEksporteresUdenAtAEndreMarkdown() =>
+        HeadlessTestApplication.RunAsync(async () =>
+        {
+            using var workspace = await CreateWorkspaceAsync();
+            var window = ShowWindow(workspace.ViewModel);
+            try
+            {
+                var vm = workspace.ViewModel;
+                var anna = vm.People.Single(person => person.DisplayName == "Anna Jensen");
+                vm.SelectedPerson = anna;
+                var editor = vm.Editor!;
+                var originalBytes = await File.ReadAllBytesAsync(anna.MarkdownFilePath);
+                editor.MarkdownText.Should().Contain(BiographyGeneratedSectionMerger.StartMarker);
+                editor.MarkdownText = editor.MarkdownText.Replace(
+                    BiographyGeneratedSectionMerger.StartMarker,
+                    BiographyGeneratedSectionMerger.StartMarker + "\n\nÆndret genereret tekst æøå.", StringComparison.Ordinal)
+                    + "\n\nUgemt fri biografi æøå.";
+                var snapshot = vm.CreateBiographyExportSnapshot([anna.RecordId]);
+                snapshot.Errors.Should().BeEmpty();
+                var roots = new[] { vm.StandardMarkdownOutputFolder! };
+                var preflight = new BiographyExportPreflightService().Prepare(snapshot.Items, BiographyExportMode.Combined, roots, CancellationToken.None);
+                var sidecar = new LocalExportSidecar(new LocalProcessRunner(),
+                    Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+                    Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"),
+                    Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+                foreach (var format in new[] { BiographyExportFormat.Pdf, BiographyExportFormat.Docx, BiographyExportFormat.Odt })
+                {
+                    var destination = Path.Combine(Path.GetDirectoryName(anna.MarkdownFilePath)!, "eksport-test." + format.ToString().ToLowerInvariant());
+                    var targets = BiographyExportService.PlanTargets(snapshot.Items, BiographyExportMode.Combined, format, destination);
+                    var result = await new BiographyExportService(sidecar, new AtomicFileWriter()).ExportAsync(
+                        targets, BiographyExportMode.Combined, format, roots, null, CancellationToken.None, [], preflight.Warnings, preflight.Fingerprints);
+                    result.Errors.Should().BeEmpty();
+                    result.Saved.Should().Equal(destination);
+                    if (format == BiographyExportFormat.Pdf)
+                    {
+                        File.ReadAllBytes(destination).Should().StartWith("%PDF-"u8.ToArray());
+                        var python = Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_PDF_READER_PYTHON");
+                        if (!string.IsNullOrWhiteSpace(python))
+                        {
+                            var start = new System.Diagnostics.ProcessStartInfo(python) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+                            start.ArgumentList.Add("-c");
+                            start.ArgumentList.Add("import sys; from pypdf import PdfReader; print('\\n'.join(page.extract_text() for page in PdfReader(sys.argv[1]).pages))");
+                            start.ArgumentList.Add(destination);
+                            using var process = System.Diagnostics.Process.Start(start)!;
+                            var text = await process.StandardOutput.ReadToEndAsync();
+                            var error = await process.StandardError.ReadToEndAsync();
+                            await process.WaitForExitAsync();
+                            process.ExitCode.Should().Be(0, error);
+                            text.Should().Contain("Ændret genereret tekst æøå.").And.Contain("Ugemt fri biografi æøå.");
+                            text.Should().NotContain("SlaegtsAssistent:generated").And.NotContain("formatVersion");
+                        }
+                    }
+                    else
+                    {
+                        using var archive = ZipFile.OpenRead(destination);
+                        var entry = archive.GetEntry(format == BiographyExportFormat.Docx ? "word/document.xml" : "content.xml")!;
+                        using var reader = new StreamReader(entry.Open());
+                        var xml = await reader.ReadToEndAsync();
+                        xml.Should().Contain("Ændret genereret tekst æøå.").And.Contain("Ugemt fri biografi æøå.");
+                        xml.Should().NotContain("SlaegtsAssistent:generated").And.NotContain("formatVersion");
+                    }
+                    (await File.ReadAllBytesAsync(anna.MarkdownFilePath)).Should().Equal(originalBytes);
+                    editor.IsDirty.Should().BeTrue();
+                }
             }
             finally { window.Close(); }
         });

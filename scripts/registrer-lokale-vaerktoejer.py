@@ -28,7 +28,7 @@ def main():
     report = {
         "formatVersion": 1,
         "platform": "macOS arm64",
-        "pdfVaerktoej": {"oplysteVersioner": {"python": "3.13.1", "weasyprint": "66.0", "pyinstaller": "6.22.3"}, "filer": inventory(export)},
+        "pdfVaerktoej": {"oplysteVersioner": {"python": "3.13.1", "weasyprint": "66.0", "pyinstaller": "6.22.3", "pandoc": "3.13", "gmp": "6.3.0"}, "filer": inventory(export)},
         "graphviz": {"oplystVersion": "16.1.1", "filer": inventory(graphviz)},
     }
     target = root / "vendor/licenser/filinventar.json"

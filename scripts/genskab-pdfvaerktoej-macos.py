@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 
 
-EXPECTED_SHA256 = "90375500d4ff1a566a48c2d159b59740ca7c40534edc75707a4a1e932599ba1f"
+EXPECTED_SHA256 = "f961f0752ee9cc27929af5f903125cac2e9e0cdcffeddef348c15a51a11ca4e6"
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
         with tarfile.open(archive, "r:gz") as source:
             source.extractall(temporary, filter="data")
         package = Path(temporary) / "slaegt-export"
-        if not (package / "slaegt-export").is_file() or not (package / "_internal/fonts.conf").is_file():
+        if not all((package / name).is_file() for name in ("slaegt-export", "pandoc", "reference.docx", "reference.odt", "_internal/fonts.conf", "_internal/libgmp.10.dylib")):
             raise ValueError("Værktøjsarkivet mangler nødvendige filer.")
         shutil.move(str(package), str(target))
     print(f"PDF-værktøjet er genskabt: {target}")

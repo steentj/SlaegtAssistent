@@ -85,6 +85,25 @@ public sealed class AtomicFileWriterTests
         }
     }
 
+    [Fact]
+    public void WriteNewBytes_OverskriverIkkeFilDerOpstaarUmiddelbartFoerPublicering()
+    {
+        var directory = CreateTemporaryDirectory();
+        var path = Path.Combine(directory, "ny.pdf");
+        var writer = new AtomicFileWriter(stage =>
+        {
+            if (stage == AtomicWriteStage.BeforeDestinationReplace) File.WriteAllText(path, "anden proces");
+        });
+        try
+        {
+            var action = () => writer.WriteNewBytes(path, [1, 2, 3]);
+            action.Should().Throw<AtomicFileWriteException>();
+            File.ReadAllText(path).Should().Be("anden proces");
+            Directory.EnumerateFiles(directory).Should().ContainSingle().Which.Should().Be(path);
+        }
+        finally { DeleteDirectoryIfExists(directory); }
+    }
+
     private static string CreateTemporaryDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

@@ -24,6 +24,30 @@
     <Content Include="..\..\tools\graphviz\osx-arm64\**\*" Link="tools\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Target Name="RestoreLocalWindowsExportTools" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Windows')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and !Exists('$(MSBuildProjectDirectory)/../../tools/export/win-x64/slaegt-export/slaegt-export.exe') and Exists('$(MSBuildProjectDirectory)/../../vendor/eksport/win-x64/eksportvaerktoej.tar.gz')">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)/../../scripts/genskab-eksportvaerktoej-windows.py&quot;" />
+  </Target>
+  <Target Name="CopyLocalWindowsExportTools" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('Windows')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and Exists('$(MSBuildProjectDirectory)/../../tools/export/win-x64/slaegt-export/slaegt-export.exe')">
+    <ItemGroup><WindowsExportFiles Include="$(MSBuildProjectDirectory)/../../tools/export/win-x64/slaegt-export/**/*" /></ItemGroup>
+    <Copy SourceFiles="@(WindowsExportFiles)" DestinationFiles="@(WindowsExportFiles->'$(TargetDir)tools/export/slaegt-export/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishLocalWindowsExportTools" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(RuntimeIdentifier)' == 'win-x64' and Exists('$(MSBuildProjectDirectory)/../../tools/export/win-x64/slaegt-export/slaegt-export.exe')">
+    <ItemGroup><WindowsPublishExportFiles Include="$(MSBuildProjectDirectory)/../../tools/export/win-x64/slaegt-export/**/*" /></ItemGroup>
+    <Copy SourceFiles="@(WindowsPublishExportFiles)" DestinationFiles="@(WindowsPublishExportFiles->'$(PublishDir)tools/export/slaegt-export/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="RestoreLocalLinuxExportTools" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Linux')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'linux-x64') and !Exists('$(MSBuildProjectDirectory)/../../tools/export/linux-x64/slaegt-export/slaegt-export') and Exists('$(MSBuildProjectDirectory)/../../vendor/eksport/linux-x64/eksportvaerktoej.tar.gz')">
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/genskab-eksportvaerktoej-linux.py&quot;" />
+  </Target>
+  <Target Name="CopyLocalLinuxExportTools" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('Linux')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'linux-x64') and Exists('$(MSBuildProjectDirectory)/../../tools/export/linux-x64/slaegt-export/slaegt-export')">
+    <MakeDir Directories="$(TargetDir)tools/export/slaegt-export" />
+    <Exec Command="cp -a &quot;$(MSBuildProjectDirectory)/../../tools/export/linux-x64/slaegt-export/.&quot; &quot;$(TargetDir)tools/export/slaegt-export/&quot;" />
+  </Target>
+  <Target Name="PublishLocalLinuxExportTools" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$(RuntimeIdentifier)' == 'linux-x64' and Exists('$(MSBuildProjectDirectory)/../../tools/export/linux-x64/slaegt-export/slaegt-export')">
+    <MakeDir Directories="$(PublishDir)tools/export/slaegt-export" />
+    <Exec Command="cp -a &quot;$(MSBuildProjectDirectory)/../../tools/export/linux-x64/slaegt-export/.&quot; &quot;$(PublishDir)tools/export/slaegt-export/&quot;" />
+  </Target>
+
   <Target Name="RestoreLocalMacExportTools" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'osx-arm64') and !Exists('$(MSBuildProjectDirectory)/../../tools/export/osx-arm64/slaegt-export/slaegt-export') and Exists('$(MSBuildProjectDirectory)/../../vendor/eksport/osx-arm64/pdf-vaerktoej.tar.gz')">
     <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/genskab-pdfvaerktoej-macos.py&quot;" />
   </Target>

@@ -27,13 +27,16 @@ def read_request(request_path):
         raise ProtocolError("unsupported-version")
     if not isinstance(data["jobId"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", data["jobId"]):
         raise ProtocolError("invalid-input")
-    if data["operation"] != "graph-pdf":
+    if data["operation"] not in ("graph-pdf", "biography-pdf", "biography-docx", "biography-odt"):
         raise ProtocolError("invalid-input")
     options = data["options"]
     if not isinstance(options, dict) or set(options) != {"paper", "orientation"} or options["paper"] not in ("A4", "A3") or options["orientation"] not in ("portrait", "landscape"):
         raise ProtocolError("invalid-input")
     input_path = _job_path(root, data["inputPath"], ".html", True)
-    output_path = _job_path(root, data["outputPath"], ".pdf", False)
+    suffix = {"graph-pdf": ".pdf", "biography-pdf": ".pdf", "biography-docx": ".docx", "biography-odt": ".odt"}[data["operation"]]
+    if data["operation"] != "graph-pdf" and options != {"paper": "A4", "orientation": "portrait"}:
+        raise ProtocolError("invalid-input")
+    output_path = _job_path(root, data["outputPath"], suffix, False)
     asset_root = _job_path(root, data["assetRoot"], None, True)
     if not input_path.is_file() or input_path.stat().st_size > MAX_INPUT or not asset_root.is_dir() or output_path.exists():
         raise ProtocolError("invalid-input")
