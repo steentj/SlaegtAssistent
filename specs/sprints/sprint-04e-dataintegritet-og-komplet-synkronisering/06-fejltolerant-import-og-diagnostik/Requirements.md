@@ -6,6 +6,7 @@
 - Diagnostik skal mindst indeholde alvorlighed, dansk besked, linje, record-id, tag og konsekvens, når oplysningerne findes.
 - Importresultatet skal vise antal importerede, importerede med advarsler, oversprungne og fatalt fejlede poster.
 - Diagnostikker skal kunne filtreres og knyttes til relevante personer eller filer i UI.
+- Gentagne diagnostikker for ignorerede MacFamilyTree-metadata samles i visningen efter tag og fejltype med antal forekomster. De enkelte linjer og record-id'er bevares i importrapportens datagrundlag; øvrige fejl vises individuelt.
 - En delvis import skal kræve brugerens udtrykkelige accept før commit.
 - Den tidligere arbejdsområdetilstand skal bevares, hvis brugeren afviser en delvis import.
 - Ældre tests, der kræver total afbrydelse ved enhver ugyldig post, skal opdateres til Missionens fejltolerante kontrakt.

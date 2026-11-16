@@ -8,6 +8,13 @@ public enum GedcomDiagnosticSeverity
     Fatal,
 }
 
+public enum GedcomDiagnosticKind
+{
+    Other,
+    IgnoredMacFamilyTreeMetadata,
+    DuplicateMacFamilyTreeMetadata,
+}
+
 public sealed record GedcomDiagnostic(
     GedcomDiagnosticSeverity Severity,
     string Message,
@@ -15,4 +22,5 @@ public sealed record GedcomDiagnostic(
     string? RecordId = null,
     string? Tag = null,
     string? Consequence = null,
-    string? FilePath = null);
+    string? FilePath = null,
+    GedcomDiagnosticKind Kind = GedcomDiagnosticKind.Other);

@@ -1334,7 +1334,10 @@ public sealed class GedcomLoader : IGedcomLoader
                         currentRecordId,
                         currentTag,
                         "Den senere dubletpost blev sprunget over; den første post blev bevaret.",
-                        filePath));
+                        filePath,
+                        currentTag is not null && IgnoredMacFamilyTreeRecordTags.Contains(currentTag)
+                            ? GedcomDiagnosticKind.DuplicateMacFamilyTreeMetadata
+                            : GedcomDiagnosticKind.Other));
                     continue;
                 }
 
@@ -1348,7 +1351,8 @@ public sealed class GedcomLoader : IGedcomLoader
                         currentRecordId,
                         currentTag,
                         "Metadatafeltet blev ikke importeret; øvrige poster blev bevaret.",
-                        filePath));
+                        filePath,
+                        GedcomDiagnosticKind.IgnoredMacFamilyTreeMetadata));
                     continue;
                 }
 

@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.Core.Domain;
 
 namespace SlaegtsAssistent.App.Services;
@@ -32,9 +33,7 @@ public sealed class AvaloniaPartialImportDialogService : IPartialImportDialogSer
         var rejectButton = new Button { Content = "Afvis import", MinWidth = 110 };
         var details = string.Join(
             Environment.NewLine,
-            report.Diagnostics.Select(diagnostic =>
-                $"Linje {diagnostic.Line?.ToString() ?? "–"}, {diagnostic.Tag ?? "ukendt tag"}: " +
-                $"{diagnostic.Message} Konsekvens: {diagnostic.Consequence}"));
+            GedcomDiagnosticViewModel.CreateSummaries(report.Diagnostics).Select(diagnostic => diagnostic.DialogText));
         var dialog = new Window
         {
             Title = "Gennemgå delvis GEDCOM-import",

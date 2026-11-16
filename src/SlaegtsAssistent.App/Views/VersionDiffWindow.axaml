@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="SlaegtsAssistent.App.Views.VersionDiffWindow"
+        x:DataType="vm:VersionDiffViewModel"
+        Width="1100"
+        Height="760"
+        MinWidth="840"
+        MinHeight="520"
+        Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="280,6,*" Background="{DynamicResource AppWindowBackgroundBrush}">
+        <Border Grid.Row="0"
+                Grid.ColumnSpan="3"
+                Padding="10"
+                Background="{DynamicResource AppPanelBackgroundBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" />
+        </Border>
+
+        <ListBox Grid.Row="1"
+                 Grid.Column="0"
+                 x:Name="DiffFileList"
+                 ItemsSource="{Binding Files}"
+                 SelectedItem="{Binding SelectedFile}"
+                 Margin="8"
+                 AutomationProperties.Name="Diff filliste">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiffFileViewModel">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding KindText}" Opacity="0.8" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <GridSplitter Grid.Row="1"
+                      Grid.Column="1"
+                      Background="{DynamicResource AppBorderBrush}"
+                      ResizeDirection="Columns"
+                      Width="6" />
+
+        <ScrollViewer Grid.Row="1"
+                      Grid.Column="2"
+                      Margin="8"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding VisibleLines}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiffLineViewModel">
+                        <TextBlock Text="{Binding Text}"
+                                   Background="{Binding BackgroundHex}"
+                                   FontFamily="Consolas, Menlo, Monaco, monospace"
+                                   TextWrapping="NoWrap" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</Window>

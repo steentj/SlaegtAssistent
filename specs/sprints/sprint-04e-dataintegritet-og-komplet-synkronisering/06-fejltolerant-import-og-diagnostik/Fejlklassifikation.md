@@ -32,3 +32,5 @@ En syntaktisk ugyldig underlinje springes over uden at fjerne den omgivende post
 Rapporten viser antal importerede poster, importerede poster med diagnostik, oversprungne poster og fatale fejl. En rapport med en isoleret `Error` eller en oversprunget post er delvis og kræver brugerens udtrykkelige accept før gennemførelse. Et afslag ændrer ikke filer, snapshot, personliste, valgt GEDCOM eller editorer.
 
 Efter en accepteret import forbliver rapporten synlig. Den kan filtreres til alle, advarsler eller fejl. En diagnostik med person-record-id navigerer til personen; alle diagnostikker viser filsti og tilgængelig linje/tag.
+
+Gentagne diagnostikker for ignorerede MacFamilyTree-metadata vises samlet pr. tag og fejltype med antal forekomster i både acceptdialogen og den synlige importrapport. En samlet linje henviser ikke til én bestemt post eller linje. Den strukturerede rapport bevarer hver enkelt diagnostik med dens oprindelige oplysninger. Andre post- og feltfejl vises fortsat individuelt.
