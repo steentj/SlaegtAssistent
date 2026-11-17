@@ -52,11 +52,12 @@
                     <Button Content="Annullér handling"
                             Command="{Binding CancelImportCommand}"
                             IsVisible="{Binding IsImporting}" />
-                    <Button Content="Gem"
-                            Command="{Binding SaveAllCommand}" />
-                    <Button Content="Commit"
+                    <Button Content="Gem alle"
+                            Command="{Binding SaveAllCommand}"
+                            ToolTip.Tip="Gem ændringer i alle åbne dokumenter uden at oprette en version." />
+                    <Button Content="Gem version…"
                             Command="{Binding CommitCommand}"
-                            ToolTip.Tip="Gem og commit alle ændringer i alle dokumenter som en ny version." />
+                            ToolTip.Tip="Gem alle åbne dokumenter og opret en version af alle dokumentændringer." />
                     <Button x:Name="ContextToggle" Content="Skjul kontekst" Click="ToggleContext" />
                 </WrapPanel>
             <StackPanel Grid.Row="2"
@@ -165,11 +166,6 @@
                         <StackPanel Spacing="2" IsVisible="{Binding IsGraphTab}">
                             <TextBlock Text="{Binding PersonGraph.ProbandText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </StackPanel>
-                        <Button Grid.Column="1"
-                                Content="Gem ændringer"
-                                Command="{Binding SaveAllCommand}"
-                                IsVisible="{Binding IsBiographyTab}"
-                                VerticalAlignment="Center" />
                     </Grid>
 
                     <TabControl Grid.Row="1" SelectedIndex="{Binding DocumentTabIndex, Mode=TwoWay}">

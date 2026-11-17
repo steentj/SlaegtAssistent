@@ -1,6 +1,6 @@
 # Validering: Gør gemning og versioner forståelige
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel og native platformprøver udestår**.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,5 @@ Nye tekster kan blive for brede. Brug menuer og ombrydning frem for mindre skrif
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026, macOS headless | Bygning og automatiserede test | `dotnet restore` og `dotnet build --no-restore` lykkedes; `dotnet test --no-restore`: 643 bestået, 0 fejl, 6 oversprunget. Test dækker én gemmeknap, annulleret eller tom versionsbesked og versionshistorik med ugemt editor. | Ikke en native visuel prøve. |
+| Ikke prøvet | R6-01–R6-03, native macOS, Windows og Linux | Manuel afprøvning af dialoger, lange tekster, skærmlæser og temaer udestår. | Accept afventer dokumenteret platformprøve. |

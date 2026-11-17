@@ -153,7 +153,7 @@ public sealed class GitVersionControlService(
     {
         if (string.IsNullOrWhiteSpace(message))
         {
-            return Fail("Skriv en commit-besked, før du fortsætter.");
+            return Fail("Skriv en beskrivelse af versionen, før du fortsætter.");
         }
 
         await Gate.WaitAsync(ct).ConfigureAwait(false);
@@ -531,7 +531,7 @@ public sealed class GitVersionControlService(
 
         if (status.ChangedFileCount == 0)
         {
-            return Fail("Der er ingen ændringer at committe.");
+            return Fail("Der er ingen ændringer at gemme i en version.");
         }
 
         await EnsureNoStagedOutsideScopeAsync(git, workspace, ct).ConfigureAwait(false);
@@ -549,7 +549,7 @@ public sealed class GitVersionControlService(
         {
             if (commit.StandardError.Contains("nothing to commit", StringComparison.OrdinalIgnoreCase))
             {
-                return Fail("Der er ingen ændringer at committe.");
+                return Fail("Der er ingen ændringer at gemme i en version.");
             }
 
             return Fail(ParseGitFailure(commit));

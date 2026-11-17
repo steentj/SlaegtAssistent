@@ -31,15 +31,15 @@ public sealed class AvaloniaVersionDialogService : IVersionDialogService
             MinWidth = 420,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        AutomationProperties.SetName(textBox, "Commitbesked");
+        AutomationProperties.SetName(textBox, "Beskrivelse af versionen");
 
         var commitButton = new Button
         {
-            Content = "Commit",
+            Content = "Gem version",
             MinWidth = 90,
             IsDefault = true,
         };
-        AutomationProperties.SetName(commitButton, "Commit");
+        AutomationProperties.SetName(commitButton, "Gem version");
 
         var cancelButton = new Button
         {
@@ -51,9 +51,9 @@ public sealed class AvaloniaVersionDialogService : IVersionDialogService
 
         var dialog = new Window
         {
-            Title = "Commit",
+            Title = "Beskriv versionen",
             Width = 560,
-            Height = 230,
+            Height = 270,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = new StackPanel
@@ -64,8 +64,10 @@ public sealed class AvaloniaVersionDialogService : IVersionDialogService
                 {
                     new TextBlock
                     {
-                        Text = "Beskriv kort, hvad der er ændret:",
+                        Text = "Alle dokumentændringer indgår i versionen. Åbne dokumenter er allerede gemt; hvis du annullerer her, oprettes ingen version med denne beskrivelse.",
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                     },
+                    new TextBlock { Text = "Beskriv kort, hvad der er ændret:" },
                     textBox,
                     new StackPanel
                     {

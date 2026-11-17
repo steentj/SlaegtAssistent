@@ -72,7 +72,9 @@ public sealed class AvaloniaHeadlessRegressionTests
             window.FindControl<NativeWebView>("PreviewWebView").Should().NotBeNull();
             window.DataContext.Should().BeSameAs(viewModel);
             Descendants<Button>(window).Should().Contain(button =>
-                button.Content as string == "Commit" && button.Command == viewModel.CommitCommand);
+                button.Content as string == "Gem version…" && button.Command == viewModel.CommitCommand);
+            Descendants<Button>(window).Where(button => button.Command == viewModel.SaveAllCommand)
+                .Should().ContainSingle().Which.Content.Should().Be("Gem alle");
             return Task.CompletedTask;
         });
 

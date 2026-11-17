@@ -1,6 +1,6 @@
 # Plan: Gør gemning og versioner forståelige
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R6. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **03**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R6. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **03**.
 
 ## Mål og evidens
 

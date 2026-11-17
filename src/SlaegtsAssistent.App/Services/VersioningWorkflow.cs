@@ -22,14 +22,14 @@ public sealed class VersioningWorkflow(
     {
         if (host.IsBusyWithImport)
         {
-            await _userDialogService.ShowInformationAsync("Commit", "Commit er deaktiveret under import.");
+            await _userDialogService.ShowInformationAsync("Gem version", "Det er ikke muligt at gemme en version under import.");
             return false;
         }
 
         var workspace = host.WorkspaceFolder;
         if (string.IsNullOrWhiteSpace(workspace))
         {
-            await _userDialogService.ShowInformationAsync("Commit", "Vælg først en arbejdsmappe i Indstillinger.");
+            await _userDialogService.ShowInformationAsync("Gem version", "Vælg først en arbejdsmappe i Indstillinger.");
             return false;
         }
 
@@ -77,7 +77,7 @@ public sealed class VersioningWorkflow(
 
         if (status.ChangedFileCount == 0)
         {
-            await _userDialogService.ShowInformationAsync("Commit", "Der er ingen ændringer at committe.");
+            await _userDialogService.ShowInformationAsync("Gem version", "Der er ingen ændringer at gemme i en version.");
             return false;
         }
 
@@ -90,7 +90,7 @@ public sealed class VersioningWorkflow(
         var result = await _versionControlService.CommitAllAsync(workspace, message, CancellationToken.None);
         if (!result.Success)
         {
-            await _userDialogService.ShowInformationAsync("Commit", result.Message ?? "Commit kunne ikke gennemføres.");
+            await _userDialogService.ShowInformationAsync("Gem version", result.Message ?? "Versionen kunne ikke gemmes.");
             return false;
         }
 
@@ -158,7 +158,7 @@ public sealed class VersioningWorkflow(
         try
         {
             var files = await _versionControlService.GetWorkingChangesAsync(workspace, CancellationToken.None);
-            _versionDiffWindowService.Show("Ikke committede ændringer", files, null);
+            _versionDiffWindowService.Show("Ændringer siden seneste version", files, null);
             return null;
         }
         catch (VersionControlException exception)

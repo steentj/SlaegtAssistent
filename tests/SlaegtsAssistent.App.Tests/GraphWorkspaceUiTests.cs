@@ -61,9 +61,11 @@ public sealed class GraphWorkspaceUiTests
             vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build([new("A", "Anna", null, null, null)], []),
                 new PersonGraphLayout(new GraphBounds(100, 100), new Dictionary<string, GraphPoint> { ["A"] = new(50, 50) }));
             var graph = window.FindControl<PersonGraphControl>("GraphControl")!;
-            graph.ShowAll();
             var graphTab = window.FindControl<TabItem>("GraphTab")!;
             graphTab.Focus().Should().BeTrue();
+            window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            graph.ShowAll();
             var before = graph.GetVisibleWorldBounds();
             window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
             vm.DocumentTabIndex.Should().Be(0);

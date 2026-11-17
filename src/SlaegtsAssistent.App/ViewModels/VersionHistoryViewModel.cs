@@ -66,7 +66,7 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
 
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         ShowChangesCommand = new AsyncRelayCommand(ShowWorkingChangesAsync, CanRunAction);
-        CommitAllCommand = new AsyncRelayCommand(CommitAllAsync, CanRunAction);
+        CommitAllCommand = new AsyncRelayCommand(CommitAllAsync, CanSaveVersion);
         EnableCommand = new AsyncRelayCommand(EnableAsync, CanEnable);
         _host.DocumentsSaved += HandleDocumentsSaved;
     }
@@ -87,6 +87,9 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
 
     private bool CanRunAction()
         => !IsBusy && !_host.IsBusyWithImport && HasChanges && !ShowEnableButton;
+
+    private bool CanSaveVersion()
+        => !IsBusy && !_host.IsBusyWithImport && CanCommitAll;
 
     private bool CanEnable()
         => !IsBusy && !_host.IsBusyWithImport && ShowEnableButton;
@@ -246,10 +249,10 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
         ShowEnableButton = status.State == VersionControlState.IkkeAktiveret;
         HasChanges = status.ChangedFileCount > 0;
         CanShowWorkingChanges = status.State == VersionControlState.Klar && HasChanges;
-        CanCommitAll = status.State == VersionControlState.Klar && HasChanges;
+        CanCommitAll = status.State == VersionControlState.Klar && (HasChanges || _host.HasUnsavedEditors);
 
         ExtraStatusText = _host.HasUnsavedEditors
-            ? "Der er ugemte ændringer i editoren. De gemmes automatisk, når du committer."
+            ? "Der er ugemte ændringer i editoren. De gemmes i filerne, før du beskriver en version."
             : null;
 
         StatusText = status.State switch
@@ -257,7 +260,7 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
             VersionControlState.GitMangler => "Git er ikke installeret, så versionsstyring er ikke tilgængelig.",
             VersionControlState.IkkeAktiveret => "Versionsstyring er ikke slået til for denne mappe.",
             VersionControlState.ForkertArkiv => "Mappen ligger inde i et andet Git-arkiv og kan ikke versioneres her.",
-            VersionControlState.Klar when status.ChangedFileCount == 0 => "Ingen ikke committede ændringer.",
+            VersionControlState.Klar when status.ChangedFileCount == 0 => "Ingen ændringer siden seneste version.",
             VersionControlState.Klar => BuildChangeStatusText(status),
             _ => string.Empty,
         };
@@ -266,8 +269,8 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
     private static string BuildChangeStatusText(VersionStatus status)
     {
         var countText = status.ChangedFileCount == 1
-            ? "1 ikke committet ændring (dokument)"
-            : string.Format(CultureInfo.InvariantCulture, "{0} ikke committede ændringer (dokumenter)", status.ChangedFileCount);
+            ? "1 dokument er ændret siden seneste version"
+            : string.Format(CultureInfo.InvariantCulture, "{0} dokumenter er ændret siden seneste version", status.ChangedFileCount);
         var lastText = status.LastChangeTime.HasValue
             ? status.LastChangeTime.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)
             : "tidspunkt ukendt";

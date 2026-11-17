@@ -1,6 +1,6 @@
 # Krav: Gør gemning og versioner forståelige
 
-Status: **planlagt**. Afhængighed: **03**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **03**.
 
 ## Acceptkriterier
 

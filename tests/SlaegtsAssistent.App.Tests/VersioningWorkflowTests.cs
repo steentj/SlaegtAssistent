@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
+using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.Core.Versioning;
 
 namespace SlaegtsAssistent.App.Tests;
@@ -72,6 +73,40 @@ public sealed class VersioningWorkflowTests
         success.Should().BeFalse();
         service.CommitCalls.Should().Be(0);
         userDialog.Messages.Should().ContainSingle(message => message.message.Contains("ingen ændringer", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task VersionshistorikTilladerVersionAfUgemtEditorUdenFilændringer()
+    {
+        var service = new FakeVersionControlService();
+        var host = new FakeVersioningHost { WorkspaceFolder = "/tmp/test", HasUnsavedEditors = true };
+        var workflow = new VersioningWorkflow(service, new FakeVersionDialogService(), new RecordingUserDialogService(), new NullVersionDiffWindowService());
+        using var viewModel = new VersionHistoryViewModel(host, service, workflow);
+
+        await viewModel.RefreshAsync();
+        viewModel.CanCommitAll.Should().BeTrue();
+        viewModel.CommitAllCommand.CanExecute(null).Should().BeTrue();
+        viewModel.CanShowWorkingChanges.Should().BeFalse();
+        viewModel.ExtraStatusText.Should().Contain("før du beskriver en version");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task AnnulleretVersionsbeskedOpretterIngenVersion(string? besked)
+    {
+        var service = new FakeVersionControlService
+        {
+            Statuses = [new VersionStatus(VersionControlState.Klar, null,
+                [new WorkingTreeChange("a.md", WorkingTreeChangeKind.Aendret)], DateTimeOffset.Now)],
+        };
+        var dialog = new FakeVersionDialogService { CommitMessage = besked };
+        var workflow = new VersioningWorkflow(service, dialog, new RecordingUserDialogService(), new NullVersionDiffWindowService());
+        var host = new FakeVersioningHost { WorkspaceFolder = "/tmp/test", HasUnsavedEditors = true };
+
+        (await workflow.CommitAllAsync(host)).Should().BeFalse();
+        host.SaveAllCalls.Should().Be(1);
+        service.CommitCalls.Should().Be(0);
     }
 
     [Fact]

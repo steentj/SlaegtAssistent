@@ -30,6 +30,7 @@ public partial class MainWindow
         {
             ("Indlæs GEDCOM…", model.SelectGedcomFileCommand, new(Key.O, modifier)),
             ("Gem alle", model.SaveAllCommand, new(Key.S, modifier)),
+            ("Gem version…", model.CommitCommand, null),
             ("Eksportér biografier…", export, null),
             ("Versionshistorik…", model.ShowVersionHistoryCommand, null),
             ("Anvend skabelon…", model.ApplyBiographyTemplateCommand, null),
