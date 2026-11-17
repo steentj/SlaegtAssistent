@@ -161,21 +161,40 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Estimat:** 15–21 effektive udviklingsdage for én udvikler.
 *   **Specifikation:** [Analyse](sprints/sprint-07e-medier-og-billedvalg/Analyse.md), [sprintplan](sprints/sprint-07e-medier-og-billedvalg/Plan.md), [mediekontrakt](sprints/sprint-07e-medier-og-billedvalg/Mediekontrakt.md), [krav](sprints/sprint-07e-medier-og-billedvalg/Requirements.md) og [validering](sprints/sprint-07e-medier-og-billedvalg/Validation.md).
 
-### Trin 15: Den Lokale AI-Assistent SPRINT 8
+### Trin 15: Brugervenligt desktoparbejdsbord SPRINT 8
+*   **Status:** Planlagt på baggrund af en statisk GUI-gennemgang. Implementering og visuel accept er ikke udført.
+*   **Mål:** Gør eksisterende person-, dokument-, import- og eksportflows overskuelige ved minimumsstørrelsen og fuldt betjenelige med tastatur.
+*   **Forudsætning:** De eksisterende flows fra sprint 7A–7E bruges som integrationsgrundlag; åbne fejl og uafsluttede platformprøver registreres, og tidligere sprints erklæres ikke afsluttet af denne plan.
+*   **Sektioner:**
+    1. Arbejdsbord og vinduesstørrelser.
+    2. Overskuelig forskelsgennemgang.
+    3. Menuer og platformsgenveje.
+    4. Tilgængeligt personnetværk.
+    5. Fælles personnavigation og grafeksport.
+    6. Gemning og forståelige versioner.
+    7. Tomme tilstande og førstegangsbrug.
+    8. Tydelig biografieksport.
+    9. Semantiske temaer og statusflader.
+    10. Enkel forhåndsvisning og dansk sprog.
+*   **Rækkefølge:** Temagrundlag (09), menuer (03) og layout (01) udføres tidligt. Grafens tilgængelighed (04) etableres før samlet navigation (05). Detaljerede afhængigheder står i sprintplanen.
+*   **Afgrænsning:** Bevar datakontrakter, fri tekst, ugemte buffers, sikker preview, eksport og versionsadfærd. Ingen nye afhængigheder eller cloudkald. AI, RAG og HTR flyttes fra sprint 8–10 til sprint 9–11; deres indbyrdes rækkefølge bevares.
+*   **Specifikation:** [Sprintplan og sektionsoversigt](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Plan.md), [samlede krav](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Requirements.md) og [valideringsplan](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Validation.md). Hver sektion har egen plan, krav og validering.
+
+### Trin 16: Den Lokale AI-Assistent SPRINT 9
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 16: Lokale Bøger som Sandhed (RAG) SPRINT 9
+### Trin 17: Lokale Bøger som Sandhed (RAG) SPRINT 10
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 17: Transkriberings-modulet (HTR) SPRINT 10
+### Trin 18: Transkriberings-modulet (HTR) SPRINT 11
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.

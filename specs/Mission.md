@@ -41,9 +41,10 @@ Input kommer primært i form a GEDCOM filer. Standarden for GEDCOM er defineret 
 ### Navigationsprincip
 Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (biografi, kildesøgning, transskribering, import, indstillinger) tilgås enten via sidebar eller ved at klikke på en person i træet.
 
-- **Personsøgning**: Et søgefelt over slægtstræet kan finde frem til *alle* personer i datasættet – ikke kun direkte aner (fx søskende eller personer der optræder via kildesøgning).
+- **Personsøgning**: Én fælles personsøgning i navigationen finder *alle* personer i datasættet – ikke kun direkte aner. Søgning og personvalg deles af liste, graf og biografi.
 - **Listevisning**: Slægtstræet kan skiftes til en tabel-liste for hurtig scanning af mange personer.
-- Klik på en person (i træ eller liste) åbner personens biografi.
+- Valg i personlisten markerer personen og centrerer grafen uden automatisk faneskift. Enter eller »Åbn biografi« åbner personens dokument. Klik på en person i grafen åbner biografien direkte.
+- Navne og direkte forbindelser er tilgængelige ved valg og tastaturfokus; de må ikke kræve hover.
 
 ### Biografi-editor
 - To-panel-layout: biografiteksten i Markdown til venstre/midt, AI-berigelse i et sidepanel.
@@ -55,7 +56,7 @@ Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (b
 - **Kildesøgning (RAG)**: fritekstsøgning i lokalt downloadede historiske PDF'er, resultater vist som uddrag med kildehenvisning.
 - **Transskribering (HTR)**: split-view med det indscannede billede til venstre og redigerbar tolket tekst til højre.
 - **Import**: drop-zone til GEDCOM-filer, med oversigt over indlæste personer og status pr. biografi (ikke startet / under berigelse / klar).
-- **Eksport**: valg af biografier og format (PDF, Word/OOXML, ODF).
+- **Eksport**: valg af biografier og format (PDF, Word/OOXML, ODF), tydelig fremdrift og sikker annullering. Grafeksport samler formatvalg og viser kun relevante indstillinger.
 - **Indstillinger**: valg af lokal AI-model, sti til den lokale kildemappe og global persondokumentskabelon.
 - **Hjælp**: menuen Hjælp kan åbne et ikke-modalt Markdown-cheat sheet og et ikke-modalt cheat sheet for skabelonformatet. Vinduerne skal kunne stå åbne, mens brugeren arbejder i editoren.
 
@@ -70,3 +71,11 @@ Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (b
 - Hjælpevinduer er ikke-modale, kan flyttes og lukkes uafhængigt af hovedvinduet og må ikke blokere redigering eller forhåndsvisning.
 - Appen skal have et roligt, informationsrigt desktopudtryk med både lyst og mørkt tema samt synlig tastaturfokus.
 - Arbejdsbordets editor-, preview- og kontekstpaneler skal kunne tilpasses med en flytbar skillelinje.
+- Arbejdsbordet skal kunne betjenes ved 960 × 600 logiske enheder; personlisten kan justeres, og kontekstpanelet kan skjules for at give plads til indholdet.
+- Menuer og tastaturgenveje følger platformen. macOS bruger native menulinje og Cmd-genveje; Windows/Linux bruger passende vinduesmenu og Ctrl-genveje.
+- »Gem alle« gemmer dokumentfiler; »Gem version…« opretter en lokal version af alle dokumentændringer. Brugeren skal kunne forstå forskellen uden Git-kendskab.
+- Førstegangsbrug, tom søgning og manglende personvalg giver hver en tydelig næste handling. Renderet »Forhåndsvisning« er standard; rå HTML er et sekundært teknisk værktøj.
+- Forskelle grupperes efter person med tydelige dokument- og importværdier, bevarede feltvalg og mulighed for at se detaljer før godkendelse.
+- Farver og fokus er semantiske og tilgængelige i begge temaer; vigtig information må ikke kræve farvesyn eller musebrug.
+
+Disse præciseringer er mål for [sprint 8](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Plan.md), ikke en påstand om allerede implementeret adfærd.

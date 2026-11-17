@@ -10,11 +10,22 @@ Skan- og GUI-laget bygges i C#, mens tunge AI-processer (som lokal OCR) uddegere
 *   **Temaer:** Lyst, mørkt og systemstyret tema gemmes i den lokale JSON-indstillingsfil og anvendes ved appstart. ViewModels afhænger ikke af Avalonia-typer.
 *   **Distribution:** Kompileres med **Native AOT** til én enkelt eksekverbar fil (`.exe` til Windows, `.app` til Mac) pr. platform. Ingen krav om præinstalleret .NET-runtime hos modtagere af applikationen.
 
+#### Planlagt GUI-grundlag i sprint 8
+
+Detaljer: [sprintplan](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Plan.md). Følgende er planlagte præciseringer; implementering og native validering udestår.
+
+*   **Layout:** Avalonia Grid med fleksible kolonner, GridSplitter og sammenklappeligt kontekstpanel. Hovedvinduets kontrakt er minimum 960 × 600 og standard 1.220 × 760 logiske enheder. Skjulte paneler frigiver også deres mellemrum.
+*   **Menuer og kommandoer:** NativeMenu på macOS og vinduesmenu på Windows/Linux genbruger de eksisterende MVVM-kommandoer og CanExecute. Genveje bruger Cmd på macOS og Ctrl på Windows/Linux; Rediger-handlinger følger den fokuserede tekstkontrol.
+*   **Tilgængelighed:** Standardkontroller suppleres med danske automation-navne, synligt fokus og korrekt tilstandsformidling. PersonGraphControl får relevant automation peer og tastaturbetjening i visningslaget; den fælles personliste giver adgang til navne og forbindelser uden hover. Ingen Avalonia-typer i ViewModels.
+*   **Tema og status:** Semantiske Light/Dark-ressourcer i App.axaml vælges via DynamicResource. DiffLineViewModel.Kind beskriver betydning; farver og stilarter vælges i visningslaget. AppPanelMutedBrush genbruges til miniaturebaggrunde, og statusflader skjules uden besked. Kontrast og højkontrastadfærd verificeres på målplatformene.
+*   **Fælles navigation:** Ét personvalg og én søgning forbindes til graf og dokument via stabile person-id’er. Listevalg viser/centrerer uden faneskift; dokumentåbning er eksplicit. Eksportindstillinger præsenteres efter format uden ændring af eksisterende eksportservices.
+*   **Validering:** Headless- og ViewModel-tests suppleres med native screenshots og tastatur-/skærmlæserprøver på macOS, Windows og Linux, minimumsstørrelser, begge temaer og høj DPI. Nye tredjepartsafhængigheder er ikke nødvendige for sprintet.
+
 ### 2. Data & Tekstbehandling
 *   **GEDCOM Parser:** `GedcomParser` (NuGet) til indlæsning og strukturering af slægtstræet.
 *   **Markdown Editor & Preview:** `Markdig` (NuGet) til konvertering af Markdown til HTML, som vises i appen via et Avalonia HTML-visningselement (f.eks. AvaloniaWebView) for live-preview.
 *   **Persondokumenter:** Markdown-filer bruger versionsstyret YAML-frontmatter med stabilt GEDCOM-record-id og et struktureret faktasnapshot. Den frie biografitekst holdes adskilt fra metadata.
-*   **Dokumentsammenligning:** En lokal Core-service normaliserer dokument- og GEDCOM-fakta og producerer deterministiske feltforskelle. Appen viser forskellene og udfører kun ændringer efter brugerens valg.
+*   **Dokumentsammenligning:** En lokal Core-service normaliserer dokument- og GEDCOM-fakta og producerer deterministiske feltforskelle. Appen viser forskellene og udfører kun ændringer efter brugerens valg. Sprint 8 grupperer gennemgangen efter person og viser tekniske detaljer sekundært uden at ændre sammenlignings- eller godkendelsesregler.
 *   **Eksport-motor (planlagt i trin 12, sprint 7B–7C):** Aktuelle Markdown-biografier, inklusive ugemte editorbuffers, parses til kontrolleret HTML i C#. En lokal Python-sidecar bruger Pandoc til Microsoft Word (.docx / OOXML) og OpenDocument (.odt / ODF), samt WeasyPrint til PDF. Stile, lokale billeder, interne personlinks og fejl kontrolleres efter [dokumentkontrakten](sprints/sprint-07c-biografieksport/Dokumentkontrakt.md). python-docx er ikke en nødvendig runtime-afhængighed i første version.
 
 ### 3. Grafisk Visualisering
