@@ -1,6 +1,6 @@
 # Krav: Forenkling af forskelsgennemgangen
 
-Status: **planlagt**. Afhængighed: **Ingen**.
+Status: **implementeret; accept afventer manuel validering**. Afhængighed: **Ingen**.
 
 ## Acceptkriterier
 

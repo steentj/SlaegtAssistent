@@ -996,6 +996,45 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task SelectGedcomFileCommand_ShouldNotApplyDefaultCandidate_WhenTemplateChangeIsRejected()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME Anna /Jensen/", "1 BIRT", "2 DATE 1 JAN 1900", "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME Anna /Jensen/", "1 BIRT", "2 DATE 2 FEB 1901", "0 TRLR");
+        var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var appSettings = new AppSettings { DefaultMarkdownOutputFolder = folder };
+        var settings = new RecordingApplicationSettingsService(appSettings);
+        var dialog = new PathChoosingGedcomDifferenceDialogService("person.birthDate");
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings, gedcomDifferenceDialogService: dialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+            var original = viewModel.Editor!.MarkdownText;
+            var path = viewModel.SelectedPerson!.MarkdownFilePath;
+            var originalBytes = File.ReadAllBytes(path);
+            var template = BiographyTemplateEditorModel.CreateDefault();
+            var templatePath = Path.Combine(folder, "ny.slaegtskabelon");
+            new TemplateEditorStorageService().Save(templatePath, new(template.Version, template.Blocks.Select(block =>
+                block.Type == BiographyTemplateBlockType.Facts ? block with { Heading = "Mine fakta" } : block).ToArray()));
+            appSettings.GlobalBiographyTemplatePath = templatePath;
+            viewModel.GlobalBiographyTemplatePath = templatePath;
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            dialog.LastDifferences.Select(item => item.StructuredDifference!.Path)
+                .Should().Contain(["person.birthDate", "template"]);
+            viewModel.Editor!.MarkdownText.Should().Be(original);
+            File.ReadAllBytes(path).Should().Equal(originalBytes);
+        }
+        finally { Directory.Delete(folder, true); }
+    }
+
+    [Fact]
     public async Task SelectGedcomFileCommand_ShouldLeaveDocumentUnchanged_WhenCandidateIsRejected()
     {
         using var firstFile = CreateTemporaryGedcomFile(

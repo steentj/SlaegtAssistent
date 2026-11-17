@@ -13,8 +13,6 @@
         Title="Rediger persondokumentskabelon"
         WindowStartupLocation="CenterOwner">
     <Window.KeyBindings>
-        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
-        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Alt+Up" Command="{Binding MoveSelectedBlockUpCommand}" />
         <KeyBinding Gesture="Alt+Down" Command="{Binding MoveSelectedBlockDownCommand}" />
         <KeyBinding Gesture="Ctrl+Alt+Up" Command="{Binding MoveSelectedFieldUpCommand}" />

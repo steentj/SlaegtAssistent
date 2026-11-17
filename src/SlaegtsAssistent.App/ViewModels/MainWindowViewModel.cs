@@ -817,10 +817,11 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             var first = documentGroup.First();
             if (first.CandidateContent is { } candidateContent)
             {
-                var chosenContent = first.CandidatePreviewFactory?.Invoke(choices)
-                    ?? (choices.TryGetValue(first.Key, out var useCandidate) && useCandidate
+                var chosenContent = first.CandidatePreviewFactory is { } factory
+                    ? factory(choices)
+                    : choices.TryGetValue(first.Key, out var useCandidate) && useCandidate
                         ? candidateContent
-                        : null);
+                        : null;
                 if (chosenContent is null)
                 {
                     continue;

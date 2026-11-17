@@ -1,6 +1,6 @@
 # Plan: Indfør menuer og platformens genveje
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R3. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; koordiner med 01**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R3. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; koordiner med 01**.
 
 ## Mål og evidens
 

@@ -314,6 +314,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(Avalonia.Input.InputElement.GotFocusEvent, RememberTextFocus, RoutingStrategies.Bubble);
         Opened += (_, _) =>
         {
             // Under 1.100 enheder bevarer en lukket kontekst mere plads til arbejdsfladen.
@@ -348,6 +349,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        InitializeMenus(viewModel);
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         AttachEditor(viewModel.Editor);
     }

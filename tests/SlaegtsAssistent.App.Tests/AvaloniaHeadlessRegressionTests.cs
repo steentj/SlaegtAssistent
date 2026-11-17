@@ -72,12 +72,7 @@ public sealed class AvaloniaHeadlessRegressionTests
             window.FindControl<NativeWebView>("PreviewWebView").Should().NotBeNull();
             window.DataContext.Should().BeSameAs(viewModel);
             Descendants<Button>(window).Should().Contain(button =>
-                button.Content as string == "Anvend skabelon" && button.Command == viewModel.ApplyBiographyTemplateCommand);
-            Descendants<Button>(window).Should().Contain(button =>
                 button.Content as string == "Commit" && button.Command == viewModel.CommitCommand);
-            Descendants<Button>(window).Should().Contain(button =>
-                button.Content as string == "Versionshistorik" && button.Command == viewModel.ShowVersionHistoryCommand);
-            Descendants<MenuItem>(window).Should().Contain(item => item.Header as string == "Eksportér biografier…");
             return Task.CompletedTask;
         });
 
@@ -124,7 +119,7 @@ public sealed class AvaloniaHeadlessRegressionTests
             buttons.Should().Contain(button => button.Content as string == "Brug kladde" && button.IsDefault);
             buttons.Should().Contain(button => button.Content as string == "Annuller" && button.IsCancel);
             buttons.Should().Contain(button => button.Content as string == "Nulstil" && button.Focusable);
-            window.KeyBindings.Should().HaveCountGreaterThanOrEqualTo(6);
+            window.KeyBindings.Should().HaveCountGreaterThanOrEqualTo(4);
             visibleText.Should().NotContain("{{");
             visibleText.Should().NotContain("#each");
             visibleText.Should().NotContain("person.");

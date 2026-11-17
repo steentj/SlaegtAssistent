@@ -1,6 +1,6 @@
 # Validering: Forenkling af forskelsgennemgangen
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel validering udestår**. Headless-kontrol erstatter ikke native visuelle prøver.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,5 @@ Dette er et sikkerhedskritisk flow. Regressioner skal dække beslutningsbevaring
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026, macOS, headless | Bygning og automatiserede prøver | `dotnet restore` og `dotnet build` uden fejl; `dotnet test` gav 633 beståede og 6 oversprungne. Prøver dækker personskift, filtrering, kandidat pr. person, annullering, anvendte valg og afvist skabelon ved GEDCOM-import. | Headless erstatter ikke native prøver. |
+| Ikke udført | R2-01–R2-03, visuel kontrol og tilgængelighed | Ingen native før-/efterbilleder eller manuelle platformprøver. | Kontrollér bredde, lange værdier, mange personer, temaer, skalering, høj kontrast, tastatur og skærmlæser på macOS, Windows og Linux. |

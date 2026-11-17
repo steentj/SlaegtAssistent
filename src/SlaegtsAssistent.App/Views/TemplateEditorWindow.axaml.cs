@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using System;
 using System.ComponentModel;
 using SlaegtsAssistent.App.Services;
@@ -16,6 +17,7 @@ public partial class TemplateEditorWindow : Window
     public TemplateEditorWindow()
     {
         InitializeComponent();
+        KeyDown += HandleEditorKeyDown;
         SafePreviewWebViewController.Attach(TemplatePreviewWebView, this);
         DataContextChanged += HandleDataContextChanged;
         Closed += HandleClosed;
@@ -26,6 +28,20 @@ public partial class TemplateEditorWindow : Window
             RefreshPreview();
         };
         TemplatePreviewWebView.AdapterDestroyed += (_, _) => _previewAdapterReady = false;
+    }
+
+    private void HandleEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Source is TextBox || _viewModel is null) return;
+        var modifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        var redo = OperatingSystem.IsMacOS() ? e.Key == Key.Z && e.KeyModifiers == (modifier | KeyModifiers.Shift)
+            : e.Key == Key.Y && e.KeyModifiers == modifier;
+        var command = redo ? _viewModel.RedoCommand : e.Key == Key.Z && e.KeyModifiers == modifier ? _viewModel.UndoCommand : null;
+        if (command?.CanExecute(null) == true)
+        {
+            command.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void HandleDataContextChanged(object? sender, EventArgs e)

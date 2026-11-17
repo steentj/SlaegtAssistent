@@ -1,12 +1,14 @@
 # Plan: Forenkling af forskelsgennemgangen
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R2. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen**.
+Status: **implementeret; afventer manuel og tværplatformsvalidering**. Kilde: GUI-anbefaling R2. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen**.
 
 ## Mål og evidens
 
 Målet er at forenkling af forskelsgennemgangen. Evidensmærke: **Inferred** (udledt af kode, ingen observeret rendering).
 
 Forskelsdialogen har otte kolonner, standardbredde 1.480 og minimum 900; faste kolonner optager 775 før tre værdikolonner, mellemrum og margin. Alle forskelle oprettes i én StackPanel.
+
+Dialogen grupperer nu efter dokument og viser kun den valgte persons forskelle og kandidat. Hvis udvalgte ændringer kræver en fravalgt skabelon eller migrering, bliver dialogen åben og forklarer, at kandidaten ikke kan anvendes. Importen bruger ikke længere standardkandidaten som reserve, når kandidatberegningen returnerer et tomt resultat. Native førbilleder kunne ikke optages under den oprindelige gennemgang; visuel kontrol udestår.
 
 ## Filer og implementeringsgrundlag
 

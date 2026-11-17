@@ -1,6 +1,6 @@
 # Krav: Indfør menuer og platformens genveje
 
-Status: **planlagt**. Afhængighed: **Ingen; koordiner med 01**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **Ingen; koordiner med 01**.
 
 ## Acceptkriterier
 
