@@ -1,6 +1,6 @@
 # Validering: Gør grafens information tilgængelig uden mus
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel og native platformprøver udestår**.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,6 @@ Hover, valg og handlingsmål kan komme ud af takt. Bevar eksisterende klik til b
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026, macOS headless | Bygning og automatiserede test | `dotnet restore` og `dotnet build --no-restore` lykkedes; `dotnet test --no-restore`: 636 bestået, 0 fejl, 6 oversprunget. Test dækker stabilt personvalg under hover, forbindelsestyper, kommandoers tilstand, tastaturpanorering, zoom, nulstilling og automation peer. | Ikke en native visuel prøve. |
+| Ikke prøvet | R4-01–R4-03, native macOS, Windows og Linux | Manuel afprøvning af tastaturflow, skærmlæser, temaer og billeder udestår. | Accept afventer dokumenteret platformprøve. |
+| 17. november 2026, macOS headless | Rettelse af tastatur i hovedvinduet | Graffanens fokus, højre pil, plus-/minustegn og piletast i søgefeltet er afprøvet i fanekontrollen; samlet testkørsel: 637 bestået, 0 fejl, 6 oversprunget. | Native afprøvning af dansk tastaturlayout udestår. |

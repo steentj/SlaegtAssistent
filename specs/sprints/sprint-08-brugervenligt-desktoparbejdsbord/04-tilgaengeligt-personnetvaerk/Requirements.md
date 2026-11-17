@@ -1,6 +1,6 @@
 # Krav: Gør grafens information tilgængelig uden mus
 
-Status: **planlagt**. Afhængighed: **Ingen; fælles navigation samles i 05**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **Ingen; fælles navigation samles i 05**.
 
 ## Acceptkriterier
 

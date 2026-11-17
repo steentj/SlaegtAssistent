@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Automation.Peers;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -91,6 +92,36 @@ public sealed class PersonGraphControlTests
             after.Should().NotBe(before);
             opened.Should().BeNull();
             model.SelectedPerson.Should().BeNull();
+        }
+        finally { window.Close(); }
+        return Task.CompletedTask;
+    });
+    [Fact]
+    public Task GrafenKanPanoreresZoomesOgNulstillesMedTastatur() => HeadlessTestApplication.RunAsync(() =>
+    {
+        var model = new PersonGraphViewModel(_ => { });
+        model.SetGraph(new PersonGraphBuilder().Build([new("A", "Anna", null, null, null)], []),
+            new PersonGraphLayout(new GraphBounds(100, 100), new Dictionary<string, GraphPoint> { ["A"] = new(50, 50) }));
+        model.Select("A");
+        var control = new PersonGraphControl { DataContext = model };
+        var window = new Window { Width = 400, Height = 400, Content = control };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            control.ShowAll();
+            control.Focus();
+            var original = control.GetVisibleWorldBounds();
+            window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
+            control.GetVisibleWorldBounds().Origin.X.Should().BeGreaterThan(original.Origin.X);
+            window.KeyPress(Key.Add, RawInputModifiers.None, default, null);
+            control.GetVisibleWorldBounds().Bounds.Width.Should().BeLessThan(original.Bounds.Width);
+            window.KeyPress(Key.Home, RawInputModifiers.None, default, null);
+            control.GetVisibleWorldBounds().Origin.X.Should().BeApproximately(original.Origin.X, 0.001);
+            control.GetVisibleWorldBounds().Bounds.Width.Should().BeApproximately(original.Bounds.Width, 0.001);
+            var peer = ControlAutomationPeer.CreatePeerForElement(control)!;
+            peer.GetName().Should().Be("Personnetværk");
+            peer.GetHelpText().Should().Contain("Valgt person: Anna").And.Contain("piletasterne");
         }
         finally { window.Close(); }
         return Task.CompletedTask;

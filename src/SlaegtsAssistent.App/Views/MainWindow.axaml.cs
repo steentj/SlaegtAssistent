@@ -269,6 +269,14 @@ public partial class MainWindow : Window
             viewModel.PersonGraph.Status = $"Grafen kunne ikke gemmes: {exception.Message}";
         }
     }
+    private void HandleGraphTabKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (!GraphTab.IsFocused || DataContext is not MainWindowViewModel { IsGraphTab: true, IsImporting: false }) return;
+        if (!GraphControl.HandleNavigationKey(e)) return;
+        GraphControl.Focus();
+        e.Handled = true;
+    }
+
     private void GraphListKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel) return;
@@ -314,6 +322,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(Avalonia.Input.InputElement.KeyDownEvent, HandleGraphTabKeyDown, RoutingStrategies.Tunnel);
         AddHandler(Avalonia.Input.InputElement.GotFocusEvent, RememberTextFocus, RoutingStrategies.Bubble);
         Opened += (_, _) =>
         {

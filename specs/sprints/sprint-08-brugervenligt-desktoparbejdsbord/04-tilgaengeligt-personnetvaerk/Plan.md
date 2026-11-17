@@ -1,6 +1,6 @@
 # Plan: Gør grafens information tilgængelig uden mus
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R4. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; fælles navigation samles i 05**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R4. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; fælles navigation samles i 05**.
 
 ## Mål og evidens
 

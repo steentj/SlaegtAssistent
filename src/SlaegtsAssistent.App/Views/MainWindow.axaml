@@ -172,7 +172,7 @@
                     </Grid>
 
                     <TabControl Grid.Row="1" SelectedIndex="{Binding DocumentTabIndex, Mode=TwoWay}">
-                        <TabItem Header="Graf">
+                        <TabItem x:Name="GraphTab" Header="Graf">
                             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
                                 <WrapPanel Orientation="Horizontal">
                                     <Button Content="Opdatér graf" Command="{Binding RefreshGraphCommand}" />
@@ -201,18 +201,29 @@
                                             <Button x:Name="CancelGraphExport" Content="Annullér eksport" Click="GraphCancelExport" IsEnabled="False" Margin="6,0,0,0" />
                                         </WrapPanel>
                                         </ScrollViewer>
-                                        <views:PersonGraphControl x:Name="GraphControl" Grid.Row="2" DataContext="{Binding PersonGraph}" />
+                                        <views:PersonGraphControl x:Name="GraphControl" Grid.Row="2" DataContext="{Binding PersonGraph}"
+                                            AutomationProperties.Name="Personnetværk"
+                                            AutomationProperties.HelpText="Brug piletaster til panorering, plus og minus til zoom og Home til at vise alle. Vælg personer i listen." />
                                     </Grid>
                                     <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="8">
                                         <ListBox ItemsSource="{Binding PersonGraph.SearchResults}" SelectedItem="{Binding PersonGraph.SelectedPerson, Mode=TwoWay}" KeyDown="GraphListKeyDown" AutomationProperties.Name="Søgte personer">
                                             <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
                                         </ListBox>
-                                        <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding PersonGraph.DirectConnections}">
+                                        <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding PersonGraph.DirectConnections}"
+                                            AutomationProperties.Name="Person og direkte forbindelser">
                                             <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Details}" TextWrapping="Wrap" Margin="0,0,0,8" /></DataTemplate></ItemsControl.ItemTemplate>
                                         </ItemsControl></ScrollViewer>
                                     </Grid>
                                 </Grid>
-                                <TextBlock Grid.Row="2" Text="{Binding PersonGraph.Status}" TextWrapping="Wrap" />
+                                <StackPanel Grid.Row="2" Spacing="2">
+                                    <TextBlock Text="Klik i grafen eller vælg graffanen med tastaturet. Piletaster: panorér. Plus/minus: zoom. Home: vis alle. Enter i personlisten åbner biografien."
+                                               TextWrapping="Wrap" />
+                                    <ScrollViewer MaxHeight="70" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <TextBlock Text="{Binding PersonGraph.ConnectionSummary}" TextWrapping="Wrap"
+                                                   AutomationProperties.LiveSetting="Polite" />
+                                    </ScrollViewer>
+                                    <TextBlock Text="{Binding PersonGraph.Status}" TextWrapping="Wrap" />
+                                </StackPanel>
                             </Grid>
                         </TabItem>
                         <TabItem Header="Editor">

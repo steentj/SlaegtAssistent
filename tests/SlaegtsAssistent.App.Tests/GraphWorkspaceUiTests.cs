@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAssertions;
@@ -45,5 +47,40 @@ public sealed class GraphWorkspaceUiTests
             vm.IsGraphTab.Should().BeTrue();
         }
         finally { window.Close(); }
+    });
+    [Fact]
+    public Task GrafensGenvejeVirkerIArbejdsbordetsFanekontrol() => HeadlessTestApplication.RunAsync(() =>
+    {
+        var vm = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = vm, Width = 1280, Height = 800 };
+        var webView = window.FindControl<NativeWebView>("PreviewWebView")!;
+        ((Panel)webView.Parent!).Children.Remove(webView);
+        try
+        {
+            vm.DocumentTabIndex = 0;
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build([new("A", "Anna", null, null, null)], []),
+                new PersonGraphLayout(new GraphBounds(100, 100), new Dictionary<string, GraphPoint> { ["A"] = new(50, 50) }));
+            var graph = window.FindControl<PersonGraphControl>("GraphControl")!;
+            graph.ShowAll();
+            var graphTab = window.FindControl<TabItem>("GraphTab")!;
+            graphTab.Focus().Should().BeTrue();
+            var before = graph.GetVisibleWorldBounds();
+            window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
+            vm.DocumentTabIndex.Should().Be(0);
+            graph.IsFocused.Should().BeTrue();
+            graph.GetVisibleWorldBounds().Origin.X.Should().BeGreaterThan(before.Origin.X);
+            window.KeyPress(Key.D0, RawInputModifiers.None, default, "+");
+            graph.GetVisibleWorldBounds().Bounds.Width.Should().BeLessThan(before.Bounds.Width);
+            window.KeyPress(Key.OemQuestion, RawInputModifiers.None, default, "-");
+            graph.GetVisibleWorldBounds().Bounds.Width.Should().BeApproximately(before.Bounds.Width, 0.001);
+            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg person");
+            search.Focus();
+            window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
+            graph.GetVisibleWorldBounds().Origin.X.Should().BeApproximately(before.Origin.X + 40 / (graph.Bounds.Width / before.Bounds.Width), 0.001);
+        }
+        finally { window.Close(); }
+        return Task.CompletedTask;
     });
 }

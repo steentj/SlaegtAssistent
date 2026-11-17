@@ -36,4 +36,23 @@ public sealed class PersonGraphViewModelTests
         vm.UseAsProbandCommand.Execute(null);
         vm.ProbandId.Should().Be("B");
     }
+    [Fact]
+    public void ValgtPersonOgForbindelserForbliverStabileUnderHover()
+    {
+        var vm = new PersonGraphViewModel(_ => { });
+        vm.SetGraph(new PersonGraphBuilder().Build(
+            [new("A", "Anna", null, null, null), new("B", "Bo", null, null, null), new("C", "Clara", null, null, null)],
+            [new("A", "B", GraphRelationKind.Parent), new("B", "C", GraphRelationKind.Partner)]), null);
+        vm.OpenBiographyCommand.CanExecute(null).Should().BeFalse();
+        vm.Select("B");
+        vm.Hover("C");
+        vm.DirectConnections.Select(item => item.RecordId).Should().Equal("B", "A", "C");
+        vm.ConnectionSummary.Should().Contain("Valgt person: Bo").And.Contain("Anna (forælder)").And.Contain("Clara (partner)");
+        vm.OpenBiographyCommand.CanExecute(null).Should().BeTrue();
+        vm.Select(null);
+        vm.ConnectionSummary.Should().Contain("Person under markøren: Clara").And.Contain("Bo (partner)");
+        vm.Hover(null);
+        vm.ConnectionSummary.Should().Be("Ingen person valgt.");
+        vm.UseAsProbandCommand.CanExecute(null).Should().BeFalse();
+    }
 }

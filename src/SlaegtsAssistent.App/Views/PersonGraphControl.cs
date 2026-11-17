@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Automation.Peers;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -38,6 +39,8 @@ public sealed class PersonGraphControl : Control
         DataContextChanged += (_, _) => AttachModel(DataContext as PersonGraphViewModel);
         ClipToBounds = true;
         Focusable = true;
+        GotFocus += (_, _) => InvalidateVisual();
+        LostFocus += (_, _) => InvalidateVisual();
     }
 
     private void AttachModel(PersonGraphViewModel? model)
@@ -97,6 +100,12 @@ public sealed class PersonGraphControl : Control
     public override void Render(DrawingContext context)
     {
         base.Render(context);
+        if (IsFocused)
+        {
+            var focusRect = new Rect(2, 2, Math.Max(0, Bounds.Width - 4), Math.Max(0, Bounds.Height - 4));
+            context.DrawRectangle(null, new Pen(Brushes.Black, 4), focusRect);
+            context.DrawRectangle(null, new Pen(Brushes.White, 2), focusRect);
+        }
         if (_model?.Layout is not { } layout) return;
         var edgePen = new Pen(Brushes.Gray, 0.8);
         foreach (var edge in _model.Graph.Edges)
@@ -121,8 +130,14 @@ public sealed class PersonGraphControl : Control
             };
             var outline = ActualThemeVariant == ThemeVariant.Dark ? Brushes.White : Brushes.Black;
             context.DrawEllipse(brush, node.RecordId == _model.ProbandId ? new Pen(outline, 2) : null, new Point(p.X, p.Y), radius, radius);
+            if (node.RecordId == _model.SelectedPerson?.RecordId)
+            {
+                var selection = new Rect(p.X - radius - 5, p.Y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+                context.DrawRectangle(null, new Pen(Brushes.Black, 4), selection);
+                context.DrawRectangle(null, new Pen(Brushes.White, 2), selection);
+            }
         }
-        if (_model.HoveredPerson is not null)
+        if (_model.SelectedPerson is not null || _model.HoveredPerson is not null)
         {
             var placed = new List<Rect>();
             var dark = ActualThemeVariant == ThemeVariant.Dark;
@@ -177,6 +192,48 @@ public sealed class PersonGraphControl : Control
         InvalidateVisual();
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new PersonGraphAutomationPeer(this);
+
+    private sealed class PersonGraphAutomationPeer(PersonGraphControl owner) : ControlAutomationPeer(owner)
+    {
+        protected override string GetClassNameCore() => nameof(PersonGraphControl);
+        protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Pane;
+        protected override string GetNameCore() => "Personnetværk";
+        protected override string GetHelpTextCore() =>
+            "Brug piletasterne til at panorere, plus og minus til zoom og Home til at vise alle. Vælg personer i listen. " +
+            (owner._model?.ConnectionSummary ?? "Ingen person valgt.");
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (IsFocused && HandleNavigationKey(e)) e.Handled = true;
+        base.OnKeyDown(e);
+    }
+
+    internal bool HandleNavigationKey(KeyEventArgs e)
+    {
+        if (e.KeyModifiers is not (KeyModifiers.None or KeyModifiers.Shift)) return false;
+        var plus = e.KeySymbol == "+" || (string.IsNullOrEmpty(e.KeySymbol) && e.Key is Key.Add or Key.OemPlus);
+        var minus = e.KeySymbol is "-" or "−" || (string.IsNullOrEmpty(e.KeySymbol) && e.Key is Key.Subtract or Key.OemMinus);
+        if (plus) ZoomBy(1.2);
+        else if (minus) ZoomBy(1 / 1.2);
+        else if (e.KeyModifiers == KeyModifiers.None)
+        {
+            switch (e.Key)
+            {
+                case Key.Left: _camera = _camera.Pan(40, 0); break;
+                case Key.Right: _camera = _camera.Pan(-40, 0); break;
+                case Key.Up: _camera = _camera.Pan(0, 40); break;
+                case Key.Down: _camera = _camera.Pan(0, -40); break;
+                case Key.Home: ShowAll(); break;
+                default: return false;
+            }
+        }
+        else return false;
+        InvalidateVisual();
+        return true;
+    }
+
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
@@ -191,6 +248,7 @@ public sealed class PersonGraphControl : Control
         base.OnPointerPressed(e);
         var properties = e.GetCurrentPoint(this).Properties;
         if (!properties.IsLeftButtonPressed && !properties.IsMiddleButtonPressed) return;
+        Focus();
         _middleDrag = properties.IsMiddleButtonPressed;
         _pointerDown = _previous = e.GetPosition(this);
         _pressedId = Hit(_previous);

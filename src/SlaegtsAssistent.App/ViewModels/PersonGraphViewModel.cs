@@ -26,6 +26,7 @@ public partial class PersonGraphViewModel : ViewModelBase
     private readonly Action<string> _openPerson;
     private PersonGraph _graph = new PersonGraphBuilder().Build([], []);
     private Dictionary<string, GraphPersonItemViewModel> _items = new(StringComparer.Ordinal);
+    private Dictionary<(string, string), PersonGraphEdge> _edges = new();
 
     public PersonGraphViewModel(Action<string> openPerson) => _openPerson = openPerson ?? throw new ArgumentNullException(nameof(openPerson));
 
@@ -41,11 +42,13 @@ public partial class PersonGraphViewModel : ViewModelBase
         ? $"Proband: {person.Name}" : "Ingen proband valgt";
     public ObservableCollection<GraphPersonItemViewModel> SearchResults { get; } = [];
     public ObservableCollection<GraphPersonItemViewModel> DirectConnections { get; } = [];
+    public string ConnectionSummary { get; private set; } = "Ingen person valgt.";
 
     public void SetGraph(PersonGraph graph, PersonGraphLayout? layout, string? preferredProbandId = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
         _graph = graph;
+        _edges = graph.Edges.ToDictionary(edge => (edge.FirstId, edge.SecondId));
         _items = graph.Nodes.ToDictionary(node => node.RecordId, node => new GraphPersonItemViewModel(node), StringComparer.Ordinal);
         Layout = layout;
         ProbandId = preferredProbandId is not null && _items.ContainsKey(preferredProbandId) ? preferredProbandId
@@ -65,16 +68,23 @@ public partial class PersonGraphViewModel : ViewModelBase
     public void Select(string? id) => SelectedPerson = id is not null && _items.TryGetValue(id, out var person) ? person : null;
     partial void OnSearchTextChanged(string value) => RefreshSearch();
     partial void OnProbandIdChanged(string? value) => OnPropertyChanged(nameof(ProbandText));
-    partial void OnSelectedPersonChanged(GraphPersonItemViewModel? value) => UpdateConnections();
+    partial void OnSelectedPersonChanged(GraphPersonItemViewModel? value)
+    {
+        UpdateConnections();
+        UseAsProbandCommand.NotifyCanExecuteChanged();
+        OpenBiographyCommand.NotifyCanExecuteChanged();
+    }
     partial void OnHoveredPersonChanged(GraphPersonItemViewModel? value) => UpdateConnections();
 
-    [RelayCommand]
+    private bool HasSelectedPerson() => SelectedPerson is not null;
+
+    [RelayCommand(CanExecute = nameof(HasSelectedPerson))]
     private void UseAsProband()
     {
         if (SelectedPerson is not null) ProbandId = SelectedPerson.RecordId;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedPerson))]
     private void OpenBiography()
     {
         if (SelectedPerson is not null) _openPerson(SelectedPerson.RecordId);
@@ -92,10 +102,35 @@ public partial class PersonGraphViewModel : ViewModelBase
     private void UpdateConnections()
     {
         DirectConnections.Clear();
-        var active = HoveredPerson ?? SelectedPerson;
-        if (active is null || !_graph.Neighbours.TryGetValue(active.RecordId, out var neighbours)) return;
-        DirectConnections.Add(active);
-        foreach (var id in neighbours)
-            if (_items.TryGetValue(id, out var item)) DirectConnections.Add(item);
+        var active = SelectedPerson ?? HoveredPerson;
+        if (active is null || !_graph.Neighbours.TryGetValue(active.RecordId, out var neighbours))
+        {
+            ConnectionSummary = "Ingen person valgt.";
+        }
+        else
+        {
+            DirectConnections.Add(active);
+            var descriptions = new List<string>();
+            foreach (var id in neighbours)
+            {
+                if (!_items.TryGetValue(id, out var item)) continue;
+                DirectConnections.Add(item);
+                var pair = StringComparer.Ordinal.Compare(active.RecordId, id) < 0
+                    ? (active.RecordId, id) : (id, active.RecordId);
+                var relations = _edges[pair].Relations
+                    .Select(relation => relation.Kind switch
+                    {
+                        GraphRelationKind.Parent => relation.SourceId == active.RecordId ? "barn" : "forælder",
+                        GraphRelationKind.Partner => "partner",
+                        _ => "dokumentlink",
+                    }).Distinct();
+                descriptions.Add($"{item.Name} ({string.Join(", ", relations)})");
+            }
+            var origin = SelectedPerson is null ? "Person under markøren" : "Valgt person";
+            ConnectionSummary = descriptions.Count == 0
+                ? $"{origin}: {active.Name}. Ingen direkte forbindelser."
+                : $"{origin}: {active.Name}. Direkte forbindelser: {string.Join("; ", descriptions)}.";
+        }
+        OnPropertyChanged(nameof(ConnectionSummary));
     }
 }
