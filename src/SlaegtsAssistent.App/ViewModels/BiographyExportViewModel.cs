@@ -34,6 +34,8 @@ public partial class BiographyExportViewModel : ViewModelBase
     [ObservableProperty] private string status = "Vælg højst 100 biografier.";
     public BiographyExportFormat Format => FormatIndex switch { 1 => BiographyExportFormat.Pdf, 2 => BiographyExportFormat.Odt, _ => BiographyExportFormat.Docx };
     public BiographyExportMode Mode => ModeIndex == 1 ? BiographyExportMode.Separate : BiographyExportMode.Combined;
+    public bool CanStart => !IsExporting && _all.Any(x => x.IsSelected);
+    public bool CanChangeSelection => !IsExporting;
     public string SelectedCountText => $"{_all.Count(x => x.IsSelected)} valgt (højst 100)";
     public IReadOnlyList<string> SelectedIds => _all.Where(x => x.IsSelected).Select(x => x.RecordId).Distinct(StringComparer.Ordinal).ToArray();
 
@@ -51,7 +53,16 @@ public partial class BiographyExportViewModel : ViewModelBase
 
     private void SelectionChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(BiographyExportPersonViewModel.IsSelected)) OnPropertyChanged(nameof(SelectedCountText));
+        if (args.PropertyName == nameof(BiographyExportPersonViewModel.IsSelected))
+        {
+            OnPropertyChanged(nameof(SelectedCountText));
+            OnPropertyChanged(nameof(CanStart));
+        }
+    }
+    partial void OnIsExportingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(CanChangeSelection));
     }
     partial void OnSearchTextChanged(string value) => RefreshFilter();
     private void RefreshFilter()

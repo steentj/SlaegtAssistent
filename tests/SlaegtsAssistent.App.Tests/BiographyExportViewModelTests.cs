@@ -23,6 +23,23 @@ public class BiographyExportViewModelTests
     }
 
     [Fact]
+    public void HandlingerFoelgerUdvalgOgIgangvaerendeEksport()
+    {
+        var model = new BiographyExportViewModel([new("a", "Anna", "/tmp/a.md")], null);
+        model.CanStart.Should().BeFalse();
+        model.CanChangeSelection.Should().BeTrue();
+        model.VisiblePeople.Single().IsSelected = true;
+        model.CanStart.Should().BeTrue();
+        model.IsExporting = true;
+        model.CanStart.Should().BeFalse();
+        model.CanChangeSelection.Should().BeFalse();
+        model.IsExporting = false;
+        model.CanStart.Should().BeTrue();
+        model.ClearSelectionCommand.Execute(null);
+        model.CanStart.Should().BeFalse();
+    }
+
+    [Fact]
     public Task DialogHarTilgaengeligeValgOgHandlinger() => HeadlessTestApplication.RunAsync(() =>
     {
         var window = new BiographyExportWindow(new MainWindowViewModel());

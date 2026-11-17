@@ -4,13 +4,13 @@
         Width="720" Height="680" MinWidth="540" MinHeight="500" Title="Eksportér biografier" WindowStartupLocation="CenterOwner">
     <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" RowSpacing="10">
         <TextBlock Text="Eksporten medtager dine aktuelle ændringer uden at gemme Markdown-filerne." TextWrapping="Wrap" />
-        <TextBox Grid.Row="1" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="Søg navn eller person-id" automation:AutomationProperties.Name="Søg biografier" />
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10">
+        <TextBox Grid.Row="1" IsEnabled="{Binding CanChangeSelection}" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="Søg navn eller person-id" automation:AutomationProperties.Name="Søg biografier" />
+        <StackPanel Grid.Row="2" IsEnabled="{Binding CanChangeSelection}" Orientation="Horizontal" Spacing="10">
             <Button Content="Vælg alle" Command="{Binding SelectAllCommand}" />
             <Button Content="Ryd valg" Command="{Binding ClearSelectionCommand}" />
             <TextBlock Text="{Binding SelectedCountText}" VerticalAlignment="Center" />
         </StackPanel>
-        <ListBox Grid.Row="3" ItemsSource="{Binding VisiblePeople}" automation:AutomationProperties.Name="Vælg biografier">
+        <ListBox Grid.Row="3" IsEnabled="{Binding CanChangeSelection}" ItemsSource="{Binding VisiblePeople}" automation:AutomationProperties.Name="Vælg biografier">
             <ListBox.ItemTemplate><DataTemplate x:DataType="vm:BiographyExportPersonViewModel">
                 <StackPanel Margin="3" Spacing="2">
                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Content="{Binding DisplayName}" />
@@ -19,15 +19,24 @@
                 </StackPanel>
             </DataTemplate></ListBox.ItemTemplate>
         </ListBox>
-        <Grid Grid.Row="4" ColumnDefinitions="*,*" ColumnSpacing="10">
-            <ComboBox ItemsSource="{Binding FormatNames}" SelectedIndex="{Binding FormatIndex}" HorizontalAlignment="Stretch" automation:AutomationProperties.Name="Eksportformat" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding ModeNames}" SelectedIndex="{Binding ModeIndex}" HorizontalAlignment="Stretch" automation:AutomationProperties.Name="Eksporttilstand" />
+        <Grid Grid.Row="4" ColumnDefinitions="*,*" ColumnSpacing="10" IsEnabled="{Binding CanChangeSelection}">
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="FormatLabel" Text="Format" />
+                <ComboBox ItemsSource="{Binding FormatNames}" SelectedIndex="{Binding FormatIndex}" HorizontalAlignment="Stretch" automation:AutomationProperties.LabeledBy="{Binding #FormatLabel}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock x:Name="ModeLabel" Text="Samling" />
+                <ComboBox ItemsSource="{Binding ModeNames}" SelectedIndex="{Binding ModeIndex}" HorizontalAlignment="Stretch" automation:AutomationProperties.LabeledBy="{Binding #ModeLabel}" />
+            </StackPanel>
         </Grid>
-        <ScrollViewer Grid.Row="5" MaxHeight="110" VerticalScrollBarVisibility="Auto"><TextBlock Text="{Binding Status}" TextWrapping="Wrap" /></ScrollViewer>
+        <StackPanel Grid.Row="5" Spacing="5">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsExporting}" automation:AutomationProperties.Name="Handlingen er i gang" />
+            <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto"><TextBlock Text="{Binding Status}" TextWrapping="Wrap" /></ScrollViewer>
+        </StackPanel>
         <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-            <Button Content="Udskriv…" Click="PrintClick" />
-            <Button Content="Eksportér…" Click="ExportClick" />
-            <Button Content="Annullér handling" Click="CancelClick" IsEnabled="{Binding IsExporting}" />
+            <Button Content="Udskriv…" Click="PrintClick" IsEnabled="{Binding CanStart}" />
+            <Button Content="Eksportér…" Click="ExportClick" IsEnabled="{Binding CanStart}" IsDefault="True" />
+            <Button Content="Annullér handling" Click="CancelClick" IsVisible="{Binding IsExporting}" />
             <Button Content="Luk" Click="CloseClick" />
         </StackPanel>
     </Grid>

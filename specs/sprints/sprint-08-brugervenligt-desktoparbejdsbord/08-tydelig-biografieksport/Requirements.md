@@ -1,6 +1,6 @@
 # Krav: Gør eksportens tilstand og handlinger tydelige
 
-Status: **planlagt**. Afhængighed: **09 for fælles statusressourcer**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **09 for fælles statusressourcer**.
 
 ## Acceptkriterier
 

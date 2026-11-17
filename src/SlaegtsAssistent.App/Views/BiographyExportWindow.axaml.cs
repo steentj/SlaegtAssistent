@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using SlaegtsAssistent.App.Services;
@@ -19,6 +20,7 @@ public partial class BiographyExportWindow : Window
     private readonly MainWindowViewModel _main;
     private readonly BiographyExportViewModel _model;
     private CancellationTokenSource? _cancellation;
+    private bool _closeWhenFinished;
 
     public BiographyExportWindow() : this(new MainWindowViewModel()) { }
 
@@ -28,17 +30,36 @@ public partial class BiographyExportWindow : Window
         _main = main;
         _model = new BiographyExportViewModel(main.GetBiographyExportDocuments(), main.SelectedPerson?.RecordId);
         DataContext = _model;
-        Closing += (_, e) => { if (_cancellation is not null) { _cancellation.Cancel(); e.Cancel = true; } };
+        Closing += (_, e) =>
+        {
+            if (_cancellation is null) return;
+            e.Cancel = true;
+            _closeWhenFinished = true;
+            CancelOperation();
+        };
+        KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            e.Handled = true;
+            if (_cancellation is null) Close();
+            else CancelOperation();
+        };
     }
 
     private async void ExportClick(object? sender, RoutedEventArgs e) => await StartAsync(false);
     private async void PrintClick(object? sender, RoutedEventArgs e) => await StartAsync(true);
-    private void CancelClick(object? sender, RoutedEventArgs e) => _cancellation?.Cancel();
+    private void CancelClick(object? sender, RoutedEventArgs e) => CancelOperation();
+    private void CancelOperation()
+    {
+        if (_cancellation is null) return;
+        _model.Status = "Annullerer handlingen. Vent, mens arbejdet afsluttes sikkert…";
+        _cancellation.Cancel();
+    }
     private void CloseClick(object? sender, RoutedEventArgs e) => Close();
 
     private async Task StartAsync(bool print)
     {
-        if (_cancellation is not null) return;
+        if (!_model.CanStart || _cancellation is not null) return;
         var sidecar = LocalExportSidecar.TryCreateDefault(new LocalProcessRunner());
         if (sidecar is null) { _model.Status = "Det lokale eksportværktøj mangler i programpakken."; return; }
         var ids = _model.SelectedIds;
@@ -110,7 +131,7 @@ public partial class BiographyExportWindow : Window
                 (warnings.Count == 0 ? "" : "\n\nAdvarsler:\n" + string.Join("\n", warnings));
             if (!await ConfirmAsync("Gennemgå eksport", description, existing.Length == 0 ? "Eksportér" : "Overskriv de viste filer")) { _model.Status = "Eksporten blev annulleret."; return; }
             cancellation.Token.ThrowIfCancellationRequested();
-            var progress = new Progress<BiographyExportProgress>(value => _model.Status = $"{value.Phase}: {value.Current} af {value.Total}…");
+            var progress = new Progress<BiographyExportProgress>(value => { if (!cancellation.IsCancellationRequested) _model.Status = $"{value.Phase}: {value.Current} af {value.Total}…"; });
             var outcome = await Task.Run(() => new BiographyExportService(sidecar, new AtomicFileWriter()).ExportAsync(targets, mode, format, roots, progress, cancellation.Token, existing, warnings, preflight.Fingerprints), cancellation.Token);
             _model.Status = (outcome.Cancelled ? "Eksporten blev annulleret.\n" : "") +
                 "Gemte:\n" + (outcome.Saved.Count == 0 ? "Ingen" : string.Join("\n", outcome.Saved)) +
@@ -121,7 +142,7 @@ public partial class BiographyExportWindow : Window
         catch (OperationCanceledException) { _model.Status = "Eksporten blev annulleret."; }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or TimeoutException or System.ComponentModel.Win32Exception)
         { _model.Status = "Eksporten kunne ikke gennemføres: " + exception.Message; }
-        finally { _cancellation = null; _model.IsExporting = false; cancellation.Dispose(); }
+        finally { _cancellation = null; _model.IsExporting = false; cancellation.Dispose(); if (_closeWhenFinished) Close(); }
     }
 
     private async Task<bool> ConfirmAsync(string title, string message, string accept)

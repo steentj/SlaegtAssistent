@@ -1,6 +1,6 @@
 # Plan: Gør eksportens tilstand og handlinger tydelige
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R8. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **09 for fælles statusressourcer**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R8. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **09 for fælles statusressourcer**.
 
 ## Mål og evidens
 

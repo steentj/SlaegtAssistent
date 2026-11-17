@@ -1,6 +1,6 @@
 # Validering: Gør eksportens tilstand og handlinger tydelige
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **delvist udført**. Automatiserede prøver er kørt; manuel og native afprøvninger udestår.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,6 @@ Kør `dotnet restore`, `dotnet build` og `dotnet test` fra projektroden. Registr
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 2026-11-17, macOS | Restore, build og automatiserede prøver | Restore og build bestået; 645 prøver bestået, 0 fejlet, 6 oversprunget. | De oversprungne prøver omfatter eksportværktøj og eksport af ugemte redigeringer. |
+| 2026-11-17 | R8-01, tilstandsovergange | Regression dækker tomt udvalg, valg og igangværende eksport. | Manuel kontrol udestår. |
+| Ikke udført | Manuel kontrol, billeder, tilgængelighed og native platformprøver | Ingen dokumenteret manuel afprøvning. | macOS, Windows og Linux samt temaer, skalering og skærmlæser skal afprøves. |
