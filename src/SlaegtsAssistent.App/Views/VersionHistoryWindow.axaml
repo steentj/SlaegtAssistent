@@ -48,14 +48,16 @@
         <Border Grid.Row="1"
                 Margin="10,0,10,4"
                 Padding="8"
-                Background="#33CC4455">
+                IsVisible="{Binding HasErrorMessage}"
+                Background="{DynamicResource AppErrorBackgroundBrush}">
             <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
         </Border>
 
         <Border Grid.Row="2"
                 Margin="10,0,10,4"
                 Padding="8"
-                Background="#334477CC">
+                IsVisible="{Binding HasInfoMessage}"
+                Background="{DynamicResource AppInfoBackgroundBrush}">
             <TextBlock Text="{Binding InfoMessage}" TextWrapping="Wrap" />
         </Border>
 

@@ -48,6 +48,12 @@ public sealed partial class VersionHistoryViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool canCommitAll;
 
+    public bool HasInfoMessage => !string.IsNullOrWhiteSpace(InfoMessage);
+    public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
+
+    partial void OnInfoMessageChanged(string? value) => OnPropertyChanged(nameof(HasInfoMessage));
+    partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasErrorMessage));
+
     public ObservableCollection<VersionEntryViewModel> Entries { get; } = [];
 
     public IAsyncRelayCommand RefreshCommand { get; }

@@ -18,7 +18,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="views:MediaPickerCard">
                         <StackPanel Width="170" Margin="4" Spacing="3">
-                            <Border Height="120" Background="{DynamicResource AppSurfaceMutedBrush}">
+                            <Border Height="120" Background="{DynamicResource AppPanelMutedBrush}">
                                 <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
                             </Border>
                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />

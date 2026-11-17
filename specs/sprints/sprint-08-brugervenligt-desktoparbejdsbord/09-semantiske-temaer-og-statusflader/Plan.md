@@ -1,6 +1,6 @@
 # Plan: Ret temaressourcer og statusflader
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R9. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; udføres tidligt som grundlag for 08**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R9. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen; udføres tidligt som grundlag for 08**.
 
 ## Mål og evidens
 

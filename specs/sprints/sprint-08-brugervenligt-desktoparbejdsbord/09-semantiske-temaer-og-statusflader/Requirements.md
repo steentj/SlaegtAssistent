@@ -1,6 +1,6 @@
 # Krav: Ret temaressourcer og statusflader
 
-Status: **planlagt**. Afhængighed: **Ingen; udføres tidligt som grundlag for 08**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **Ingen; udføres tidligt som grundlag for 08**.
 
 ## Acceptkriterier
 

@@ -15,6 +15,11 @@
                     <SolidColorBrush x:Key="AppTextBrush" Color="#17212B" />
                     <SolidColorBrush x:Key="AppMutedTextBrush" Color="#5E6B78" />
                     <SolidColorBrush x:Key="AppDangerBrush" Color="#B42318" />
+                    <SolidColorBrush x:Key="AppInfoBackgroundBrush" Color="#E1EFFA" />
+                    <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#FCE7E5" />
+                    <SolidColorBrush x:Key="AppDiffAddedBackgroundBrush" Color="#E1F3E7" />
+                    <SolidColorBrush x:Key="AppDiffRemovedBackgroundBrush" Color="#FCE7E5" />
+                    <SolidColorBrush x:Key="AppDiffHeaderBackgroundBrush" Color="#E1EFFA" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#151A20" />
@@ -26,6 +31,11 @@
                     <SolidColorBrush x:Key="AppTextBrush" Color="#EDF2F7" />
                     <SolidColorBrush x:Key="AppMutedTextBrush" Color="#AAB7C4" />
                     <SolidColorBrush x:Key="AppDangerBrush" Color="#F28B82" />
+                    <SolidColorBrush x:Key="AppInfoBackgroundBrush" Color="#253C50" />
+                    <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#4B292D" />
+                    <SolidColorBrush x:Key="AppDiffAddedBackgroundBrush" Color="#233E30" />
+                    <SolidColorBrush x:Key="AppDiffRemovedBackgroundBrush" Color="#4B292D" />
+                    <SolidColorBrush x:Key="AppDiffHeaderBackgroundBrush" Color="#253C50" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

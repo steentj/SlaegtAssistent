@@ -1,6 +1,6 @@
 # Validering: Ret temaressourcer og statusflader
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **delvist udført**. Automatiseret kontrol og beregning er udført; manuel og native afprøvninger udestår.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,7 @@ Farveændringer kan gøre diff eller markering utydelig. Kontrollér både tekst
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 2026-11-17, macOS | Restore, build og test | Restore og build bestået; samlet testkørsel: 646 bestået, 1 fejlet, 6 oversprunget. Den fejlede grafgenvejsprøve bestod ved særskilt gentagelse. De to nye prøver bestod igen efter sidste ændring. | Grafprøven kan være ustabil; de oversprungne eksportprøver blev ikke kørt. |
+| 2026-11-17 | Tekstkontrast, beregnet fra ressourcefarver | Lys: 13,73–14,10:1; mørk: 10,13–11,27:1 for tekst på de nye status- og diffbaggrunde. | Kontrol- og fokusmarkeringer samt faktisk rendering er ikke målt. |
+| 2026-11-17 | Diff uden farve | Plus og minus samt synlig forklaring viser betydningen, også hvis baggrundsfarver ikke kan skelnes. | Reservevisningen og systemets højkontrast skal prøves native. |
+| Ikke udført | Manuel kontrol, billeder og native platformprøver | Ingen dokumenteret manuel afprøvning. | macOS, Windows og Linux, temaer, skalering, tastatur og skærmlæser udestår. |

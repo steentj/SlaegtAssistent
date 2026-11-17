@@ -76,6 +76,26 @@ public sealed class VersioningWorkflowTests
     }
 
     [Fact]
+    public void StatusfladerFoelgerTekstensIndhold()
+    {
+        var service = new FakeVersionControlService();
+        var host = new FakeVersioningHost();
+        var workflow = new VersioningWorkflow(service, new FakeVersionDialogService(), new RecordingUserDialogService(), new NullVersionDiffWindowService());
+        using var model = new VersionHistoryViewModel(host, service, workflow);
+        var changes = new List<string?>();
+        model.PropertyChanged += (_, args) => changes.Add(args.PropertyName);
+        model.ErrorMessage = "Fejl";
+        model.HasErrorMessage.Should().BeTrue();
+        model.InfoMessage = "Besked";
+        model.HasInfoMessage.Should().BeTrue();
+        model.ErrorMessage = "  ";
+        model.InfoMessage = null;
+        model.HasErrorMessage.Should().BeFalse();
+        model.HasInfoMessage.Should().BeFalse();
+        changes.Should().Contain(nameof(model.HasErrorMessage)).And.Contain(nameof(model.HasInfoMessage));
+    }
+
+    [Fact]
     public async Task VersionshistorikTilladerVersionAfUgemtEditorUdenFilændringer()
     {
         var service = new FakeVersionControlService();

@@ -12,6 +12,12 @@
         MinHeight="520"
         Title="{Binding Title}">
 
+    <Window.Styles>
+        <Style Selector="TextBlock.diffAdded"><Setter Property="Background" Value="{DynamicResource AppDiffAddedBackgroundBrush}" /></Style>
+        <Style Selector="TextBlock.diffRemoved"><Setter Property="Background" Value="{DynamicResource AppDiffRemovedBackgroundBrush}" /></Style>
+        <Style Selector="TextBlock.diffHeader"><Setter Property="Background" Value="{DynamicResource AppDiffHeaderBackgroundBrush}" /></Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="280,6,*" Background="{DynamicResource AppWindowBackgroundBrush}">
         <Border Grid.Row="0"
                 Grid.ColumnSpan="3"
@@ -19,7 +25,10 @@
                 Background="{DynamicResource AppPanelBackgroundBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="0,0,0,1">
-            <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" />
+            <StackPanel Spacing="4">
+                <TextBlock Text="+ Tilføjet   − Fjernet" />
+                <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" IsVisible="{Binding !!Notice}" />
+            </StackPanel>
         </Border>
 
         <ListBox Grid.Row="1"
@@ -53,8 +62,10 @@
             <ItemsControl ItemsSource="{Binding VisibleLines}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:DiffLineViewModel">
-                        <TextBlock Text="{Binding Text}"
-                                   Background="{Binding BackgroundHex}"
+                        <TextBlock Text="{Binding DisplayText}"
+                                   Classes.diffAdded="{Binding IsAdded}"
+                                   Classes.diffRemoved="{Binding IsRemoved}"
+                                   Classes.diffHeader="{Binding IsHeader}"
                                    FontFamily="Consolas, Menlo, Monaco, monospace"
                                    TextWrapping="NoWrap" />
                     </DataTemplate>

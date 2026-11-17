@@ -95,11 +95,14 @@ public sealed class DiffLineViewModel(DiffLine source)
 {
     public DiffLineKind Kind { get; } = source.Kind;
     public string Text { get; } = source.Text;
-    public string BackgroundHex { get; } = source.Kind switch
+    public bool IsAdded => Kind == DiffLineKind.Added;
+    public bool IsRemoved => Kind == DiffLineKind.Removed;
+    public bool IsHeader => Kind == DiffLineKind.HunkHeader;
+    public string DisplayText => Kind switch
     {
-        DiffLineKind.Added => "#3322AA44",
-        DiffLineKind.Removed => "#33CC4455",
-        DiffLineKind.HunkHeader => "#334477CC",
-        _ => "Transparent",
+        DiffLineKind.Added => "+ " + Text,
+        DiffLineKind.Removed => "− " + Text,
+        DiffLineKind.Context => "  " + Text,
+        _ => Text,
     };
 }
