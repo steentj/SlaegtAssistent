@@ -112,13 +112,7 @@ public partial class EditorViewModel : ViewModelBase
     public bool IsHtmlPreviewSelected
     {
         get => PreviewMode == PreviewMode.Html;
-        set
-        {
-            if (value)
-            {
-                PreviewMode = PreviewMode.Html;
-            }
-        }
+        set => PreviewMode = value ? PreviewMode.Html : PreviewMode.Web;
     }
 
     public void Load()

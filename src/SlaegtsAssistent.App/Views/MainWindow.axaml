@@ -87,12 +87,12 @@
                     Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Spacing="8">
-                        <TextBlock Text="PERSONER"
+                        <TextBlock Text="Personer"
                                    FontSize="11"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource AppMutedTextBrush}" />
                         <TextBox x:Name="PersonFilter" Text="{Binding PersonFilterText, Mode=TwoWay}"
-                                 PlaceholderText="Søg navn eller record-id" />
+                                 PlaceholderText="Søg navn eller person-id" />
                         <TextBlock Text="{Binding ErrorMessage}"
                                    Foreground="{DynamicResource AppDangerBrush}"
                                    AutomationProperties.LiveSetting="Polite"
@@ -259,16 +259,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                             </Grid>
                         </TabItem>
-                        <TabItem Header="Preview">
+                        <TabItem Header="Forhåndsvisning">
                             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <RadioButton Content="Webvisning"
-                                                 GroupName="PreviewMode"
-                                                 IsChecked="{Binding Editor.IsWebPreviewSelected, Mode=TwoWay}" />
-                                    <RadioButton Content="Rå HTML"
-                                                 GroupName="PreviewMode"
-                                                 IsChecked="{Binding Editor.IsHtmlPreviewSelected, Mode=TwoWay}" />
-                                </StackPanel>
+                                <Expander Header="Teknisk visning">
+                                    <CheckBox Content="Vis rå HTML (fjern markeringen for at vende tilbage)"
+                                              IsChecked="{Binding Editor.IsHtmlPreviewSelected, Mode=TwoWay}" />
+                                </Expander>
                                 <TextBlock Grid.Row="1"
                                            Text="{Binding Editor.PreviewSecurityMessage}"
                                            IsVisible="{Binding Editor.HasPreviewSecurityMessage}"
@@ -307,7 +303,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="KONTEKST"
+                            <TextBlock Text="Kontekst"
                                        FontSize="11"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource AppMutedTextBrush}" />

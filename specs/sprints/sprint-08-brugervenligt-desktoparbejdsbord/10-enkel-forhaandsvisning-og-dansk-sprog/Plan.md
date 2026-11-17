@@ -1,6 +1,6 @@
 # Plan: Forenkling af forhåndsvisning og dansk sprog
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R10. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **03**.
+Status: **implementeret og manuelt godkendt af brugeren**. Kilde: GUI-anbefaling R10. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **03**.
 
 ## Mål og evidens
 

@@ -1,6 +1,6 @@
 # Krav: Forenkling af forhåndsvisning og dansk sprog
 
-Status: **planlagt**. Afhængighed: **03**.
+Status: **implementeret og manuelt godkendt af brugeren**. Afhængighed: **03**.
 
 ## Acceptkriterier
 

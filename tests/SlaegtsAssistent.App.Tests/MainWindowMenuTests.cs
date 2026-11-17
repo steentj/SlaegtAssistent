@@ -24,7 +24,7 @@ public sealed class MainWindowMenuTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
             var search = window.GetLogicalDescendants().OfType<TextBox>()
-                .Single(box => box.PlaceholderText == "Søg navn eller record-id");
+                .Single(box => box.PlaceholderText == "Søg navn eller person-id");
             search.Text = "Anna";
             search.Focus();
             Dispatcher.UIThread.RunJobs();

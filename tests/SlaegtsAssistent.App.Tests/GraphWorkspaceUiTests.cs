@@ -35,8 +35,8 @@ public sealed class GraphWorkspaceUiTests
             vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build(
                 [new("A", "Anna", "F", null, null), new("B", "Bo", "M", null, null)], []), null, "A");
             window.GetVisualDescendants().OfType<TabControl>().Single().Items
-                .Cast<TabItem>().Select(tab => tab.Header).Should().Equal("Graf", "Editor", "Preview");
-            window.GetVisualDescendants().OfType<TextBox>().Count(box => box.PlaceholderText == "Søg navn eller record-id").Should().Be(1);
+                .Cast<TabItem>().Select(tab => tab.Header).Should().Equal("Graf", "Editor", "Forhåndsvisning");
+            window.GetVisualDescendants().OfType<TextBox>().Count(box => box.PlaceholderText == "Søg navn eller person-id").Should().Be(1);
             window.GetVisualDescendants().OfType<TextBox>().Should().NotContain(box => box.PlaceholderText == "Søg person");
             vm.PersonGraph.Select("B");
             vm.PersonGraph.UseAsProbandCommand.Execute(null);
@@ -75,7 +75,7 @@ public sealed class GraphWorkspaceUiTests
             graph.GetVisibleWorldBounds().Bounds.Width.Should().BeLessThan(before.Bounds.Width);
             window.KeyPress(Key.OemQuestion, RawInputModifiers.None, default, "-");
             graph.GetVisibleWorldBounds().Bounds.Width.Should().BeApproximately(before.Bounds.Width, 0.001);
-            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg navn eller record-id");
+            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg navn eller person-id");
             search.Focus();
             window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
             graph.GetVisibleWorldBounds().Origin.X.Should().BeApproximately(before.Origin.X + 40 / (graph.Bounds.Width / before.Bounds.Width), 0.001);

@@ -1,6 +1,6 @@
 # Validering: Forenkling af forhåndsvisning og dansk sprog
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel validering godkendt af brugeren**.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,6 @@ Flytning af visningsvalg kan skjule sikkerhedsstatus. Bevar eksisterende binding
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026 / macOS | Restore, build og test | Restore og build bestået; 647 tests bestået, 0 fejl, 6 oversprunget. Test af tilstandsskift og eksisterende sikkerhedstests bestået. | Native visuel kontrol, tastatur, skærmlæser, temaer, skalering og billeder er ikke prøvet. Windows og Linux er ikke prøvet. |
+
+| 17. november 2026 / platform ikke oplyst | Manuel validering | Brugeren har bekræftet, at den manuelle validering er i orden. | Platforme, konkrete prøver og billeder er ikke specificeret. |

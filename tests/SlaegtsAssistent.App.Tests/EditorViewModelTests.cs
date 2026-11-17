@@ -173,6 +173,12 @@ public class EditorViewModelTests
         viewModel.PreviewMode.Should().Be(PreviewMode.Html);
         viewModel.IsHtmlPreviewSelected.Should().BeTrue();
         viewModel.IsWebPreviewSelected.Should().BeFalse();
+
+        viewModel.IsHtmlPreviewSelected = false;
+
+        viewModel.PreviewMode.Should().Be(PreviewMode.Web);
+        viewModel.IsWebPreviewSelected.Should().BeTrue();
+        viewModel.IsHtmlPreviewSelected.Should().BeFalse();
     }
 
     [Fact]
