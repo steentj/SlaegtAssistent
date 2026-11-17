@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading;
+using System.Globalization;
 using Patagames.GedcomNetSdk;
 using SlaegtsAssistent.Core.Domain;
 
@@ -63,7 +64,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         try
         {
-            var parsedGedcom = ParseGedcom(filePath, cancellationToken);
+            var parsedGedcom = ParseGedcom(filePath, existingTree?.SharedNotes, cancellationToken);
             var tree = existingTree ?? new FamilyTree();
             tree.SourceFilePath = Path.GetFullPath(filePath);
 
@@ -114,10 +115,11 @@ public sealed class GedcomLoader : IGedcomLoader
 
     private static ParsedGedcom ParseGedcom(
         string filePath,
+        IReadOnlyDictionary<string, string>? existingNotes,
         CancellationToken cancellationToken)
     {
         var decoded = ReadGedcomFile(filePath);
-        var prepared = PrepareGedcomText(decoded.Text, filePath);
+        var prepared = PrepareGedcomText(decoded.Text, filePath, existingNotes);
         var rawGedcomByRecordId = ReadRawPersonSegments(decoded.Text);
         cancellationToken.ThrowIfCancellationRequested();
         using var stream = CreateParserStream(prepared.Text);
@@ -339,6 +341,7 @@ public sealed class GedcomLoader : IGedcomLoader
             sources.Values.ToList(),
             media.Values.ToList(),
             submitters.Values.ToList(),
+            prepared.SharedNotes,
             headerSubmitterId,
             diagnostics,
             prepared.SkippedRecords);
@@ -405,7 +408,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     break;
 
                 case "NOTE":
-                    if (NormalizeToken(value) is { } note)
+                    if (ParseNote(value) is { } note)
                     {
                         person.Notes.Add(note);
                     }
@@ -524,7 +527,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     break;
 
                 case "NOTE":
-                    currentEvent.Note = NormalizeToken(value);
+                    currentEvent.Note = AppendNote(currentEvent.Note, ParseNote(value));
                     break;
 
                 case "SOUR":
@@ -553,7 +556,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 break;
 
             case "NOTE":
-                currentCensus.Note = NormalizeToken(value);
+                currentCensus.Note = AppendNote(currentCensus.Note, ParseNote(value));
                 break;
 
             case "SOUR":
@@ -602,12 +605,16 @@ public sealed class GedcomLoader : IGedcomLoader
                 source.Date = NormalizeToken(value);
                 break;
             case "NOTE":
-                source.Note = NormalizeToken(value);
+                source.Note = AppendNote(source.Note, ParseNote(value));
                 break;
         }
     }
 
-    private static void ParseMediaLine(ParsedMedia media, int level, string tag, string? value)
+    private static void ParseMediaLine(
+        ParsedMedia media,
+        int level,
+        string tag,
+        string? value)
     {
         if (level != 1 && level != 2)
         {
@@ -633,7 +640,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 break;
 
             case "NOTE":
-                media.Note = NormalizeToken(value);
+                media.Note = AppendNote(media.Note, ParseNote(value));
                 break;
         }
     }
@@ -693,7 +700,7 @@ public sealed class GedcomLoader : IGedcomLoader
                     currentEvent.Type = NormalizeToken(value);
                     break;
                 case "NOTE":
-                    currentEvent.Note = NormalizeToken(value);
+                    currentEvent.Note = AppendNote(currentEvent.Note, ParseNote(value));
                     break;
                 case "SOUR":
                     currentSource = CreateCitation(value);
@@ -725,7 +732,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 break;
 
             case "NOTE":
-                if (NormalizeToken(value) is { } note)
+                if (ParseNote(value) is { } note)
                 {
                     family.Notes.Add(note);
                 }
@@ -796,6 +803,12 @@ public sealed class GedcomLoader : IGedcomLoader
         tree.Diagnostics.Clear();
         var importedRecordIds = new HashSet<string>(StringComparer.Ordinal);
 
+        foreach (var (recordId, note) in parsedGedcom.SharedNotes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            tree.SetSharedNote(recordId, note.Text, note.Timestamp);
+        }
+
         foreach (var parsedSource in parsedGedcom.Sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -805,7 +818,7 @@ public sealed class GedcomLoader : IGedcomLoader
             }
 
             var source = tree.GetOrAddSource(parsedSource.RecordId);
-            CopySource(parsedSource, source);
+            CopySource(tree, parsedSource, source);
         }
 
         foreach (var parsedMedia in parsedGedcom.Media)
@@ -817,7 +830,7 @@ public sealed class GedcomLoader : IGedcomLoader
             }
 
             var media = tree.GetOrAddMedia(parsedMedia.RecordId);
-            CopyMedia(parsedMedia, media);
+            CopyMedia(tree, parsedMedia, media);
         }
 
         foreach (var parsedPerson in parsedGedcom.People)
@@ -847,7 +860,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
             foreach (var note in parsedPerson.Notes)
             {
-                person.Notes.Add(note);
+                person.AddNote(CreateNoteValue(tree, note));
             }
 
             foreach (var parsedMedia in parsedPerson.Media)
@@ -871,14 +884,31 @@ public sealed class GedcomLoader : IGedcomLoader
             }
         }
 
-        tree.SubmitterRecordId = parsedGedcom.HeaderSubmitterId;
-        tree.Submitter = CreateSubmitter(
-            parsedGedcom.HeaderSubmitterId,
-            parsedGedcom.Submitters);
+        if (parsedGedcom.HeaderSubmitterId is { } headerSubmitterId)
+        {
+            tree.SubmitterRecordId = headerSubmitterId;
+            tree.Submitter = CreateSubmitter(headerSubmitterId, parsedGedcom.Submitters)
+                ?? (tree.Submitter?.RecordId == headerSubmitterId ? tree.Submitter : null);
+        }
+        else if (tree.SubmitterRecordId is { } existingSubmitterId
+            && CreateSubmitter(existingSubmitterId, parsedGedcom.Submitters) is { } updatedSubmitter)
+        {
+            tree.Submitter = updatedSubmitter;
+        }
 
+        var updatedFamilyIds = parsedGedcom.Families.Select(family => family.RecordId)
+            .ToHashSet(StringComparer.Ordinal);
         foreach (var person in tree.People)
         {
-            person.Families.Clear();
+            foreach (var family in person.Families.Where(family => updatedFamilyIds.Contains(family.RecordId)).ToList())
+            {
+                person.Families.Remove(family);
+            }
+
+            foreach (var family in person.ChildhoodFamilies.Where(family => updatedFamilyIds.Contains(family.RecordId)).ToList())
+            {
+                person.ChildhoodFamilies.Remove(family);
+            }
         }
 
         foreach (var recordId in importedRecordIds)
@@ -933,6 +963,7 @@ public sealed class GedcomLoader : IGedcomLoader
                 }
 
                 AddIfMissing(domainFamily.Children, child, person => person.RecordId);
+                AddIfMissing(child.ChildhoodFamilies, domainFamily, familyRecord => familyRecord.RecordId);
             }
 
             foreach (var parsedSource in family.Sources)
@@ -942,7 +973,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
             foreach (var note in family.Notes)
             {
-                domainFamily.Notes.Add(note);
+                domainFamily.AddNote(CreateNoteValue(tree, note));
             }
 
             foreach (var parsedEvent in family.Events)
@@ -971,6 +1002,7 @@ public sealed class GedcomLoader : IGedcomLoader
             .Concat(parsedGedcom.Sources.Select(source => source.RecordId))
             .Concat(parsedGedcom.Media.Select(mediaRecord => mediaRecord.RecordId))
             .Concat(parsedGedcom.Submitters.Select(submitter => submitter.RecordId))
+            .Concat(parsedGedcom.SharedNotes.Keys)
             .Where(recordId => !string.IsNullOrWhiteSpace(recordId))
             .Select(recordId => recordId!)
             .ToHashSet(StringComparer.Ordinal);
@@ -1027,7 +1059,7 @@ public sealed class GedcomLoader : IGedcomLoader
             var parsedRecord = parsedSources.FirstOrDefault(candidate => candidate.RecordId == recordId);
             if (parsedRecord is not null)
             {
-                CopySource(parsedRecord, source);
+                CopySource(tree, parsedRecord, source);
             }
             else if (tree.FindSource(recordId) is { } existingSource)
             {
@@ -1035,7 +1067,7 @@ public sealed class GedcomLoader : IGedcomLoader
             }
         }
 
-        CopySource(parsedSource, source, overwriteWithNull: false);
+        CopySource(tree, parsedSource, source, overwriteWithNull: false);
         return source;
     }
 
@@ -1052,7 +1084,7 @@ public sealed class GedcomLoader : IGedcomLoader
             var parsedRecord = parsedMediaRecords.FirstOrDefault(candidate => candidate.RecordId == recordId);
             if (parsedRecord is not null)
             {
-                CopyMedia(parsedRecord, media);
+                CopyMedia(tree, parsedRecord, media);
             }
             else if (tree.FindMedia(recordId) is { } existingMedia)
             {
@@ -1060,7 +1092,7 @@ public sealed class GedcomLoader : IGedcomLoader
             }
         }
 
-        CopyMedia(parsedMedia, media, overwriteWithNull: false);
+        CopyMedia(tree, parsedMedia, media, overwriteWithNull: false);
         return media;
     }
 
@@ -1076,7 +1108,7 @@ public sealed class GedcomLoader : IGedcomLoader
             Date = parsedEvent.Date,
             Place = parsedEvent.Place,
             Type = parsedEvent.Type,
-            Note = parsedEvent.Note
+            NoteValue = CreateNoteValueOrNull(tree, parsedEvent.Note),
         };
 
         foreach (var parsedSource in parsedEvent.Sources)
@@ -1096,7 +1128,7 @@ public sealed class GedcomLoader : IGedcomLoader
         {
             Date = parsedCensus.Date,
             Place = parsedCensus.Place,
-            Note = parsedCensus.Note
+            NoteValue = CreateNoteValueOrNull(tree, parsedCensus.Note),
         };
 
         foreach (var parsedSource in parsedCensus.Sources)
@@ -1107,7 +1139,7 @@ public sealed class GedcomLoader : IGedcomLoader
         return census;
     }
 
-    private static void CopySource(ParsedSource source, Source target)
+    private static void CopySource(FamilyTree tree, ParsedSource source, Source target)
     {
         target.Title = source.Title;
         target.Author = source.Author;
@@ -1117,7 +1149,7 @@ public sealed class GedcomLoader : IGedcomLoader
         target.Page = source.Page;
         target.Data = source.Data;
         target.Date = source.Date;
-        target.Note = source.Note;
+        target.NoteValue = CreateNoteValueOrNull(tree, source.Note);
     }
 
     private static void CopySource(Source source, Source target)
@@ -1130,10 +1162,10 @@ public sealed class GedcomLoader : IGedcomLoader
         target.Page = source.Page;
         target.Data = source.Data;
         target.Date = source.Date;
-        target.Note = source.Note;
+        target.NoteValue = source.NoteValue;
     }
 
-    private static void CopySource(ParsedSource source, Source target, bool overwriteWithNull)
+    private static void CopySource(FamilyTree tree, ParsedSource source, Source target, bool overwriteWithNull)
     {
         if (overwriteWithNull || source.Title is not null)
         {
@@ -1177,17 +1209,17 @@ public sealed class GedcomLoader : IGedcomLoader
 
         if (overwriteWithNull || source.Note is not null)
         {
-            target.Note = source.Note;
+            target.NoteValue = CreateNoteValueOrNull(tree, source.Note);
         }
     }
 
-    private static void CopyMedia(ParsedMedia media, Media target)
+    private static void CopyMedia(FamilyTree tree, ParsedMedia media, Media target)
     {
         target.File = media.File;
         target.Form = media.Form;
         target.Title = media.Title;
         target.Type = media.Type;
-        target.Note = media.Note;
+        target.NoteValue = CreateNoteValueOrNull(tree, media.Note);
     }
 
     private static void CopyMedia(Media media, Media target)
@@ -1196,10 +1228,10 @@ public sealed class GedcomLoader : IGedcomLoader
         target.Form = media.Form;
         target.Title = media.Title;
         target.Type = media.Type;
-        target.Note = media.Note;
+        target.NoteValue = media.NoteValue;
     }
 
-    private static void CopyMedia(ParsedMedia media, Media target, bool overwriteWithNull)
+    private static void CopyMedia(FamilyTree tree, ParsedMedia media, Media target, bool overwriteWithNull)
     {
         if (overwriteWithNull || media.File is not null)
         {
@@ -1223,7 +1255,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         if (overwriteWithNull || media.Note is not null)
         {
-            target.Note = media.Note;
+            target.NoteValue = CreateNoteValueOrNull(tree, media.Note);
         }
     }
 
@@ -1263,7 +1295,10 @@ public sealed class GedcomLoader : IGedcomLoader
         return new MemoryStream(Encoding.UTF8.GetBytes(normalizedLineEndings));
     }
 
-    private static PreparedGedcom PrepareGedcomText(string text, string filePath)
+    private static PreparedGedcom PrepareGedcomText(
+        string text,
+        string filePath,
+        IReadOnlyDictionary<string, string>? existingNotes)
     {
         var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         var lines = normalized.Split('\n');
@@ -1291,7 +1326,10 @@ public sealed class GedcomLoader : IGedcomLoader
         }
 
         var output = new List<string>(lines.Length);
+        var outputContexts = new List<(int Line, string? RecordId, string? RecordTag)>(lines.Length);
         var diagnostics = new List<GedcomDiagnostic>();
+        var sharedNoteBuilders = new Dictionary<string, SharedNoteBuilder>(StringComparer.Ordinal);
+        SharedNoteBuilder? currentSharedNote = null;
         var skippedRecords = 0;
         var skipCurrentRecord = false;
         var seenRecordIds = new HashSet<string>(StringComparer.Ordinal);
@@ -1304,6 +1342,7 @@ public sealed class GedcomLoader : IGedcomLoader
             if (line.StartsWith("0 ", StringComparison.Ordinal))
             {
                 skipCurrentRecord = false;
+                currentSharedNote = null;
                 currentRecordId = null;
                 currentTag = ReadLevelZeroTag(line);
                 TryReadRecordHeader(line, out currentRecordId);
@@ -1356,7 +1395,15 @@ public sealed class GedcomLoader : IGedcomLoader
                     continue;
                 }
 
-                if (currentTag is "NOTE" or "REPO" or "SUBN")
+                if (currentTag == "NOTE")
+                {
+                    currentSharedNote = new SharedNoteBuilder(ReadSharedNoteText(line));
+                    sharedNoteBuilders.Add(currentRecordId!, currentSharedNote);
+                    skipCurrentRecord = true;
+                    continue;
+                }
+
+                if (currentTag is "REPO" or "SUBN")
                 {
                     skipCurrentRecord = true;
                     skippedRecords++;
@@ -1387,6 +1434,50 @@ public sealed class GedcomLoader : IGedcomLoader
                 }
             }
 
+            if (currentSharedNote is not null)
+            {
+                if (currentSharedNote.ReadDateLine(line))
+                {
+                    continue;
+                }
+
+                if (TryReadContinuation(line, out var level, out var tag, out var value) && level == 1)
+                {
+                    if (tag == "CONT")
+                    {
+                        currentSharedNote.Text.Append('\n');
+                    }
+
+                    currentSharedNote.Text.Append(value);
+                }
+                else if (line.Length > 0 && !IsSyntacticallyValidGedcomLine(line))
+                {
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Error,
+                        "GEDCOM-linjen har ugyldig syntaks.",
+                        index + 1,
+                        currentRecordId,
+                        null,
+                        "Kun det ugyldige underfelt blev sprunget over.",
+                        filePath));
+                }
+                else if (TryReadLevel(line, out var noteLevel) && noteLevel == 1)
+                {
+                    var fields = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+                    var unsupportedTag = fields.Length > 1 ? fields[1] : null;
+                    diagnostics.Add(new GedcomDiagnostic(
+                        GedcomDiagnosticSeverity.Warning,
+                        $"Underfeltet '{unsupportedTag}' på den delte notatpost understøttes ikke.",
+                        index + 1,
+                        currentRecordId,
+                        unsupportedTag,
+                        "Underfeltet blev ikke importeret; notatteksten blev bevaret.",
+                        filePath));
+                }
+
+                continue;
+            }
+
             if (skipCurrentRecord)
             {
                 continue;
@@ -1406,10 +1497,84 @@ public sealed class GedcomLoader : IGedcomLoader
             }
 
             output.Add(line);
+            outputContexts.Add((index + 1, currentRecordId, currentTag));
         }
 
-        return new PreparedGedcom(string.Join('\n', output), diagnostics, skippedRecords);
+        var sharedNotes = sharedNoteBuilders.ToDictionary(
+            pair => pair.Key,
+            pair => new ParsedSharedNote(DecodeNoteText(pair.Value.Text.ToString()), pair.Value.LatestTimestamp()),
+            StringComparer.Ordinal);
+
+        for (var index = 0; index < output.Count; index++)
+        {
+            var context = outputContexts[index];
+            if (context.RecordTag is not ("INDI" or "FAM" or "SOUR" or "OBJE")
+                || !TryReadNoteReference(output[index], out var reference))
+            {
+                continue;
+            }
+
+            if (!sharedNotes.ContainsKey(reference) && existingNotes?.ContainsKey(reference) != true)
+            {
+                diagnostics.Add(new GedcomDiagnostic(
+                    GedcomDiagnosticSeverity.Warning,
+                    $"Den delte notatpost '{reference}' blev ikke fundet.",
+                    context.Line,
+                    context.RecordId,
+                    "NOTE",
+                    "Henvisningen blev bevaret, men notatteksten kunne ikke indlæses.",
+                    filePath));
+            }
+        }
+
+        return new PreparedGedcom(string.Join('\n', output), diagnostics, skippedRecords, sharedNotes);
     }
+
+    private static string ReadSharedNoteText(string line)
+    {
+        var idStart = line.IndexOf('@');
+        var idEnd = line.IndexOf('@', idStart + 1);
+        var tagStart = idEnd + 1;
+        while (tagStart < line.Length && line[tagStart] == ' ')
+        {
+            tagStart++;
+        }
+
+        var valueStart = tagStart + "NOTE".Length;
+        return valueStart < line.Length && line[valueStart] == ' '
+            ? line[(valueStart + 1)..]
+            : string.Empty;
+    }
+
+    private static bool TryReadNoteReference(string line, out string reference)
+    {
+        reference = string.Empty;
+        var firstSpace = line.IndexOf(' ');
+        if (firstSpace <= 0 || !int.TryParse(line[..firstSpace], out var level) || level == 0)
+        {
+            return false;
+        }
+
+        var tagEnd = line.IndexOf(' ', firstSpace + 1);
+        if (tagEnd < 0 || line[(firstSpace + 1)..tagEnd] != "NOTE")
+        {
+            return false;
+        }
+
+        var value = line[(tagEnd + 1)..].Trim();
+        if (!IsNoteReference(value))
+        {
+            return false;
+        }
+
+        reference = value;
+        return true;
+    }
+
+    private static bool IsNoteReference(string value) =>
+        value.Length >= 3 && value[0] == '@' && value[^1] == '@'
+        && !value.StartsWith("@@", StringComparison.Ordinal)
+        && !value.AsSpan(1, value.Length - 2).ContainsAny(' ', '\t', '@');
 
     private static GedcomLoadException CreateFatalStructureException(
         string filePath,
@@ -1443,7 +1608,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
     private static bool RequiresRecordId(string? tag)
     {
-        return tag is "INDI" or "FAM" or "SOUR" or "OBJE" or "SUBM";
+        return tag is "INDI" or "FAM" or "SOUR" or "OBJE" or "SUBM" or "NOTE";
     }
 
     private static bool IsSupportedLevelZeroRecord(string? tag)
@@ -1454,8 +1619,8 @@ public sealed class GedcomLoader : IGedcomLoader
     private static bool TryReadRecordHeader(string line, out string? recordId)
     {
         recordId = null;
-        var fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (fields.Length != 3
+        var fields = line.Split(' ', 4, StringSplitOptions.RemoveEmptyEntries);
+        if ((fields.Length != 3 && !(fields.Length == 4 && fields[2] == "NOTE"))
             || fields[0] != "0"
             || !fields[1].StartsWith('@')
             || !fields[1].EndsWith('@')
@@ -1477,6 +1642,7 @@ public sealed class GedcomLoader : IGedcomLoader
             "SOUR" => "Kildeposten mangler et gyldigt record-id.",
             "OBJE" => "Medieposten mangler et gyldigt record-id.",
             "SUBM" => "Afsenderposten mangler et gyldigt record-id.",
+            "NOTE" => "Notatposten mangler et gyldigt record-id.",
             _ => "GEDCOM-posten mangler et gyldigt record-id.",
         };
     }
@@ -1490,6 +1656,7 @@ public sealed class GedcomLoader : IGedcomLoader
             "SOUR" => "Kildeposten blev sprunget over; øvrige poster blev bevaret.",
             "OBJE" => "Medieposten blev sprunget over; øvrige poster blev bevaret.",
             "SUBM" => "Afsenderposten blev sprunget over; øvrige poster blev bevaret.",
+            "NOTE" => "Notatposten blev sprunget over; øvrige poster blev bevaret.",
             _ => "Posten blev sprunget over; øvrige poster blev bevaret.",
         };
     }
@@ -1788,6 +1955,12 @@ public sealed class GedcomLoader : IGedcomLoader
             if (TryReadContinuation(line, out var level, out var tag, out var value)
                 && targetByLevel.TryGetValue(level - 1, out var target))
             {
+                var separator = output[target].IndexOf(' ');
+                if (separator >= 0 && output[target].IndexOf(' ', separator + 1) < 0)
+                {
+                    output[target] += " ";
+                }
+
                 output[target] += tag == "CONT" ? ContinuedLineBreak + value : value;
                 targetByLevel[level] = target;
                 continue;
@@ -1960,6 +2133,131 @@ public sealed class GedcomLoader : IGedcomLoader
         return value.Trim().Replace(ContinuedLineBreak.ToString(), "\n", StringComparison.Ordinal);
     }
 
+    private static ParsedNote? ParseNote(string? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var reference = value.Trim();
+        if (IsNoteReference(reference))
+        {
+            return new ParsedNote(null, reference);
+        }
+
+        var text = DecodeNoteText(value.Replace(ContinuedLineBreak, '\n'));
+        return text.Length == 0 ? null : new ParsedNote(text, null);
+    }
+
+    private static string DecodeNoteText(string text) =>
+        text.Replace("@@", "@", StringComparison.Ordinal);
+
+    private static ParsedNote? AppendNote(ParsedNote? existing, ParsedNote? next)
+    {
+        if (existing is null || next is null)
+        {
+            return existing ?? next;
+        }
+
+        if (existing.Parts is { } parts)
+        {
+            parts.Add(next);
+            return existing;
+        }
+
+        return new ParsedNote(null, null, [existing, next]);
+    }
+
+    private static GedcomNoteValue CreateNoteValue(FamilyTree tree, ParsedNote note) =>
+        note.Parts is { } parts
+            ? new GedcomNoteValue(parts.Select(part => CreateNoteValue(tree, part)).ToArray())
+            : note.ReferenceId is { } referenceId
+            ? new GedcomNoteValue(tree.GetOrAddNoteReference(referenceId))
+            : new GedcomNoteValue(note.Text!);
+
+    private static GedcomNoteValue? CreateNoteValueOrNull(FamilyTree tree, ParsedNote? note) =>
+        note is null ? null : CreateNoteValue(tree, note);
+
+    private sealed record ParsedNote(string? Text, string? ReferenceId, List<ParsedNote>? Parts = null);
+
+    private sealed record ParsedSharedNote(string Text, string? Timestamp);
+
+    private sealed class SharedNoteBuilder(string text)
+    {
+        private readonly NoteDate _created = new();
+        private readonly NoteDate _changed = new();
+        private NoteDate? _current;
+        private bool _inDate;
+
+        public StringBuilder Text { get; } = new(text);
+
+        public bool ReadDateLine(string line)
+        {
+            var fields = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length < 2 || !int.TryParse(fields[0], out var level))
+            {
+                return false;
+            }
+
+            var tag = fields[1];
+            var value = fields.Length == 3 ? fields[2].Trim() : string.Empty;
+            if (level == 1)
+            {
+                _current = tag switch { "CREA" => _created, "CHAN" => _changed, _ => null };
+                _inDate = false;
+                return _current is not null;
+            }
+            if (level == 2 && _current is not null)
+            {
+                _inDate = tag == "DATE";
+                if (_inDate)
+                {
+                    _current.Date = value;
+                    _current.Time = null;
+                    return true;
+                }
+            }
+            if (level == 3 && tag == "TIME" && _current is not null && _inDate)
+            {
+                _current.Time = value;
+                return true;
+            }
+            return false;
+        }
+
+        public string? LatestTimestamp()
+        {
+            var created = _created.Parse();
+            var changed = _changed.Parse();
+            return created is null ? changed?.Display
+                : changed is null || created.Value.Value > changed.Value.Value ? created.Value.Display
+                : changed.Value.Display;
+        }
+    }
+
+    private sealed class NoteDate
+    {
+        public string? Date { get; set; }
+        public string? Time { get; set; }
+
+        public (DateTime Value, string Display)? Parse()
+        {
+            if (!DateTime.TryParseExact(Date, ["d MMM yyyy", "dd MMM yyyy"],
+                    CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out var date))
+            {
+                return null;
+            }
+
+            if (Time is not null && TimeSpan.TryParse(Time, CultureInfo.InvariantCulture, out var time)
+                && time >= TimeSpan.Zero && time < TimeSpan.FromDays(1))
+            {
+                return (date.Add(time), $"{Date} {Time}");
+            }
+            return (date, Date!);
+        }
+    }
+
     private sealed record DecodedGedcom(
         string Text,
         IReadOnlyCollection<GedcomDiagnostic> Diagnostics);
@@ -1969,7 +2267,8 @@ public sealed class GedcomLoader : IGedcomLoader
     private sealed record PreparedGedcom(
         string Text,
         IReadOnlyCollection<GedcomDiagnostic> Diagnostics,
-        int SkippedRecords);
+        int SkippedRecords,
+        IReadOnlyDictionary<string, ParsedSharedNote> SharedNotes);
 
     private sealed record ParsedGedcom(
         IReadOnlyCollection<ParsedPerson> People,
@@ -1977,6 +2276,7 @@ public sealed class GedcomLoader : IGedcomLoader
         IReadOnlyCollection<ParsedSource> Sources,
         IReadOnlyCollection<ParsedMedia> Media,
         IReadOnlyCollection<ParsedSubmitter> Submitters,
+        IReadOnlyDictionary<string, ParsedSharedNote> SharedNotes,
         string? HeaderSubmitterId,
         IReadOnlyCollection<GedcomDiagnostic> Diagnostics,
         int SkippedRecords);
@@ -2012,7 +2312,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
 
-        public IList<string> Notes { get; } = new List<string>();
+        public IList<ParsedNote> Notes { get; } = new List<ParsedNote>();
 
         public IList<ParsedMedia> Media { get; } = new List<ParsedMedia>();
 
@@ -2050,7 +2350,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public string? Type { get; set; }
 
-        public string? Note { get; set; }
+        public ParsedNote? Note { get; set; }
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
     }
@@ -2061,7 +2361,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public string? Place { get; set; }
 
-        public string? Note { get; set; }
+        public ParsedNote? Note { get; set; }
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
     }
@@ -2083,7 +2383,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public IList<ParsedSource> Sources { get; } = new List<ParsedSource>();
 
-        public IList<string> Notes { get; } = new List<string>();
+        public IList<ParsedNote> Notes { get; } = new List<ParsedNote>();
 
         public IList<ParsedEvent> Events { get; } = new List<ParsedEvent>();
 
@@ -2115,7 +2415,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public string? Date { get; set; }
 
-        public string? Note { get; set; }
+        public ParsedNote? Note { get; set; }
     }
 
     private sealed class ParsedMedia
@@ -2135,7 +2435,7 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public string? Type { get; set; }
 
-        public string? Note { get; set; }
+        public ParsedNote? Note { get; set; }
     }
 
     private sealed class ParsedSubmitter

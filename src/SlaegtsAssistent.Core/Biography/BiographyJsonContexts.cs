@@ -11,6 +11,8 @@ internal partial class CanonicalBiographyJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(IReadOnlyList<string>))]
 [JsonSerializable(typeof(BiographySyncBaseline))]
 [JsonSerializable(typeof(CanonicalPersonData))]
+[JsonSerializable(typeof(CanonicalChildhoodFamilyNotes))]
+[JsonSerializable(typeof(CanonicalNoteDetails))]
 [JsonSerializable(typeof(CanonicalFamilyData))]
 [JsonSerializable(typeof(CanonicalEventData))]
 [JsonSerializable(typeof(CanonicalCensusData))]

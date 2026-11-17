@@ -135,6 +135,12 @@ public sealed class BiographyTemplateEditorCompiler
     private static void AppendFacts(StringBuilder result, BiographyTemplateBlock block)
     {
         AppendHeading(result, block);
+        if (block.Presentation == BiographyTemplatePresentation.Table)
+        {
+            AppendFactsTable(result, block);
+            return;
+        }
+
         foreach (var field in block.Fields)
         {
             result.Append(field switch
@@ -151,6 +157,45 @@ public sealed class BiographyTemplateEditorCompiler
                     "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}",
                 BiographyTemplateField.CreatedDate =>
                     "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}",
+                BiographyTemplateField.PersonNote =>
+                    "{{#each person.notes }}{{#if text }}- **Notat:** {{ text }}\n{{/if}}{{/each}}",
+                BiographyTemplateField.FamilyNote =>
+                    "{{#each person.familyNotes }}{{#if text }}- **Familienotat:** {{ text }}\n{{/if}}{{/each}}",
+                _ => throw UnexpectedField(block, field),
+            });
+        }
+        result.Append('\n');
+    }
+
+    private static void AppendFactsTable(StringBuilder result, BiographyTemplateBlock block)
+    {
+        if (block.Fields.Count == 0)
+        {
+            result.Append('\n');
+            return;
+        }
+
+        result.Append("| Oplysning | Værdi |\n| --- | --- |\n");
+        foreach (var field in block.Fields)
+        {
+            result.Append(field switch
+            {
+                BiographyTemplateField.Birth =>
+                    "{{#if person.birthDate }}| Født | {{ person.birthDate }}{{#if person.birthPlace }} i {{ person.birthPlace }}{{/if}} |\n{{/if}}",
+                BiographyTemplateField.Death =>
+                    "{{#if person.deathDate }}| Død | {{ person.deathDate }}{{#if person.deathPlace }} i {{ person.deathPlace }}{{/if}} |\n{{/if}}",
+                BiographyTemplateField.Parents =>
+                    "{{#if person.parents }}| Forældre | {{ person.parentNames }} |\n{{/if}}",
+                BiographyTemplateField.Children =>
+                    "{{#if person.children }}| Børn | {{ person.childNames }} |\n{{/if}}",
+                BiographyTemplateField.Partners =>
+                    "{{#if person.partners }}| Partnere | {{ person.partnerNames }} |\n{{/if}}",
+                BiographyTemplateField.CreatedDate =>
+                    "{{#if person.createdDate }}| Oprettet dato | {{ person.createdDate }} |\n{{/if}}",
+                BiographyTemplateField.PersonNote =>
+                    "{{#each person.notes }}{{#if text }}| Notat | {{ text }} |\n{{/if}}{{/each}}",
+                BiographyTemplateField.FamilyNote =>
+                    "{{#each person.familyNotes }}{{#if text }}| Familienotat | {{ text }} |\n{{/if}}{{/each}}",
                 _ => throw UnexpectedField(block, field),
             });
         }
@@ -166,6 +211,12 @@ public sealed class BiographyTemplateEditorCompiler
             return;
         }
 
+        if (block.Fields.Count == 1 && block.Fields[0] == BiographyTemplateField.EventNote)
+        {
+            AppendNotesOnly(result, "allEvents");
+            return;
+        }
+
         result.Append("{{#each allEvents }}-");
         foreach (var field in block.Fields)
         {
@@ -176,6 +227,7 @@ public sealed class BiographyTemplateEditorCompiler
                 BiographyTemplateField.EventValue => "{{#if value }}: {{ value }}{{/if}}",
                 BiographyTemplateField.EventDate => "{{#if date }} ({{ date }}){{/if}}",
                 BiographyTemplateField.EventPlace => "{{#if place }} i {{ place }}{{/if}}",
+                BiographyTemplateField.EventNote => "{{#if note }} – **Notat:** {{ note }}{{/if}}",
                 _ => throw UnexpectedField(block, field),
             });
         }
@@ -214,6 +266,12 @@ public sealed class BiographyTemplateEditorCompiler
             return;
         }
 
+        if (block.Fields.Count == 1 && block.Fields[0] == BiographyTemplateField.SourceNote)
+        {
+            AppendNotesOnly(result, "sources");
+            return;
+        }
+
         result.Append("{{#each sources }}-");
         foreach (var field in block.Fields)
         {
@@ -222,6 +280,7 @@ public sealed class BiographyTemplateEditorCompiler
                 BiographyTemplateField.SourceTitle => " {{ title }}",
                 BiographyTemplateField.SourceAuthor => "{{#if author }} ({{ author }}){{/if}}",
                 BiographyTemplateField.SourcePage => "{{#if page }}, side {{ page }}{{/if}}",
+                BiographyTemplateField.SourceNote => "{{#if note }} – **Notat:** {{ note }}{{/if}}",
                 _ => throw UnexpectedField(block, field),
             });
         }
@@ -243,6 +302,12 @@ public sealed class BiographyTemplateEditorCompiler
             return;
         }
 
+        if (block.Fields.Count == 1 && block.Fields[0] == BiographyTemplateField.MediaNote)
+        {
+            AppendNotesOnly(result, "media");
+            return;
+        }
+
         result.Append("{{#each media }}-");
         foreach (var field in block.Fields)
         {
@@ -250,11 +315,16 @@ public sealed class BiographyTemplateEditorCompiler
             {
                 BiographyTemplateField.MediaTitle => " {{ title }}",
                 BiographyTemplateField.MediaRelativeFile => " {{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}",
+                BiographyTemplateField.MediaNote => "{{#if note }} – **Notat:** {{ note }}{{/if}}",
                 _ => throw UnexpectedField(block, field),
             });
         }
         result.Append("\n{{/each}}\n");
     }
+
+    private static void AppendNotesOnly(StringBuilder result, string collection) =>
+        result.Append("{{#each ").Append(collection)
+            .Append(" }}{{#if note }}- **Notat:** {{ note }}\n{{/if}}{{/each}}\n");
 
     private static void AppendSubmitter(StringBuilder result, BiographyTemplateBlock block)
     {
@@ -301,6 +371,7 @@ public sealed class BiographyTemplateEditorCompiler
             [BiographyTemplateField.EventValue] = new("Oplysning", "value"),
             [BiographyTemplateField.EventDate] = new("Dato", "date"),
             [BiographyTemplateField.EventPlace] = new("Sted", "place"),
+            [BiographyTemplateField.EventNote] = new("Notat", "note"),
         };
 
     private static readonly IReadOnlyDictionary<BiographyTemplateField, TableColumn> CensusColumns =
@@ -308,7 +379,7 @@ public sealed class BiographyTemplateEditorCompiler
         {
             [BiographyTemplateField.CensusDate] = new("Dato", "date"),
             [BiographyTemplateField.CensusPlace] = new("Sted", "place"),
-            [BiographyTemplateField.CensusNote] = new("Note", "note"),
+            [BiographyTemplateField.CensusNote] = new("Notat", "note"),
         };
 
     private static readonly IReadOnlyDictionary<BiographyTemplateField, TableColumn> SourceColumns =
@@ -317,6 +388,7 @@ public sealed class BiographyTemplateEditorCompiler
             [BiographyTemplateField.SourceTitle] = new("Titel", "title"),
             [BiographyTemplateField.SourceAuthor] = new("Forfatter", "author"),
             [BiographyTemplateField.SourcePage] = new("Side", "page"),
+            [BiographyTemplateField.SourceNote] = new("Notat", "note"),
         };
 
     private static readonly IReadOnlyDictionary<BiographyTemplateField, TableColumn> MediaColumns =
@@ -324,6 +396,7 @@ public sealed class BiographyTemplateEditorCompiler
         {
             [BiographyTemplateField.MediaTitle] = new("Titel", "title"),
             [BiographyTemplateField.MediaRelativeFile] = new("Lokal fil", "file"),
+            [BiographyTemplateField.MediaNote] = new("Notat", "note"),
         };
 
     private sealed record TableColumn(string Heading, string Path);

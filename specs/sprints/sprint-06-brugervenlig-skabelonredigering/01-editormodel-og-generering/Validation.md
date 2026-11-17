@@ -19,3 +19,9 @@
 - Samlet build: bestået med 0 warnings og 0 errors.
 - Samlet regression: 280 af 280 tests bestået.
 - Standardskabelonen er låst af en uafhængig byte-for-byte snapshot-assertion. Brugeren godkendte trin 1 med beskeden “fortsæt”.
+
+## Udvidelse: faktatabel
+
+- [x] Tabelvisning kan vælges og gemmes i editoren.
+- [x] Valgte oplysninger og notater vises i rækkefølge, mens manglende værdier udelades.
+- [x] Links og flerlinjede notater vises sikkert i forhåndsvisningen.

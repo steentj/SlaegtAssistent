@@ -15,6 +15,8 @@ public static class BiographyTemplateContract
     public static IReadOnlyList<string> CollectionExamples { get; } =
     [
         "{{#each person.parents}}{{ recordId }}{{ fullName }}{{/each}}",
+        "{{#each person.notes}}{{ text }}{{/each}}",
+        "{{#each person.familyNotes}}{{ text }}{{/each}}",
         "{{#each events}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{#each sources}}{{ title }}{{/each}}{{/each}}",
         "{{#each familyEvents}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{/each}}",
         "{{#each allEvents}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{/each}}",
@@ -25,6 +27,7 @@ public static class BiographyTemplateContract
 
     public static IReadOnlyList<string> PublicFieldPaths { get; } = RootScalarPaths
         .Concat(new[] { "parents", "children", "partners" }.SelectMany(relation => new[] { $"person.{relation}", $"person.{relation}[].recordId", $"person.{relation}[].fullName", $"person.{relation}[].link", $"person.{relation}[].plainName", $"person.{relation}[].documentPath" }))
+        .Concat(["person.notes", "person.notes[].text", "person.familyNotes", "person.familyNotes[].text"])
         .Concat(EventCollectionPaths("events"))
         .Concat(EventCollectionPaths("familyEvents"))
         .Concat(EventCollectionPaths("allEvents"))
@@ -150,6 +153,7 @@ public static class BiographyTemplateContract
         Context.Source => "en kilde",
         Context.Media => "et medie",
         Context.Parent => "en forældrereference",
+        Context.Note => "et notat",
         _ => "den aktuelle løkkekontekst",
     };
 
@@ -169,9 +173,10 @@ public static class BiographyTemplateContract
     private static readonly IReadOnlyDictionary<Context, IReadOnlyDictionary<string, Field>> Fields =
         new Dictionary<Context, IReadOnlyDictionary<string, Field>>
         {
-            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "childNames", "partnerNames", "createdDate", ("parents", Collection(Context.Parent)), ("children", Collection(Context.Parent)), ("partners", Collection(Context.Parent))),
+            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "childNames", "partnerNames", "createdDate", ("parents", Collection(Context.Parent)), ("children", Collection(Context.Parent)), ("partners", Collection(Context.Parent)), ("notes", Collection(Context.Note)), ("familyNotes", Collection(Context.Note))),
             [Context.Submitter] = ScalarFields("recordId", "name", "address", "phone", "email", "website", "language"),
             [Context.Parent] = ScalarFields("recordId", "fullName", "plainName", "link", "documentPath"),
+            [Context.Note] = ScalarFields("text"),
             [Context.Event] = ScalarFields("tag", "category", "value", "date", "place", "type", "note", ("sources", Collection(Context.Source))),
             [Context.Census] = ScalarFields("date", "place", "note", ("sources", Collection(Context.Source))),
             [Context.Source] = ScalarFields("key", "recordId", "title", "author", "publication", "text", "repository", "page", "data", "date", "note"),
@@ -199,7 +204,7 @@ public static class BiographyTemplateContract
     private static Field Object(Context context) => new(FieldKind.Object, context);
     private static Field Collection(Context context) => new(FieldKind.Collection, context);
 
-    private enum Context { Root, Person, Submitter, Parent, Event, Census, Source, Media }
+    private enum Context { Root, Person, Submitter, Parent, Note, Event, Census, Source, Media }
     private enum FieldKind { Scalar, Object, Collection }
     private readonly record struct Field(FieldKind Kind, Context? ItemContext);
 }

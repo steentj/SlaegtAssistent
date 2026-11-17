@@ -17,5 +17,11 @@ public sealed class Media
 
     public string? Type { get; set; }
 
-    public string? Note { get; set; }
+    internal GedcomNoteValue? NoteValue { get; set; }
+
+    public string? Note
+    {
+        get => NoteValue?.Text;
+        set => NoteValue = value is null ? null : new GedcomNoteValue(value);
+    }
 }

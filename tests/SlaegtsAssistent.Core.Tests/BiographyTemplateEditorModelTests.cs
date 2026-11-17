@@ -83,6 +83,44 @@ public sealed class BiographyTemplateEditorModelTests
         rendered.Should().NotContain("Kategori");
     }
 
+    [Fact]
+    public void Faktatabel_ViserValgteFelterOgNotaterIRaekkefoelge()
+    {
+        var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion,
+        [
+            new(BiographyTemplateBlockType.Facts, true, "Fakta", BiographyTemplatePresentation.Table,
+                [BiographyTemplateField.PersonNote, BiographyTemplateField.Parents, BiographyTemplateField.Birth,
+                 BiographyTemplateField.Death, BiographyTemplateField.FamilyNote]),
+        ]);
+        var serializer = new BiographyTemplateEditorSerializer();
+        var loaded = serializer.Deserialize(serializer.Serialize(model));
+        var template = new BiographyTemplateLoader().Parse(new BiographyTemplateEditorCompiler().Compile(loaded));
+        var person = new Person("@I1@") { BirthDate = "1900", BirthPlace = "Odense | Fyn" };
+        person.Parents.Add(new Person("@I2@") { FullName = "Anna\nJensen" });
+        person.Notes.Add("Første\n## Anden | linje");
+        person.Notes.Add(" ");
+        var family = new Family("@F1@");
+        family.Notes.Add("Familienotat");
+        person.Families.Add(family);
+        var links = new BiographyPersonLinks(new Dictionary<string, string>
+        {
+            ["@I1@"] = "/tmp/barn.md",
+            ["@I2@"] = "/tmp/anna.md",
+        });
+
+        var result = new BiographyTemplateRenderer().Render(template, BiographyTemplateContext.FromPerson(person, personLinks: links));
+
+        result.Should().Contain("| Oplysning | Værdi |")
+            .And.Contain("| Notat | Første \\## Anden \\| linje |")
+            .And.Contain("| Forældre | [Anna Jensen](anna.md) |")
+            .And.Contain("| Født | 1900 i Odense \\| Fyn |")
+            .And.Contain("| Familienotat | Familienotat |")
+            .And.NotContain("| Død |");
+        result.IndexOf("| Notat |", StringComparison.Ordinal).Should().BeLessThan(result.IndexOf("| Forældre |", StringComparison.Ordinal));
+        result.IndexOf("| Forældre |", StringComparison.Ordinal).Should().BeLessThan(result.IndexOf("| Født |", StringComparison.Ordinal));
+        result.Split('\n').Count(line => line.StartsWith("| Notat |", StringComparison.Ordinal)).Should().Be(1);
+    }
+
     [Theory]
     [InlineData(BiographyTemplatePresentation.Standard)]
     [InlineData(BiographyTemplatePresentation.List)]
@@ -207,15 +245,17 @@ public sealed class BiographyTemplateEditorModelTests
         "{{#if person.parents }}- **Forældre:** {{ person.parentNames }}\n{{/if}}" +
         "{{#if person.children }}- **Børn:** {{ person.childNames }}\n{{/if}}" +
         "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}" +
-        "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}\n" +
+        "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}" +
+        "{{#each person.notes }}{{#if text }}- **Notat:** {{ text }}\n{{/if}}{{/each}}" +
+        "{{#each person.familyNotes }}{{#if text }}- **Familienotat:** {{ text }}\n{{/if}}{{/each}}\n" +
         "## Hændelser\n" +
-        "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}\n{{/each}}\n" +
+        "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}{{#if note }} – **Notat:** {{ note }}{{/if}}\n{{/each}}\n" +
         "## Folketællinger\n" +
         "{{#each census }}- {{ date }}{{#if place }} i {{ place }}{{/if}}{{#if note }}: {{ note }}{{/if}}\n{{/each}}\n" +
         "## Kilder\n" +
-        "{{#each sources }}- {{ title }}{{#if author }} ({{ author }}){{/if}}{{#if page }}, side {{ page }}{{/if}}\n{{/each}}\n" +
+        "{{#each sources }}- {{ title }}{{#if author }} ({{ author }}){{/if}}{{#if page }}, side {{ page }}{{/if}}{{#if note }} – **Notat:** {{ note }}{{/if}}\n{{/each}}\n" +
         "## Medier\n" +
-        "{{#each media }}- {{ title }} {{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}\n{{/each}}\n" +
+        "{{#each media }}- {{ title }} {{ file }}{{#if diagnostic }} ({{ diagnostic }}){{/if}}{{#if note }} – **Notat:** {{ note }}{{/if}}\n{{/each}}\n" +
         "{{#if submitter}}---\nKilde/afsender: {{ submitter.name }}\n{{/if}}" +
         "## Biografi\n\n_Skriv den fulde livshistorie her._\n";
 }

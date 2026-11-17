@@ -19,7 +19,7 @@ Følgende fejl springer kun den berørte level-0-post over:
 - `INDI`, `FAM`, `SOUR`, `OBJE` eller `SUBM` uden gyldigt record-id;
 - et record-id, som allerede er brugt af en tidligere post;
 - en ukendt level-0-post, som produktets datakontrakt ikke kan fortolke sikkert.
-- en kendt `NOTE`-, `REPO`- eller `SUBN`-post, som endnu ikke har et selvstændigt domæneobjekt.
+- en kendt `REPO`- eller `SUBN`-post, som endnu ikke har et selvstændigt domæneobjekt.
 
 Den første post vinder ved dublerede record-id’er. Diagnostikken indeholder startlinje, record-id når det findes, tag, filsti og den konkrete konsekvens. Efterfølgende poster fortolkes fortsat.
 

@@ -10,3 +10,10 @@
 8. Kør målrettede tests, hele testpakken og build.
 9. Gennemfør manuel import af en repræsentativ GEDCOM 5.5.1-fil og sammenlign rådata med domæneoutput.
 10. Dokumentér resultatet, og stop før feature 06.
+
+## Udvidelse: notattidspunkt
+
+1. Fortolk `CREA` og `CHAN` på delte notatposter og vælg det seneste gyldige dato- og klokkeslæt.
+2. Bevar tidspunktet ved henvisninger, genimport og godkendt baseline uden at ændre notatteksten.
+3. Vis tidspunktet i kursiv efter hvert notat og test liste, tabel og forhåndsvisning.
+4. Formatér tidspunktet efter region, uden at ændre den gemte værdi eller sammenligningen af sekunder.

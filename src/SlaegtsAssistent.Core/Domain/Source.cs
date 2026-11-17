@@ -25,5 +25,11 @@ public sealed class Source
 
     public string? Date { get; set; }
 
-    public string? Note { get; set; }
+    internal GedcomNoteValue? NoteValue { get; set; }
+
+    public string? Note
+    {
+        get => NoteValue?.Text;
+        set => NoteValue = value is null ? null : new GedcomNoteValue(value);
+    }
 }

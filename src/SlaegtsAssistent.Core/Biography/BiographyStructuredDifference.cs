@@ -42,7 +42,10 @@ public sealed class BiographyStructuredDifferenceService
             AddPersonScalars(result, state, approved.Person, state.Imported.Person);
             AddSet(result, "relations.parents", "Forælder", approved.ParentRecordIds, state.Imported.ParentRecordIds);
             AddSet(result, "relations.children", "Barn", approved.ChildRecordIds, state.Imported.ChildRecordIds);
-            AddOrdered(result, "person.notes", "Personnote", approved.Person.Notes, state.Imported.Person.Notes);
+            AddPersonNotes(result, approved.Person, state.Imported.Person);
+            AddKeyed(result, "person.childhoodFamilyNotes", "Familienotat",
+                approved.Person.ChildhoodFamilyNotes ?? [], state.Imported.Person.ChildhoodFamilyNotes ?? [],
+                family => family.RecordId);
             AddIdentifiedOrdered(result, "person.events", "Personhændelse", approved.Person.Events, state.Imported.Person.Events, item => item.Identity);
             AddIdentifiedOrdered(result, "person.census", "Folketælling", approved.Person.Census, state.Imported.Person.Census, item => item.Identity);
             AddKeyed(result, "person.sources", "Kilde", approved.Person.Sources, state.Imported.Person.Sources, SourceKey);
@@ -143,20 +146,39 @@ public sealed class BiographyStructuredDifferenceService
         }
     }
 
-    private static void AddOrdered<T>(
+    private static void AddPersonNotes(
         ICollection<BiographyStructuredDifference> result,
-        string path,
-        string label,
-        IReadOnlyList<T> approved,
-        IReadOnlyList<T> imported)
+        CanonicalPersonData approved,
+        CanonicalPersonData imported)
     {
-        for (var index = 0; index < Math.Max(approved.Count, imported.Count); index++)
+        var oldNotes = NoteEntries(approved);
+        var newNotes = NoteEntries(imported);
+        for (var index = 0; index < Math.Max(oldNotes.Count, newNotes.Count); index++)
         {
-            var oldValue = index < approved.Count ? approved[index] : default;
-            var newValue = index < imported.Count ? imported[index] : default;
-            AddObject(result, $"{path}[{index}]", label, oldValue, newValue);
+            var oldNote = index < oldNotes.Count ? oldNotes[index] : null;
+            var newNote = index < newNotes.Count ? newNotes[index] : null;
+            if (string.Equals(oldNote?.Text, newNote?.Text, StringComparison.Ordinal)
+                && string.Equals(Display(oldNote?.Details), Display(newNote?.Details), StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            result.Add(new BiographyStructuredDifference(
+                $"person.notes[{index}]", "Notat", null, DescribeNote(oldNote), DescribeNote(newNote),
+                Kind(oldNote, newNote), BiographyDifferenceCause.Gedcom));
         }
     }
+
+    internal static IReadOnlyList<NoteEntry> NoteEntries(CanonicalPersonData person) =>
+        person.Notes.Select((text, index) => new NoteEntry(text,
+            person.NoteDetails is { } details && index < details.Count ? details[index] : null)).ToArray();
+
+    private static string? DescribeNote(NoteEntry? note) => note is null ? null
+        : note.Details is null ? note.Text
+        : string.Join("\n\n", note.Details.Parts.Select(part =>
+            part.Text + (part.Timestamp is null ? "" : $" ({NoteTimestampFormatter.Format(part.Timestamp)})")));
+
+    internal sealed record NoteEntry(string Text, CanonicalNoteDetails? Details);
 
     private static void AddIdentifiedOrdered<T>(
         ICollection<BiographyStructuredDifference> result,
@@ -267,6 +289,9 @@ public sealed class BiographySnapshotDecisionService
         ArgumentNullException.ThrowIfNull(imported);
         ArgumentNullException.ThrowIfNull(useImportedByPath);
 
+        var selectedNotes = SelectOrdered("person.notes",
+            BiographyStructuredDifferenceService.NoteEntries(approved.Person),
+            BiographyStructuredDifferenceService.NoteEntries(imported.Person));
         var selectedPerson = approved.Person with
         {
             FullName = Pick("person.fullName", approved.Person.FullName, imported.Person.FullName),
@@ -276,7 +301,11 @@ public sealed class BiographySnapshotDecisionService
             DeathDate = Pick("person.deathDate", approved.Person.DeathDate, imported.Person.DeathDate),
             DeathPlace = Pick("person.deathPlace", approved.Person.DeathPlace, imported.Person.DeathPlace),
             CreatedDate = Pick("person.createdDate", approved.Person.CreatedDate, imported.Person.CreatedDate),
-            Notes = SelectOrdered("person.notes", approved.Person.Notes, imported.Person.Notes),
+            Notes = selectedNotes.Select(note => note.Text).ToArray(),
+            NoteDetails = selectedNotes.Any(note => note.Details is not null)
+                ? selectedNotes.Select(note => note.Details).ToArray()
+                : null,
+            ChildhoodFamilyNotes = SelectChildhoodFamilyNotes(),
             Events = SelectIdentifiedOrdered("person.events", approved.Person.Events, imported.Person.Events, item => item.Identity),
             Census = SelectIdentifiedOrdered("person.census", approved.Person.Census, imported.Person.Census, item => item.Identity),
             Sources = SelectKeyed("person.sources", approved.Person.Sources, imported.Person.Sources, BiographyStructuredDifferenceService.SourceKey)
@@ -301,6 +330,14 @@ public sealed class BiographySnapshotDecisionService
 
         bool UseImported(string path) =>
             useImportedByPath.TryGetValue(path, out var selected) && selected;
+
+        IReadOnlyList<CanonicalChildhoodFamilyNotes>? SelectChildhoodFamilyNotes()
+        {
+            var notes = SelectKeyed("person.childhoodFamilyNotes",
+                approved.Person.ChildhoodFamilyNotes ?? [], imported.Person.ChildhoodFamilyNotes ?? [],
+                family => family.RecordId);
+            return notes.Count == 0 ? null : notes;
+        }
 
         CanonicalSubmitterData? SelectSubmitter(CanonicalSubmitterData? oldValue, CanonicalSubmitterData? newValue)
         {

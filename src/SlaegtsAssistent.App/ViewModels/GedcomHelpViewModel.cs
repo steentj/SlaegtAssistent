@@ -81,11 +81,12 @@ public sealed class GedcomHelpViewModel : ViewModelBase
         | Kilde | `SOUR` | Titel, forfatter, udgivelsesdata | `0 @S1@ SOUR` |
         | Multimedie | `OBJE` | Filsti til billede, format, titel | `0 @O1@ OBJE` |
         | Header | `HEAD` | Programnavn, version, tegnsæt (UTF-8) | `0 HEAD` |
-        | Note | `NOTE` | Tekstlige kommentarer fra forskeren | `0 @N1@ NOTE` |
+        | Notat | `NOTE` | Tekstlige kommentarer fra forskeren | `0 @N1@ NOTE` |
 
         ## Sådan behandler SlægtsAssistenten tags
 
         - **Hændelser** (fx `BIRT`, `DEAT`, `MARR`, `OCCU`) vises som hændelser i biografien.
+        - **`NOTE`** importeres som notat. Personens notater kan vises eller fravælges under Fakta i skabelonredigeringen; henvisninger til delte notater opløses.
         - **`CREA`** (oprettelsesdato) er metadata om, hvornår en post blev oprettet, og er ikke en hændelse. Datoen er tilgængelig i skabeloner som `person.createdDate` ("Oprettet dato") og kan udelades i skabelonen.
         - **Private tags** (starter med `_`, fx `_MYTAG`) er programspecifikke og medtages ikke som hændelser.
         - **`CHAN`** (seneste ændring) er metadata og vises ikke som hændelse.

@@ -23,19 +23,24 @@ public static class BiographyTemplateEditorCatalog
         new(BiographyTemplateField.Children, BiographyTemplateBlockType.Facts, "Børn", ["person.children", "person.childNames"]),
         new(BiographyTemplateField.Partners, BiographyTemplateBlockType.Facts, "Partnere", ["person.partners", "person.partnerNames"]),
         new(BiographyTemplateField.CreatedDate, BiographyTemplateBlockType.Facts, "Oprettelsesdato", ["person.createdDate"]),
+        new(BiographyTemplateField.PersonNote, BiographyTemplateBlockType.Facts, "Notat", ["person.notes", "person.notes[].text"]),
+        new(BiographyTemplateField.FamilyNote, BiographyTemplateBlockType.Facts, "Familienotat", ["person.familyNotes", "person.familyNotes[].text"]),
         new(BiographyTemplateField.EventCategory, BiographyTemplateBlockType.Events, "Kategori", ["allEvents[].category"]),
         new(BiographyTemplateField.EventType, BiographyTemplateBlockType.Events, "Type", ["allEvents[].type"]),
         new(BiographyTemplateField.EventValue, BiographyTemplateBlockType.Events, "Oplysning", ["allEvents[].value"]),
         new(BiographyTemplateField.EventDate, BiographyTemplateBlockType.Events, "Dato", ["allEvents[].date"]),
         new(BiographyTemplateField.EventPlace, BiographyTemplateBlockType.Events, "Sted", ["allEvents[].place"]),
+        new(BiographyTemplateField.EventNote, BiographyTemplateBlockType.Events, "Notat", ["allEvents[].note"]),
         new(BiographyTemplateField.CensusDate, BiographyTemplateBlockType.Census, "Dato", ["census[].date"]),
         new(BiographyTemplateField.CensusPlace, BiographyTemplateBlockType.Census, "Sted", ["census[].place"]),
-        new(BiographyTemplateField.CensusNote, BiographyTemplateBlockType.Census, "Note", ["census[].note"]),
+        new(BiographyTemplateField.CensusNote, BiographyTemplateBlockType.Census, "Notat", ["census[].note"]),
         new(BiographyTemplateField.SourceTitle, BiographyTemplateBlockType.Sources, "Titel", ["sources[].title"]),
         new(BiographyTemplateField.SourceAuthor, BiographyTemplateBlockType.Sources, "Forfatter", ["sources[].author"]),
         new(BiographyTemplateField.SourcePage, BiographyTemplateBlockType.Sources, "Side", ["sources[].page"]),
+        new(BiographyTemplateField.SourceNote, BiographyTemplateBlockType.Sources, "Notat", ["sources[].note"]),
         new(BiographyTemplateField.MediaTitle, BiographyTemplateBlockType.Media, "Titel", ["media[].title"]),
         new(BiographyTemplateField.MediaRelativeFile, BiographyTemplateBlockType.Media, "Lokal fil", ["media[].relativeFile"]),
+        new(BiographyTemplateField.MediaNote, BiographyTemplateBlockType.Media, "Notat", ["media[].note"]),
         new(BiographyTemplateField.SubmitterName, BiographyTemplateBlockType.Submitter, "Navn", ["submitter.name"]),
     ];
 
@@ -62,12 +67,12 @@ public static class BiographyTemplateEditorCatalog
     {
         BiographyTemplatePresentation[] allowed = type switch
         {
+            BiographyTemplateBlockType.Facts or
             BiographyTemplateBlockType.Events or
             BiographyTemplateBlockType.Census or
             BiographyTemplateBlockType.Sources or
             BiographyTemplateBlockType.Media =>
                 [BiographyTemplatePresentation.List, BiographyTemplatePresentation.Table],
-            BiographyTemplateBlockType.Facts => [BiographyTemplatePresentation.List],
             _ => [BiographyTemplatePresentation.Standard],
         };
 
@@ -83,11 +88,11 @@ public sealed record BiographyTemplateBlockDescriptor(
     public string Help => Type switch
     {
         BiographyTemplateBlockType.Title => "Viser personens navn øverst. Skjul sektionen, hvis navnet ikke skal gentages i dokumentet.",
-        BiographyTemplateBlockType.Facts => "Vælg fødsel, død og relationer. Flyt felterne for at ændre rækkefølgen. Manglende oplysninger udelades.",
+        BiographyTemplateBlockType.Facts => "Vælg fødsel, død, relationer og notater. Flyt felterne for at ændre rækkefølgen, og vælg liste eller tabel under Flere muligheder. Manglende oplysninger udelades.",
         BiographyTemplateBlockType.Events => "Vælg oplysninger om hændelser. Åbn Flere muligheder for at skifte mellem liste og tabel.",
-        BiographyTemplateBlockType.Census => "Vis folketællingernes dato, sted og note. Åbn Flere muligheder for at vælge liste eller tabel.",
-        BiographyTemplateBlockType.Sources => "Vælg kildens titel, forfatter og side. Flyt sektionen for at placere kilderne før eller efter hændelserne.",
-        BiographyTemplateBlockType.Media => "Vis en liste eller tabel over medier. Billeder indsættes ikke automatisk.",
+        BiographyTemplateBlockType.Census => "Vis folketællingernes dato, sted og notat. Åbn Flere muligheder for at vælge liste eller tabel.",
+        BiographyTemplateBlockType.Sources => "Vælg kildens titel, forfatter, side og notat. Flyt sektionen for at placere kilderne før eller efter hændelserne.",
+        BiographyTemplateBlockType.Media => "Vis en liste eller tabel over medier og notater. Billeder indsættes ikke automatisk.",
         BiographyTemplateBlockType.Submitter => "Vis navnet på GEDCOM-filens afsender. Sektionen udelades, når der ikke er afsenderoplysninger.",
         BiographyTemplateBlockType.Biography => "Tilføjer en overskrift og plads til livshistorien. Din egen tekst i eksisterende dokumenter bevares ved skabelonændringer.",
         _ => throw new BiographyTemplateEditorException($"Ukendt bloktype `{Type}`."),

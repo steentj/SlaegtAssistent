@@ -2,6 +2,8 @@ namespace SlaegtsAssistent.Core.Domain;
 
 public sealed class Family
 {
+    private readonly GedcomNoteCollection _notes = new();
+
     public Family(string recordId)
     {
         if (string.IsNullOrWhiteSpace(recordId))
@@ -22,7 +24,11 @@ public sealed class Family
 
     public IList<Source> Sources { get; } = new List<Source>();
 
-    public IList<string> Notes { get; } = new List<string>();
+    public IList<string> Notes => _notes;
+
+    internal IReadOnlyList<GedcomNoteValue> NoteValues => _notes.Values;
+
+    internal void AddNote(GedcomNoteValue note) => _notes.Add(note);
 
     public IList<GedcomEvent> Events { get; } = new List<GedcomEvent>();
 }

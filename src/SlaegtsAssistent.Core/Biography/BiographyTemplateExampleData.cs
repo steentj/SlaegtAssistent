@@ -24,6 +24,7 @@ public static class BiographyTemplateExampleData
         anna.Parents.Add(father);
         anna.Parents.Add(mother);
         anna.Children.Add(child);
+        anna.Notes.Add("Familien huskede Anna som en ivrig fortæller.");
 
         var churchBook = new Source("@EKSEMPEL-S1@")
         {
@@ -31,6 +32,7 @@ public static class BiographyTemplateExampleData
             Author = "Aarhus Domsogn",
             Page = "opslag 143",
             Date = "1892",
+            Note = "Kirkebogen er gennemgået i original.",
         };
         var censusSource = new Source("@EKSEMPEL-S2@")
         {
@@ -71,11 +73,13 @@ public static class BiographyTemplateExampleData
             Wife = anna,
         };
         family.Children.Add(child);
+        family.Notes.Add("Familien boede senere i Odense.");
         family.Events.Add(new GedcomEvent("MARR")
         {
             Category = GedcomEventCategory.Marriage,
             Date = "14 MAY 1918",
             Place = "Aarhus Rådhus",
+            Note = "Vielsen blev fejret med familien.",
         });
         anna.Families.Add(family);
 

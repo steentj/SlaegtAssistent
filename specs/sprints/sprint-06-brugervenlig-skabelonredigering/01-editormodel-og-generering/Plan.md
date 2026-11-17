@@ -8,3 +8,8 @@
 6. Implementér indlæsning af den nye model og en tydelig dansk fejl ved ukendt version.
 7. Test standardskabelonen byte-for-byte eller dokumentér og godkend en tilsigtet kanonisk ændring.
 8. Kør Core-tests og stop for manuel gennemgang af den genererede standardtekst.
+
+## Udvidelse: faktatabel
+
+1. Tilføj tabel som valg for Faktablokken uden at ændre eksisterende skabeloners visning.
+2. Generér en række pr. valgt oplysning eller notat og test feltrækkefølge, tomme værdier, links og forhåndsvisning.

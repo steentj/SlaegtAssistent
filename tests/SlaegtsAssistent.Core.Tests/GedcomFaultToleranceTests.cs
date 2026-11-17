@@ -263,7 +263,6 @@ public sealed class GedcomFaultToleranceTests
     }
 
     [Theory]
-    [InlineData("NOTE")]
     [InlineData("REPO")]
     [InlineData("SUBN")]
     public void Load_KendtMenIkkeModelleretPostForsvinderIkkeLydloest(string tag)

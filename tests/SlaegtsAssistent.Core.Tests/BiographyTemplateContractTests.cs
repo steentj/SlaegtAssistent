@@ -94,6 +94,42 @@ public sealed class BiographyTemplateContractTests
     }
 
     [Fact]
+    public void PersonNotes_ShouldRenderInOrderFromPersonAndApprovedSnapshot()
+    {
+        var person = new Person("@I1@") { FullName = "Anna Jensen" };
+        person.Notes.Add("Første notat");
+        person.Notes.Add("Andet *notat*");
+        var snapshot = CanonicalBiographySnapshot.Create(person);
+        var generator = new BiographyTemplateMarkdownGenerator();
+
+        var directBody = BiographyDocumentParser.Parse(generator.Generate(person)).Body;
+        var snapshotBody = BiographyDocumentParser.Parse(generator.Generate(snapshot, snapshot)).Body;
+        var customBody = BiographyDocumentParser.Parse(
+            new BiographyTemplateMarkdownGenerator("# {{ person.fullName }}\n").Generate(person)).Body;
+        var withoutNotes = BiographyDocumentParser.Parse(
+            generator.Generate(new Person("@I2@") { FullName = "Bent" })).Body;
+
+        directBody.Should().Contain("- **Notat:** Første notat\n- **Notat:** Andet \\*notat\\*");
+        snapshotBody.Should().Be(directBody);
+        customBody.Should().NotContain("Første notat").And.NotContain("**Notat:**");
+        withoutNotes.Should().NotContain("**Notat:**");
+    }
+
+    [Fact]
+    public void PersonNotes_ShouldPreserveLineBreaksWithoutCreatingMarkdownBlocks()
+    {
+        var person = new Person("@I1@") { FullName = "Anna Jensen", BirthDate = "1900" };
+        person.Notes.Add("Første linje\n## Ikke en overskrift\n- Ikke en liste\n1. Heller ikke en liste");
+
+        var generated = new BiographyTemplateMarkdownGenerator().Generate(person);
+        var body = BiographyDocumentParser.Parse(generated).Body;
+
+        body.Should().Contain(
+            "**Notat:** Første linje  \n  \\## Ikke en overskrift  \n  \\- Ikke en liste  \n  1\\. Heller ikke en liste");
+        body.Should().NotContain("\n## Ikke en overskrift");
+    }
+
+    [Fact]
     public void CanonicalSnapshot_ShouldOnlySerializeCreatedDateWhenPresent()
     {
         var uden = CanonicalBiographySnapshot.Create(new Person("@I1@") { FullName = "Anna" });

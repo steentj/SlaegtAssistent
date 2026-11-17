@@ -92,6 +92,53 @@ public sealed class BiographyConflictResolutionTests
         imported.Person.BirthPlace.Should().Be("Aarhus");
     }
 
+    [Theory]
+    [InlineData(true, "Nyt notat")]
+    [InlineData(false, "Godkendt notat")]
+    public void Notes_ShouldRespectReviewChoiceWhenRendering(bool useImported, string expected)
+    {
+        var approved = Snapshot(person => person with { Notes = ["Godkendt notat"] });
+        var imported = Snapshot(person => person with { Notes = ["Nyt notat"] });
+        var differences = new BiographyStructuredDifferenceService().Compare(State(approved, imported));
+        differences.Should().ContainSingle(item =>
+            item.Path == "person.notes[0]" && item.Label == "Notat"
+            && item.Kind == BiographyDifferenceKind.Changed);
+
+        var selected = new BiographySnapshotDecisionService().Apply(
+            approved, imported, new Dictionary<string, bool> { ["person.notes[0]"] = useImported });
+        var body = BiographyDocumentParser.Parse(
+            new BiographyTemplateMarkdownGenerator().Generate(selected, imported)).Body;
+
+        body.Should().Contain($"**Notat:** {expected}");
+        selected.Person.Notes.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData(true, "Nyt familienotat")]
+    [InlineData(false, "Godkendt familienotat")]
+    public void ChildhoodFamilyNotes_ShouldRespectReviewChoice(bool useImported, string expected)
+    {
+        var approved = Snapshot(person => person with
+        {
+            ChildhoodFamilyNotes = [new("@F1@", ["Godkendt familienotat"])],
+        });
+        var imported = Snapshot(person => person with
+        {
+            ChildhoodFamilyNotes = [new("@F1@", ["Nyt familienotat"])],
+        });
+        var differences = new BiographyStructuredDifferenceService().Compare(State(approved, imported));
+        differences.Should().ContainSingle(item =>
+            item.Path == "person.childhoodFamilyNotes[@F1@]" && item.Label == "Familienotat"
+            && item.Kind == BiographyDifferenceKind.Changed);
+
+        var selected = new BiographySnapshotDecisionService().Apply(
+            approved, imported,
+            new Dictionary<string, bool> { ["person.childhoodFamilyNotes[@F1@]"] = useImported });
+
+        selected.Person.ChildhoodFamilyNotes.Should().ContainSingle()
+            .Which.Notes.Should().Equal(expected);
+    }
+
     [Fact]
     public void Apply_ShouldHonorAddChangeAndRemoveChoicesForCollections()
     {

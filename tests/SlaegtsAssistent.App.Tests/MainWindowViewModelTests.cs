@@ -738,12 +738,22 @@ public partial class MainWindowViewModelTests
             "1 CHAR UTF-8",
             "0 @I1@ INDI",
             "1 NAME Anna /Jensen/",
-            "1 NOTE Ændret note, som standardskabelonen ikke viser",
+            "1 NOTE Ændret notat, som skabelonen ikke viser",
             "0 TRLR");
         var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputFolder);
+        var templatePath = Path.Combine(outputFolder, "uden-notater.slaegtskabelon");
+        var standard = BiographyTemplateEditorModel.CreateDefault();
+        var template = new BiographyTemplateEditorModel(standard.Version, standard.Blocks.Select(block =>
+            block.Type == BiographyTemplateBlockType.Facts
+                ? new BiographyTemplateBlock(block.Type, block.IsVisible, block.Heading, block.Presentation,
+                    block.Fields.Where(field => field != BiographyTemplateField.PersonNote).ToArray())
+                : block).ToArray());
+        new TemplateEditorStorageService().Save(templatePath, template);
         var settings = new RecordingApplicationSettingsService(new AppSettings
         {
             DefaultMarkdownOutputFolder = outputFolder,
+            GlobalBiographyTemplatePath = templatePath,
         });
         var dialog = new RecordingGedcomDifferenceDialogService();
         var viewModel = CreateViewModel(
@@ -757,6 +767,7 @@ public partial class MainWindowViewModelTests
         {
             await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
             var before = File.ReadAllText(viewModel.People.Single().MarkdownFilePath);
+            BiographyDocumentParser.Parse(before).Body.Should().NotContain("Første note");
             await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
             dialog.LastDifferences.Should().ContainSingle();
@@ -766,11 +777,56 @@ public partial class MainWindowViewModelTests
             reconciliation.Should().NotBeNull();
             reconciliation!.Approved.Should().NotBeNull();
             reconciliation.Imported.Person.Notes
-                .Should().ContainSingle("Ændret note, som standardskabelonen ikke viser");
+                .Should().ContainSingle("Ændret notat, som skabelonen ikke viser");
             reconciliation.DocumentFacts.FullName.Should().Be("Anna Jensen");
             dialog.LastDifferences[0].Difference.DocumentValue.Should().NotBe(
                 dialog.LastDifferences[0].Difference.GedcomValue);
             File.ReadAllText(viewModel.People.Single().MarkdownFilePath).Should().Be(before);
+        }
+        finally
+        {
+            Directory.Delete(outputFolder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SelectGedcomFileCommand_ShouldImportAndUpdateSharedPersonNotes()
+    {
+        using var firstFile = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME Anna /Jensen/",
+            "1 NOTE @N1@", "0 @N1@ NOTE Første notat", "0 TRLR");
+        using var secondFile = CreateTemporaryGedcomFile(
+            "0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME Anna /Jensen/",
+            "1 NOTE @N1@", "0 @N1@ NOTE Ændret notat", "0 TRLR");
+        var outputFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var settings = new RecordingApplicationSettingsService(new AppSettings
+        {
+            DefaultMarkdownOutputFolder = outputFolder,
+        });
+        var dialog = new ChoosingGedcomDifferenceDialogService(true);
+        var viewModel = CreateViewModel(
+            gedcomFilePickerService: new SequencedGedcomFilePickerService([firstFile.Path, secondFile.Path]),
+            settingsService: settings,
+            gedcomDifferenceDialogService: dialog,
+            markdownBiographyExportService: new MarkdownBiographyExportService(settings),
+            markdownFileStore: new FileSystemMarkdownFileStore());
+
+        try
+        {
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ErrorMessage.Should().BeNull();
+            viewModel.Editor!.MarkdownText.Should().Contain("**Notat:** Første notat");
+            viewModel.Editor.MarkdownText = viewModel.Editor.MarkdownText.Replace(
+                "_Skriv den fulde livshistorie her._", "Min egen tekst.", StringComparison.Ordinal);
+
+            await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+
+            viewModel.ErrorMessage.Should().BeNull();
+            viewModel.Editor.MarkdownText.Should().Contain("**Notat:** Ændret notat")
+                .And.Contain("Min egen tekst.");
+            viewModel.Editor.CreateDocument().Metadata!.SyncBaseline!.Approved.Person.Notes
+                .Should().Equal("Ændret notat");
         }
         finally
         {

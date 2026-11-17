@@ -11,15 +11,17 @@ public sealed class BiographyTemplateRenderer
         ArgumentNullException.ThrowIfNull(template);
         ArgumentNullException.ThrowIfNull(context);
 
-        return RenderNodes(template.Nodes, context, context);
+        var output = new System.Text.StringBuilder();
+        RenderNodes(template.Nodes, context, context, output);
+        return output.ToString();
     }
 
-    private static string RenderNodes(
+    private static void RenderNodes(
         IReadOnlyList<BiographyTemplateNode> nodes,
         BiographyTemplateContext root,
-        object? current)
+        object? current,
+        System.Text.StringBuilder output)
     {
-        var output = new System.Text.StringBuilder();
         foreach (var node in nodes)
         {
             switch (node)
@@ -28,12 +30,12 @@ public sealed class BiographyTemplateRenderer
                     output.Append(text.Text);
                     break;
                 case VariableTemplateNode variable:
-                    output.Append(EscapeMarkdown(Resolve(root, current, variable.Path)));
+                    output.Append(EscapeMarkdown(Resolve(root, current, variable.Path), IsTableRow(output)));
                     break;
                 case IfTemplateNode @if:
                     if (IsTruthy(Resolve(root, current, @if.Path)))
                     {
-                        output.Append(RenderNodes(@if.Children, root, current));
+                        RenderNodes(@if.Children, root, current, output);
                     }
 
                     break;
@@ -42,7 +44,7 @@ public sealed class BiographyTemplateRenderer
                     {
                         foreach (var value in values)
                         {
-                            output.Append(RenderNodes(each.Children, root, value));
+                            RenderNodes(each.Children, root, value, output);
                         }
                     }
 
@@ -50,7 +52,23 @@ public sealed class BiographyTemplateRenderer
             }
         }
 
-        return output.ToString();
+    }
+
+    private static bool IsTableRow(System.Text.StringBuilder output)
+    {
+        var index = output.Length - 1;
+        while (index >= 0 && output[index] is not '\n' and not '\r')
+        {
+            index--;
+        }
+
+        index++;
+        while (index < output.Length && output[index] is ' ' or '\t')
+        {
+            index++;
+        }
+
+        return index < output.Length && output[index] == '|';
     }
 
     private static object? Resolve(BiographyTemplateContext root, object? current, string path)
@@ -103,6 +121,8 @@ public sealed class BiographyTemplateRenderer
                 "children" => person.Children,
                 "partners" => person.Partners,
                 "createdDate" => person.CreatedDate,
+                "notes" => person.Notes,
+                "familyNotes" => person.FamilyNotes,
                 _ => null,
             },
             PersonReferenceTemplateContext person => name switch
@@ -114,6 +134,11 @@ public sealed class BiographyTemplateRenderer
                 "documentPath" => person.DocumentPath,
                 _ => null,
             },
+            NoteTemplateContext note => name switch
+            {
+                "text" => new NoteText(note.Text, note.NoteDetails),
+                _ => null,
+            },
             EventTemplateContext @event => name switch
             {
                 "tag" => @event.Tag,
@@ -122,7 +147,7 @@ public sealed class BiographyTemplateRenderer
                 "date" => @event.Date,
                 "place" => @event.Place,
                 "type" => @event.Type,
-                "note" => @event.Note,
+                "note" => WrapNote(@event.Note, @event.NoteDetails),
                 "sources" => @event.Sources,
                 _ => null,
             },
@@ -130,7 +155,7 @@ public sealed class BiographyTemplateRenderer
             {
                 "date" => census.Date,
                 "place" => census.Place,
-                "note" => census.Note,
+                "note" => WrapNote(census.Note, census.NoteDetails),
                 "sources" => census.Sources,
                 _ => null,
             },
@@ -146,7 +171,7 @@ public sealed class BiographyTemplateRenderer
                 "page" => source.Page,
                 "data" => source.Data,
                 "date" => source.Date,
-                "note" => source.Note,
+                "note" => WrapNote(source.Note, source.NoteDetails),
                 _ => null,
             },
             MediaTemplateContext media => name switch
@@ -157,7 +182,7 @@ public sealed class BiographyTemplateRenderer
                 "form" => media.Form,
                 "title" => media.Title,
                 "type" => media.Type,
-                "note" => media.Note,
+                "note" => WrapNote(media.Note, media.NoteDetails),
                 "diagnostic" => media.Diagnostic,
                 _ => null,
             },
@@ -196,6 +221,7 @@ public sealed class BiographyTemplateRenderer
         {
             null => false,
             PersonLinkMarkdown markdown => !string.IsNullOrWhiteSpace(markdown.Text),
+            NoteText note => !string.IsNullOrWhiteSpace(note.Text),
             string text => !string.IsNullOrWhiteSpace(text),
             IEnumerable values => values.Cast<object?>().Any(),
             bool boolean => boolean,
@@ -212,11 +238,33 @@ public sealed class BiographyTemplateRenderer
         return new PersonLinkMarkdown(person.DocumentPath is null ? name : $"[{name}]({person.DocumentPath})");
     }
 
-    private static string EscapeMarkdown(object? value)
+    private static NoteText? WrapNote(string? text, CanonicalNoteDetails? details) =>
+        text is null ? null : new NoteText(text, details);
+
+    private static string EscapeMarkdown(object? value, bool inTable = false)
     {
         if (value is PersonLinkMarkdown markdown)
         {
-            return markdown.Text;
+            return inTable
+                ? markdown.Text.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ')
+                : markdown.Text;
+        }
+
+        if (value is NoteText note)
+        {
+            if (string.IsNullOrWhiteSpace(note.Text))
+            {
+                return string.Empty;
+            }
+            var parts = note.Details?.Parts ?? [new CanonicalNotePart(note.Text, null)];
+            return string.Join(inTable ? "  " : "  \n  \n  ", parts.Select(part =>
+            {
+                var lines = part.Text.Replace("\r\n", "\n", StringComparison.Ordinal)
+                    .Replace('\r', '\n').Split('\n');
+                var text = string.Join(inTable ? " " : "  \n  ", lines.Select(EscapeNoteLine));
+                return part.Timestamp is null ? text
+                    : $"{text} *({EscapeMarkdown(NoteTimestampFormatter.Format(part.Timestamp), inTable)})*";
+            }));
         }
 
         if (value is null)
@@ -225,6 +273,11 @@ public sealed class BiographyTemplateRenderer
         }
 
         var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (inTable)
+        {
+            text = text.Replace("\r\n", " ", StringComparison.Ordinal)
+                .Replace('\r', ' ').Replace('\n', ' ');
+        }
         return text
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("`", "\\`", StringComparison.Ordinal)
@@ -236,4 +289,35 @@ public sealed class BiographyTemplateRenderer
             .Replace(">", "\\>", StringComparison.Ordinal)
             .Replace("|", "\\|", StringComparison.Ordinal);
     }
+
+    private static string EscapeNoteLine(string line)
+    {
+        var escaped = EscapeMarkdown(line);
+        var index = 0;
+        while (index < escaped.Length && escaped[index] is ' ' or '\t')
+        {
+            index++;
+        }
+
+        if (index < escaped.Length && escaped[index] is '#' or '-' or '+' or '~' or '=')
+        {
+            return escaped.Insert(index, "\\");
+        }
+
+        var digitEnd = index;
+        while (digitEnd < escaped.Length && char.IsAsciiDigit(escaped[digitEnd]))
+        {
+            digitEnd++;
+        }
+
+        if (digitEnd > index && digitEnd + 1 < escaped.Length
+            && escaped[digitEnd] is '.' or ')' && char.IsWhiteSpace(escaped[digitEnd + 1]))
+        {
+            return escaped.Insert(digitEnd, "\\");
+        }
+
+        return escaped;
+    }
+
+    private sealed record NoteText(string Text, CanonicalNoteDetails? Details);
 }

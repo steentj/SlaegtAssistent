@@ -86,6 +86,570 @@ public class GedcomCompletenessTests
     }
 
     [Fact]
+    public void Load_DelteNotatposterOploeseesIAlleUnderstoettedeNotatfelter()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @N1@ NOTE Første linje
+            1 CONT Anden linje
+            1 CONC  fortsat
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE Eget notat
+            1 NOTE @N2@
+            1 NOTE @N1@
+            1 BIRT
+            2 NOTE @N1@
+            2 SOUR @S1@
+            3 NOTE @N2@
+            1 CENS
+            2 NOTE @N2@
+            1 OBJE @M1@
+            2 NOTE @N2@
+            0 @F1@ FAM
+            1 HUSB @I1@
+            1 NOTE @N1@
+            1 MARR
+            2 NOTE @N2@
+            0 @S1@ SOUR
+            1 TITL Kirkebog
+            1 NOTE @N1@
+            0 @M1@ OBJE
+            1 FILE billede.jpg
+            1 NOTE @N1@
+            0 @N2@ NOTE
+            1 CONT Senere defineret notat
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+            var family = tree.FindFamily("@F1@")!;
+            var firstNote = "Første linje\nAnden linje fortsat";
+            var secondNote = "\nSenere defineret notat";
+
+            tree.SharedNotes.Should().HaveCount(2);
+            tree.SharedNotes["@N1@"].Should().Be(firstNote);
+            tree.SharedNotes["@N2@"].Should().Be(secondNote);
+            person.Notes.Should().Equal("Eget notat", secondNote, firstNote);
+            person.Events.Single().Note.Should().Be(firstNote);
+            person.Events.Single().Sources.Single().Note.Should().Be(secondNote);
+            person.Census.Single().Note.Should().Be(secondNote);
+            person.Media.Single().Note.Should().Be(secondNote);
+            family.Notes.Should().Equal(firstNote);
+            family.Events.Single().Note.Should().Be(secondNote);
+            tree.FindSource("@S1@")!.Note.Should().Be(firstNote);
+            tree.FindMedia("@M1@")!.Note.Should().Be(firstNote);
+            var generatedBody = BiographyDocumentParser.Parse(
+                new BiographyTemplateMarkdownGenerator().Generate(person)).Body;
+            generatedBody.Should().Contain("**Notat:** Eget notat")
+                .And.Contain("**Notat:** Første linje  \n  Anden linje fortsat")
+                .And.NotContain("@N1@");
+            tree.ImportReport.ImportedRecords.Should().Be(6);
+            tree.ImportReport.SkippedRecords.Should().Be(0);
+            tree.Diagnostics.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_NotatUdenStartvaerdiBevarerFortsatteLinjer()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE
+            2 CONT Første linje
+            2 CONC  fortsat
+            2 CONT Anden linje
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.FindPerson("@I1@")!.Notes.Should().Equal("\nFørste linje fortsat\nAnden linje");
+            tree.Diagnostics.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_ManglendeNotathenvisningBevaresMedSporbarDiagnostik()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE @N404@
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.FindPerson("@I1@")!.Notes.Should().Equal("@N404@");
+            tree.Diagnostics.Should().ContainSingle(item =>
+                item.Line == 5 && item.RecordId == "@I1@" && item.Tag == "NOTE"
+                && item.Message.Contains("@N404@") && item.FilePath == path);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_DubletNotatBevarerDenFoerstePost()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @N1@ NOTE Første
+            0 @N1@ NOTE Anden
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE @N1@
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.SharedNotes["@N1@"].Should().Be("Første");
+            tree.FindPerson("@I1@")!.Notes.Should().Equal("Første");
+            tree.ImportReport.SkippedRecords.Should().Be(1);
+            tree.Diagnostics.Should().ContainSingle(item => item.Tag == "NOTE" && item.Line == 4);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_NotatposterRapportererManglendeIdOgUunderstoettedeUnderfelter()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 NOTE Uden identitet
+            0 @N1@ NOTE Bevaret tekst
+            1 SOUR @S1@
+            2 PAGE Side 5
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE @N1@
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.FindPerson("@I1@")!.Notes.Should().Equal("Bevaret tekst");
+            tree.ImportReport.SkippedRecords.Should().Be(1);
+            tree.Diagnostics.Should().Contain(item =>
+                item.Line == 3 && item.Tag == "NOTE" && item.Message.Contains("mangler"));
+            tree.Diagnostics.Should().Contain(item =>
+                item.Line == 5 && item.Tag == "SOUR" && item.RecordId == "@N1@");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_NotattekstBevarerBetydendeMellemrumOgAfkoderSnabelA()
+    {
+        var path = CreateFixture(
+            "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE   Kontakt anne@@example.dk  \n" +
+            "1 CONT  Anden linje  \n0 @I1@ INDI\n1 NAME Anne /Jensen/\n" +
+            "1 NOTE @N1@\n1 NOTE  Eget @@notat  \n0 TRLR\n");
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.SharedNotes["@N1@"].Should().Be("  Kontakt anne@example.dk  \n Anden linje  ");
+            tree.FindPerson("@I1@")!.Notes.Should().Equal(
+                "  Kontakt anne@example.dk  \n Anden linje  ",
+                " Eget @notat  ");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_MangeHenvisningerGenbrugerDenDelteNotattekst()
+    {
+        var note = new string('x', 5000);
+        var people = string.Join('\n', Enumerable.Range(1, 200).Select(index =>
+            $"0 @I{index}@ INDI\n1 NAME Person{index}\n1 NOTE @N1@"));
+        var path = CreateFixture(
+            $"0 HEAD\n1 CHAR UTF-8\n{people}\n0 @N1@ NOTE {note}\n0 TRLR\n");
+
+        try
+        {
+            var tree = _loader.Load(path);
+
+            tree.People.Should().HaveCount(200);
+            foreach (var person in tree.People)
+            {
+                person.Notes.Single().Should().BeSameAs(tree.SharedNotes["@N1@"]);
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_AendretDeltNotatAendrerPersonensBaseline()
+    {
+        var path = CreateFixture(
+            "0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anne /Jensen/\n1 NOTE @N1@\n" +
+            "0 @N1@ NOTE Første notat\n0 TRLR\n");
+
+        try
+        {
+            var before = CanonicalBiographySnapshot.Create(_loader.Load(path).FindPerson("@I1@")!);
+            File.WriteAllText(path,
+                "0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anne /Jensen/\n1 NOTE @N1@\n" +
+                "0 @N1@ NOTE Ændret notat\n0 TRLR\n");
+            var after = CanonicalBiographySnapshot.Create(_loader.Load(path).FindPerson("@I1@")!);
+
+            after.Person.Notes.Should().Equal("Ændret notat");
+            after.ComputeFingerprint().Should().NotBe(before.ComputeFingerprint());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_FamilienotatInkluderesIBarnetsBaselineOgOpdateresVedFletning()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @N1@ NOTE Familien boede i Aarhus.
+            0 @I1@ INDI
+            1 NAME Anna /Jensen/
+            0 @I2@ INDI
+            1 NAME Bo /Jensen/
+            0 @F1@ FAM
+            1 HUSB @I1@
+            1 CHIL @I2@
+            1 NOTE @N1@
+            1 MARR
+            2 DATE 1900
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var child = tree.FindPerson("@I2@")!;
+            var before = CanonicalBiographySnapshot.Create(child);
+            before.Person.ChildhoodFamilyNotes.Should().ContainSingle()
+                .Which.Notes.Should().Equal("Familien boede i Aarhus.");
+            before.Families.Should().BeEmpty();
+            var renderer = new BiographyTemplateRenderer();
+            var template = new BiographyTemplateLoader().Parse("{{#each person.familyNotes }}{{ text }}{{/each}}");
+            renderer.Render(template, BiographyTemplateContext.FromPerson(child)).Should().Be("Familien boede i Aarhus.");
+            renderer.Render(template, BiographyTemplateContext.FromSnapshot(before)).Should().Be("Familien boede i Aarhus.");
+            var stored = BiographyDocumentParser.Parse(
+                new BiographyTemplateMarkdownGenerator().Generate(before, before));
+            stored.Metadata!.SyncBaseline!.Approved.Person.ChildhoodFamilyNotes
+                .Should().ContainSingle().Which.Notes.Should().Equal("Familien boede i Aarhus.");
+            child.FamilyEvents.Should().BeEmpty();
+            File.WriteAllText(path, "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Familien flyttede.\n0 TRLR\n");
+
+            _loader.Load(path, tree);
+
+            var after = CanonicalBiographySnapshot.Create(child);
+            after.Person.ChildhoodFamilyNotes.Should().ContainSingle().Which.Notes.Should().Equal("Familien flyttede.");
+            after.Families.Should().BeEmpty();
+            after.ComputeFingerprint().Should().NotBe(before.ComputeFingerprint());
+            renderer.Render(template, BiographyTemplateContext.FromPerson(child)).Should().Be("Familien flyttede.");
+            renderer.Render(template, BiographyTemplateContext.FromSnapshot(after)).Should().Be("Familien flyttede.");
+            renderer.Render(template, BiographyTemplateContext.FromSnapshot(before)).Should().Be("Familien boede i Aarhus.");
+            child.FamilyEvents.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_FletningBevarerOgOpdatererDelteNotatreferencer()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            1 SUBM @U1@
+            0 @U1@ SUBM
+            1 NAME Slægtsarkivet
+            0 @N1@ NOTE Første
+            0 @N2@ NOTE
+            0 @S1@ SOUR
+            1 TITL Kilde
+            1 NOTE @N1@
+            0 @M1@ OBJE
+            1 FILE foto.jpg
+            1 NOTE @N1@
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 NOTE @N1@
+            1 NOTE @N2@
+            1 BIRT
+            2 NOTE @N1@
+            1 CENS
+            2 NOTE @N1@
+            1 SOUR @S1@
+            1 OBJE @M1@
+            0 @F1@ FAM
+            1 WIFE @I1@
+            1 NOTE @N1@
+            1 MARR
+            2 NOTE @N1@
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+            var family = tree.FindFamily("@F1@")!;
+            person.Notes.Should().Equal("Første", "");
+            person.Notes[0] = "Manuelt notat";
+            File.WriteAllText(path,
+                "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Ændret\n0 @N2@ NOTE Nu udfyldt\n0 TRLR\n");
+
+            _loader.Load(path, tree);
+
+            person.Notes.Should().Equal("Manuelt notat", "Nu udfyldt");
+            person.Events.Single().Note.Should().Be("Ændret");
+            person.Census.Single().Note.Should().Be("Ændret");
+            person.Sources.Single().Note.Should().Be("Ændret");
+            person.Media.Single().Note.Should().Be("Ændret");
+            tree.FindSource("@S1@")!.Note.Should().Be("Ændret");
+            tree.FindMedia("@M1@")!.Note.Should().Be("Ændret");
+            family.Notes.Should().Equal("Ændret");
+            family.Events.Single().Note.Should().Be("Ændret");
+            person.Families.Should().ContainSingle().Which.Should().BeSameAs(family);
+            tree.Submitter!.Name.Should().Be("Slægtsarkivet");
+
+            File.WriteAllText(path,
+                "0 HEAD\n1 CHAR UTF-8\n0 @I2@ INDI\n1 NAME Bo /Jensen/\n1 NOTE @N1@\n0 TRLR\n");
+            _loader.Load(path, tree);
+
+            tree.FindPerson("@I2@")!.Notes.Should().Equal("Ændret");
+            tree.Diagnostics.Should().NotContain(item => item.Tag == "NOTE");
+            person.Events.Single().Note = "Ændret";
+            File.WriteAllText(path, "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Seneste\n0 TRLR\n");
+            _loader.Load(path, tree);
+            person.Events.Single().Note.Should().Be("Ændret");
+            tree.FindPerson("@I2@")!.Notes.Should().Equal("Seneste");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_NotatlisteBevarerReferenceidentitetVedAlmindeligeListeoperationer()
+    {
+        var path = CreateFixture(
+            "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Samme\n0 @I1@ INDI\n1 NAME Anne /Jensen/\n" +
+            "1 NOTE Samme\n1 NOTE @N1@\n1 NOTE @N1@\n1 NOTE @MANGLER@\n0 TRLR\n");
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var notes = tree.FindPerson("@I1@")!.Notes;
+            tree.Diagnostics.Should().ContainSingle(item => item.Message.Contains("@MANGLER@"));
+            notes.Should().Equal("Samme", "Samme", "Samme", "@MANGLER@");
+            notes[1] = "Samme";
+            notes.Insert(1, "Indsat");
+            notes.Remove("Indsat").Should().BeTrue();
+            notes.RemoveAt(0);
+            notes.IndexOf("Samme").Should().Be(0);
+            var copied = new string[notes.Count];
+            notes.CopyTo(copied, 0);
+            copied.Should().Equal("Samme", "Samme", "@MANGLER@");
+            File.WriteAllText(path,
+                "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Ændret\n0 @MANGLER@ NOTE Fundet\n0 TRLR\n");
+
+            _loader.Load(path, tree);
+
+            notes.Should().Equal("Samme", "Ændret", "Fundet");
+            tree.Diagnostics.Should().BeEmpty();
+            notes.Clear();
+            notes.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_FletningOpdatererArvetKildeOgMedienotatMenIkkeLokaleNotater()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @N1@ NOTE Delt
+            0 @S1@ SOUR
+            1 TITL Kilde
+            1 NOTE @N1@
+            0 @M1@ OBJE
+            1 FILE foto.jpg
+            1 NOTE @N1@
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 SOUR @S1@
+            1 SOUR @S1@
+            2 NOTE Lokal kilde
+            1 OBJE @M1@
+            1 OBJE @M1@
+            2 NOTE Lokalt medie
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+            File.WriteAllText(path, "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Opdateret\n0 TRLR\n");
+
+            _loader.Load(path, tree);
+
+            person.Sources.Select(source => source.Note).Should().Equal("Opdateret", "Lokal kilde");
+            person.Media.Select(media => media.Note).Should().Equal("Opdateret", "Lokalt medie");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_GentagneNotaterBevaresPaaHaendelserKilderOgMedier()
+    {
+        var path = CreateFixture(
+            """
+            0 HEAD
+            1 CHAR UTF-8
+            0 @N1@ NOTE Delt
+            0 @S1@ SOUR
+            1 TITL Kilde
+            1 NOTE Første
+            1 NOTE @N1@
+            0 @M1@ OBJE
+            1 FILE foto.jpg
+            1 NOTE Første
+            1 NOTE @N1@
+            0 @I1@ INDI
+            1 NAME Anne /Jensen/
+            1 BIRT
+            2 NOTE Første
+            2 NOTE @N1@
+            1 CENS
+            2 NOTE Første
+            2 NOTE @N1@
+            0 @F1@ FAM
+            1 WIFE @I1@
+            1 MARR
+            2 NOTE Første
+            2 NOTE @N1@
+            0 TRLR
+            """);
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+            var family = tree.FindFamily("@F1@")!;
+            person.Events.Single().Note.Should().Be("Første\n\nDelt");
+            person.Census.Single().Note.Should().Be("Første\n\nDelt");
+            family.Events.Single().Note.Should().Be("Første\n\nDelt");
+            tree.FindSource("@S1@")!.Note.Should().Be("Første\n\nDelt");
+            tree.FindMedia("@M1@")!.Note.Should().Be("Første\n\nDelt");
+
+            File.WriteAllText(path, "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Opdateret\n0 TRLR\n");
+            _loader.Load(path, tree);
+
+            person.Events.Single().Note.Should().Be("Første\n\nOpdateret");
+            person.Census.Single().Note.Should().Be("Første\n\nOpdateret");
+            family.Events.Single().Note.Should().Be("Første\n\nOpdateret");
+            tree.FindSource("@S1@")!.Note.Should().Be("Første\n\nOpdateret");
+            tree.FindMedia("@M1@")!.Note.Should().Be("Første\n\nOpdateret");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_EscapetPointertekstErEtBogstaveligtNotat()
+    {
+        var path = CreateFixture(
+            "0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME Anne /Jensen/\n" +
+            "1 NOTE @@N1@@\n0 @N1@ NOTE Første\n0 TRLR\n");
+
+        try
+        {
+            var tree = _loader.Load(path);
+            var person = tree.FindPerson("@I1@")!;
+            person.Notes.Should().Equal("@N1@");
+            File.WriteAllText(path, "0 HEAD\n1 CHAR UTF-8\n0 @N1@ NOTE Ændret\n0 TRLR\n");
+
+            _loader.Load(path, tree);
+
+            person.Notes.Should().Equal("@N1@");
+            tree.Diagnostics.Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Load_CitationerBevarerFelterOgFortsatteTeksterIAlleUnderstoettedeKontekster()
     {
         var path = CreateFixture(

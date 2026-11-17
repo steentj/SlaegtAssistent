@@ -6,6 +6,8 @@ public sealed class FamilyTree
     private readonly Dictionary<string, Source> _sourcesByRecordId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Media> _mediaByRecordId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Family> _familiesByRecordId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _sharedNotesByRecordId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SharedGedcomNote> _noteReferences = new(StringComparer.Ordinal);
 
     public IReadOnlyCollection<Person> People => _peopleByRecordId.Values;
 
@@ -14,6 +16,8 @@ public sealed class FamilyTree
     public IReadOnlyCollection<Source> Sources => _sourcesByRecordId.Values;
 
     public IReadOnlyCollection<Media> Media => _mediaByRecordId.Values;
+
+    public IReadOnlyDictionary<string, string> SharedNotes => _sharedNotesByRecordId;
 
     public Submitter? Submitter { get; internal set; }
 
@@ -112,5 +116,24 @@ public sealed class FamilyTree
         }
 
         return family;
+    }
+
+    internal void SetSharedNote(string recordId, string text, string? timestamp)
+    {
+        _sharedNotesByRecordId[recordId] = text;
+        var note = GetOrAddNoteReference(recordId);
+        note.Text = text;
+        note.Timestamp = timestamp;
+    }
+
+    internal SharedGedcomNote GetOrAddNoteReference(string recordId)
+    {
+        if (!_noteReferences.TryGetValue(recordId, out var note))
+        {
+            note = new SharedGedcomNote(recordId);
+            _noteReferences.Add(recordId, note);
+        }
+
+        return note;
     }
 }

@@ -102,7 +102,10 @@ public sealed class BiographyTemplateContext
             item.Date,
             item.Place,
             item.Note,
-            item.Sources.Select(ToSource).ToArray())).ToArray();
+            item.Sources.Select(ToSource).ToArray())
+        {
+            NoteDetails = item.NoteDetails,
+        }).ToArray();
         var sources = person.Sources
             .Concat(person.Events.SelectMany(item => item.Sources))
             .Concat(snapshot.Families.SelectMany(family => family.Sources))
@@ -132,7 +135,10 @@ public sealed class BiographyTemplateContext
                 item.Type,
                 item.Note,
                 resolution?.Diagnostic,
-                resolution?.RequiresApproval ?? false);
+                resolution?.RequiresApproval ?? false)
+            {
+                NoteDetails = item.NoteDetails,
+            };
         }).ToArray();
         var submitter = snapshot.Submitter is null
             ? null
@@ -163,6 +169,12 @@ public sealed class BiographyTemplateContext
                     .ToArray(),
                 person.CreatedDate)
             {
+                Notes = NoteTemplateContext.FromSnapshot(person.Notes, person.NoteDetails),
+                FamilyNotes = snapshot.Families.Select(family => (family.RecordId, family.Notes, family.NoteDetails))
+                    .Concat((person.ChildhoodFamilyNotes ?? []).Select(family => (family.RecordId, family.Notes, family.NoteDetails)))
+                    .DistinctBy(family => family.RecordId, StringComparer.Ordinal)
+                    .OrderBy(family => family.RecordId, StringComparer.Ordinal)
+                    .SelectMany(family => NoteTemplateContext.FromSnapshot(family.Notes, family.NoteDetails)).ToArray(),
                 Children = References(snapshot.ChildRecordIds),
                 Partners = References(snapshot.Families
                     .Where(family => family.HusbandRecordId == person.RecordId || family.WifeRecordId == person.RecordId)
@@ -194,7 +206,10 @@ public sealed class BiographyTemplateContext
                 item.Place,
                 item.Type,
                 item.Note,
-                item.Sources.Select(ToSource).ToArray());
+                item.Sources.Select(ToSource).ToArray())
+            {
+                NoteDetails = item.NoteDetails,
+            };
         }
 
         static SourceTemplateContext ToSource(CanonicalSourceData item) => new(
@@ -208,7 +223,10 @@ public sealed class BiographyTemplateContext
             item.Page,
             item.Data,
             item.Date,
-            item.Note);
+            item.Note)
+        {
+            NoteDetails = item.NoteDetails,
+        };
     }
 }
 
@@ -229,6 +247,8 @@ public sealed record PersonTemplateContext(
 
     public IReadOnlyList<PersonReferenceTemplateContext> Children { get; init; } = [];
     public IReadOnlyList<PersonReferenceTemplateContext> Partners { get; init; } = [];
+    public IReadOnlyList<NoteTemplateContext> Notes { get; init; } = [];
+    public IReadOnlyList<NoteTemplateContext> FamilyNotes { get; init; } = [];
 
     public PersonTemplateContext WithLinks(BiographyPersonLinks? links)
     {
@@ -254,6 +274,11 @@ public sealed record PersonTemplateContext(
                 .ToArray(),
             person.CreatedDate)
         {
+            Notes = person.NoteValues.Select(NoteTemplateContext.FromValue).ToArray(),
+            FamilyNotes = person.Families.Concat(person.ChildhoodFamilies)
+                .DistinctBy(family => family.RecordId, StringComparer.Ordinal)
+                .OrderBy(family => family.RecordId, StringComparer.Ordinal)
+                .SelectMany(family => family.NoteValues).Select(NoteTemplateContext.FromValue).ToArray(),
             Children = person.Children.Select(child => new PersonReferenceTemplateContext(child.RecordId, child.FullName)).ToArray(),
             Partners = person.Families
                 .Where(family => family.Husband?.RecordId == person.RecordId || family.Wife?.RecordId == person.RecordId)
@@ -269,6 +294,23 @@ public sealed record PersonReferenceTemplateContext(string RecordId, string? Ful
     public string? DocumentPath { get; init; }
 }
 
+public sealed record NoteTemplateContext(string Text)
+{
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+
+    internal static NoteTemplateContext FromValue(GedcomNoteValue value) => new(value.Text)
+    {
+        NoteDetails = CanonicalBiographySnapshot.CreateNoteDetails(value),
+    };
+
+    internal static IReadOnlyList<NoteTemplateContext> FromSnapshot(
+        IReadOnlyList<string> notes, IReadOnlyList<CanonicalNoteDetails?>? details) =>
+        notes.Select((text, index) => new NoteTemplateContext(text)
+        {
+            NoteDetails = details is not null && index < details.Count ? details[index] : null,
+        }).ToArray();
+}
+
 public sealed record EventTemplateContext(
     string Tag,
     GedcomEventCategory Category,
@@ -279,6 +321,8 @@ public sealed record EventTemplateContext(
     string? Note,
     IReadOnlyList<SourceTemplateContext> Sources)
 {
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+
     public static EventTemplateContext FromEvent(GedcomEvent @event)
     {
         return new EventTemplateContext(
@@ -289,7 +333,10 @@ public sealed record EventTemplateContext(
             @event.Place,
             @event.Type,
             @event.Note,
-            @event.Sources.Select(SourceTemplateContext.FromSource).ToArray());
+            @event.Sources.Select(SourceTemplateContext.FromSource).ToArray())
+        {
+            NoteDetails = CanonicalBiographySnapshot.CreateNoteDetails(@event.NoteValue),
+        };
     }
 }
 
@@ -299,13 +346,18 @@ public sealed record CensusTemplateContext(
     string? Note,
     IReadOnlyList<SourceTemplateContext> Sources)
 {
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+
     public static CensusTemplateContext FromCensus(Census census)
     {
         return new CensusTemplateContext(
             census.Date,
             census.Place,
             census.Note,
-            census.Sources.Select(SourceTemplateContext.FromSource).ToArray());
+            census.Sources.Select(SourceTemplateContext.FromSource).ToArray())
+        {
+            NoteDetails = CanonicalBiographySnapshot.CreateNoteDetails(census.NoteValue),
+        };
     }
 }
 
@@ -322,8 +374,11 @@ public sealed record SourceTemplateContext(
     string? Date,
     string? Note)
 {
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+
     public static SourceTemplateContext FromSource(Source source)
     {
+        var details = CanonicalBiographySnapshot.CreateNoteDetails(source.NoteValue);
         var key = string.Join(
             "|",
             source.RecordId,
@@ -336,6 +391,11 @@ public sealed record SourceTemplateContext(
             source.Data,
             source.Date,
             source.Note);
+        if (details is not null)
+        {
+            key += "|" + string.Concat(details.Parts.Select(part =>
+                $"{part.Text.Length}:{part.Text}{part.Timestamp?.Length ?? -1}:{part.Timestamp}"));
+        }
         return new SourceTemplateContext(
             key,
             source.RecordId,
@@ -347,7 +407,10 @@ public sealed record SourceTemplateContext(
             source.Page,
             source.Data,
             source.Date,
-            source.Note);
+            source.Note)
+        {
+            NoteDetails = details,
+        };
     }
 }
 
@@ -362,6 +425,8 @@ public sealed record MediaTemplateContext(
     string? Diagnostic = null,
     bool RequiresApproval = false)
 {
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+
     public static MediaTemplateContext FromMedia(
         Media media,
         string? mediaBaseDirectory,
@@ -391,7 +456,10 @@ public sealed record MediaTemplateContext(
             media.Type,
             media.Note,
             resolution?.Diagnostic,
-            resolution?.RequiresApproval ?? false);
+            resolution?.RequiresApproval ?? false)
+        {
+            NoteDetails = CanonicalBiographySnapshot.CreateNoteDetails(media.NoteValue),
+        };
     }
 }
 

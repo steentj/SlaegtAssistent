@@ -19,6 +19,7 @@ Snapshotet omfatter:
 - personens record-id, navn, køn, fødsel, død og noter;
 - forældre- og børnereferencer;
 - personens familie-id’er, ægtefæller, børn og familienoter;
+- notater fra familier, hvor personen er barn, gemmes særskilt og medtages kun, når de indeholder tekst; de ændrer ikke familierelationerne i netværksgrafen;
 - person- og familiehændelser med tag, kategori, værdi, dato, sted, type, note og citationer;
 - census med dato, sted, note og citationer;
 - direkte person- og familiekilder samt alle kildecitationfelter;

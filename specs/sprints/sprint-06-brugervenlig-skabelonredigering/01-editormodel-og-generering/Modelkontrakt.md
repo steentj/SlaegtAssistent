@@ -28,11 +28,11 @@ Serialiseringen er kanonisk: samme model giver byte-identisk JSON med afsluttend
 | Type | Dansk navn | Visning |
 | --- | --- | --- |
 | `Title` | Titel | Standard |
-| `Facts` | Fakta | Liste |
+| `Facts` | Fakta | Liste eller tabel |
 | `Events` | Hændelser | Liste eller tabel |
 | `Census` | Folketællinger | Liste eller tabel |
 | `Sources` | Kilder | Liste eller tabel |
-| `Media` | Medier | Standard |
+| `Media` | Medier | Liste eller tabel (`Standard` i ældre modeller understøttes) |
 | `Submitter` | Afsender | Standard |
 | `Biography` | Biografi | Standard |
 
@@ -41,11 +41,11 @@ En bloktype må højst forekomme én gang. Skjulte blokke bevares i modellen, me
 ## Feltgrupper
 
 - Titel: personens navn.
-- Fakta: fødsel, død, forældre, børn, partnere og oprettelsesdato.
-- Hændelser: kategori, type, oplysning, dato og sted.
-- Folketællinger: dato, sted og note.
-- Kilder: titel, forfatter og side.
-- Medier: titel og lokal fil.
+- Fakta: fødsel, død, forældre, børn, partnere, oprettelsesdato, notat og familienotat.
+- Hændelser: kategori, type, oplysning, dato, sted og notat.
+- Folketællinger: dato, sted og notat.
+- Kilder: titel, forfatter, side og notat.
+- Medier: titel, lokal fil og notat.
 - Afsender: navn.
 - Biografi: ingen strukturerede felter; blokken reserverer plads til brugerens frie tekst.
 
@@ -53,7 +53,7 @@ En bloktype må højst forekomme én gang. Skjulte blokke bevares i modellen, me
 
 ## Dokumentgenerering
 
-`BiographyTemplateEditorCompiler` omsætter modellen deterministisk til den eksisterende sikre renderingsmekanisme. Standardsmodellen giver byte-identisk skabelontekst med den hidtidige indbyggede standardskabelon, men tidligere brugerdefinerede tekstskabeloner er ikke en del af denne kontrakt.
+`BiographyTemplateEditorCompiler` omsætter modellen deterministisk til den eksisterende sikre renderingsmekanisme. Standardmodellen omfatter alle notatfelterne; tidligere gemte modeller ændres ikke automatisk, men felterne kan tilvælges. Medienotater vises uafhængigt af filens tilgængelighed og titelens tilvalg. I tabeller vises linjeskift som mellemrum, uden at ændre de lagrede data. Tidligere brugerdefinerede tekstskabeloner er ikke en del af denne kontrakt.
 
 Generatoren afviser blandt andet:
 

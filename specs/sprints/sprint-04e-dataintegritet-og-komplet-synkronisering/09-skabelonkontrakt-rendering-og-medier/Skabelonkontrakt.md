@@ -18,6 +18,10 @@ Samme loader og renderer anvendes ved gemning af indstillinger, skabelonpreview,
 
 Standardskabelonen bruger `person.parentNames`, som formaterer flere forældre med komma og mellemrum. Hændelseskategorier præsenteres på dansk: Fødsel, Dåb, Konfirmation, Vielse, Død, Begravelse, Folketælling, Militærtjeneste og Anden hændelse.
 
+Personens notater er tilgængelige i inputrækkefølge via `{{#each person.notes}}{{ text }}{{/each}}`. Standardskabelonen viser dem som "Notat" under Fakta; feltet kan fravælges i skabelonredigeringen. Eksisterende gemte skabeloner ændres ikke automatisk.
+
+Familiernes notater findes via `{{#each person.familyNotes}}{{ text }}{{/each}}` i familienummerorden og notaternes oprindelige rækkefølge. De vises som "Familienotat" under Fakta, også ved regenerering fra godkendt baseline. Hændelses-, kilde- og medienotater er valgfrie felter i deres respektive blokke og er tilvalgt i standardmodellen. Tabellen undviger Markdown-tegn og viser linjeskift som mellemrum; selve konteksten og baseline bevarer notaternes linjeskift.
+
 Renderingen er deterministisk: samme kontraktversion, skabelontekst og kontekst giver byte-identisk genereret tekst. Kandidatflowet ændrer fortsat kun metadata og indholdet mellem de genererede markører.
 
 ## Lokale medier

@@ -4,6 +4,9 @@
 - `CONT` og `CONC` skal sammensættes korrekt og deterministisk på alle understøttede tekstfelter.
 - Kildehenvisninger under person-, hændelses-, familie- og censusdata skal bevare relevante citationfelter som `PAGE`, `DATA`, `DATE`, `TEXT` og `NOTE`.
 - `FAMC`, `FAMS`, `CHAN`, `NOTE`, identitetsfelter og andre strukturtags må ikke fejlklassificeres som hændelser.
+- Personnotater og delte `NOTE`-poster skal fortolkes med `CONT` og `CONC`. Henvisninger til delte notater skal opløses i understøttede notatfelter; en manglende henvisning skal bevares og give diagnostik.
+- En delt `NOTE`-posts `CREA` og `CHAN` med `DATE` og eventuelt `TIME` skal knyttes til notatet; det seneste gyldige tidspunkt vises efter teksten i kursiv og parentes.
+- Notattidspunkter skal vises i det regionale datoformat; på dansk `dd-MM-yyyy HH:mm`. Datoer uden klokkeslæt vises uden klokkeslæt. Det oprindelige tidspunkt bevares i baseline.
 - Kendte person- og familiebegivenheder skal klassificeres korrekt; ukendte hændelser skal bevares som ukendte med rå tag og diagnostik.
 - GEDCOM-headerens `CHAR` skal respekteres for UTF-8, Unicode, ASCII og ANSEL i overensstemmelse med GEDCOM 5.5.1.
 - Uunderstøttet eller modstridende encoding skal give diagnostik uden lydløs tegnkorruption.

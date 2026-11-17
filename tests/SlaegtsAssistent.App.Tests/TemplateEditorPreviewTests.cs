@@ -59,6 +59,78 @@ public sealed class TemplateEditorPreviewTests
     }
 
     [Fact]
+    public async Task PersonNote_ShouldBeSelectableInExistingTemplatesAndRefreshPreview()
+    {
+        var standard = BiographyTemplateEditorModel.CreateDefault();
+        var existing = new BiographyTemplateEditorModel(standard.Version, standard.Blocks.Select(block =>
+            block.Type == BiographyTemplateBlockType.Facts
+                ? new BiographyTemplateBlock(block.Type, block.IsVisible, block.Heading, block.Presentation,
+                    block.Fields.Where(field => field != BiographyTemplateField.PersonNote).ToArray())
+                : block).ToArray());
+        var viewModel = new TemplateEditorViewModel(existing, previewDelay: TimeSpan.Zero);
+        await viewModel.PreviewUpdateTask;
+        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+        var note = viewModel.Fields.Single(field => field.Field == BiographyTemplateField.PersonNote);
+
+        note.Label.Should().Be("Notat");
+        note.IsSelected.Should().BeFalse();
+        viewModel.PreviewMarkdown.Should().NotContain("Familien huskede Anna som en ivrig fortæller.");
+
+        viewModel.ToggleFieldCommand.Execute(note);
+        await viewModel.PreviewUpdateTask;
+        viewModel.PreviewMarkdown.Should().Contain("**Notat:** Familien huskede Anna som en ivrig fortæller.");
+        viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts)
+            .Fields.Should().Contain(BiographyTemplateField.PersonNote);
+
+        viewModel.ToggleFieldCommand.Execute(note);
+        await viewModel.PreviewUpdateTask;
+        viewModel.PreviewMarkdown.Should().NotContain("Familien huskede Anna som en ivrig fortæller.");
+        viewModel.StopPreview();
+    }
+
+    [Fact]
+    public async Task PersonNote_PreviewShouldPreserveLinesAsText()
+    {
+        var person = new Person("@I1@") { FullName = "Anna Jensen" };
+        person.Notes.Add("Første linje\n## Ikke en overskrift\n- Ikke en liste");
+
+        var result = await new TemplateEditorPreviewService().RenderAsync(
+            BiographyTemplateEditorModel.CreateDefault(), person, null, CancellationToken.None);
+
+        result.SafePreview.Html.Should().Contain("Første linje")
+            .And.Contain("Ikke en overskrift")
+            .And.Contain("Ikke en liste")
+            .And.Contain("<br")
+            .And.NotContain("<h2>Ikke en overskrift</h2>");
+    }
+
+    [Fact]
+    public async Task Faktatabel_KanVaelgesOgVisesIForhaandsvisningen()
+    {
+        var viewModel = CreateViewModel();
+        try
+        {
+            viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+            viewModel.AvailablePresentations.Select(item => item.Presentation).Should().Equal(
+                BiographyTemplatePresentation.List, BiographyTemplatePresentation.Table);
+            viewModel.SelectedPresentation = viewModel.AvailablePresentations.Single(
+                item => item.Presentation == BiographyTemplatePresentation.Table);
+
+            await viewModel.PreviewUpdateTask;
+
+            viewModel.PreviewErrorMessage.Should().BeNull();
+            viewModel.PreviewHtmlDocument.Should().Contain("<table>").And.Contain("<th>Oplysning</th>")
+                .And.Contain("Familien huskede Anna");
+            viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts)
+                .Presentation.Should().Be(BiographyTemplatePresentation.Table);
+        }
+        finally
+        {
+            viewModel.StopPreview();
+        }
+    }
+
+    [Fact]
     public async Task LatestResult_ShouldWinWhenAnOlderRenderFinishesLast()
     {
         var service = new DelayedPreviewService();

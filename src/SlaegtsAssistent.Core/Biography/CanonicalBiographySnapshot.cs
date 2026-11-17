@@ -45,7 +45,11 @@ public sealed record CanonicalBiographySnapshot(
                 CreateCensusList(person.Census),
                 SortSources(person.Sources),
                 CreateMediaList(person.Media),
-                Normalize(person.CreatedDate)),
+                Normalize(person.CreatedDate))
+            {
+                ChildhoodFamilyNotes = CreateChildhoodFamilyNotes(person),
+                NoteDetails = CreateNotesDetails(person.NoteValues),
+            },
             SortRecordIds(person.Parents),
             SortRecordIds(person.Children),
             person.Families
@@ -71,6 +75,24 @@ public sealed record CanonicalBiographySnapshot(
             .ToArray();
     }
 
+    private static IReadOnlyList<CanonicalChildhoodFamilyNotes>? CreateChildhoodFamilyNotes(Person person)
+    {
+        var ownFamilyIds = person.Families.Select(family => family.RecordId).ToHashSet(StringComparer.Ordinal);
+        var notes = person.ChildhoodFamilies
+            .Where(family => !ownFamilyIds.Contains(family.RecordId))
+            .OrderBy(family => family.RecordId, StringComparer.Ordinal)
+            .DistinctBy(family => family.RecordId, StringComparer.Ordinal)
+            .Select(family => new CanonicalChildhoodFamilyNotes(
+                family.RecordId,
+                family.Notes.Select(Normalize).OfType<string>().ToArray())
+            {
+                NoteDetails = CreateNotesDetails(family.NoteValues),
+            })
+            .Where(family => family.Notes.Count > 0)
+            .ToArray();
+        return notes.Length == 0 ? null : notes;
+    }
+
     private static CanonicalFamilyData CreateFamily(Family family)
     {
         return new CanonicalFamilyData(
@@ -80,7 +102,10 @@ public sealed record CanonicalBiographySnapshot(
             SortRecordIds(family.Children),
             family.Notes.Select(Normalize).Where(value => value is not null).Select(value => value!).ToArray(),
             CreateEvents(family.Events),
-            SortSources(family.Sources));
+            SortSources(family.Sources))
+        {
+            NoteDetails = CreateNotesDetails(family.NoteValues),
+        };
     }
 
     private static IReadOnlyList<CanonicalEventData> CreateEvents(IEnumerable<GedcomEvent> events)
@@ -102,7 +127,10 @@ public sealed record CanonicalBiographySnapshot(
                 Normalize(item.Place),
                 Normalize(item.Type),
                 Normalize(item.Note),
-                sourceData);
+                sourceData)
+            {
+                NoteDetails = CreateNoteDetails(item.NoteValue),
+            };
         });
         return EnsureUniqueIdentities(
             canonicalEvents,
@@ -118,7 +146,10 @@ public sealed record CanonicalBiographySnapshot(
             Normalize(census.Date),
             Normalize(census.Place),
             Normalize(census.Note),
-            sources);
+            sources)
+        {
+            NoteDetails = CreateNoteDetails(census.NoteValue),
+        };
     }
 
     private static IReadOnlyList<CanonicalCensusData> CreateCensusList(IEnumerable<Census> census)
@@ -159,7 +190,10 @@ public sealed record CanonicalBiographySnapshot(
             Normalize(source.Page),
             Normalize(source.Data),
             Normalize(source.Date),
-            Normalize(source.Note));
+            Normalize(source.Note))
+        {
+            NoteDetails = CreateNoteDetails(source.NoteValue),
+        };
     }
 
     private static CanonicalMediaData CreateMedia(Media media)
@@ -171,7 +205,28 @@ public sealed record CanonicalBiographySnapshot(
             Normalize(media.Form),
             Normalize(media.Title),
             Normalize(media.Type),
-            Normalize(media.Note));
+            Normalize(media.Note))
+        {
+            NoteDetails = CreateNoteDetails(media.NoteValue),
+        };
+    }
+
+    internal static CanonicalNoteDetails? CreateNoteDetails(GedcomNoteValue? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var parts = value.Parts.Select(part =>
+            new CanonicalNotePart(Normalize(part.Text) ?? string.Empty, part.Timestamp)).ToArray();
+        return parts.Any(part => part.Timestamp is not null) ? new CanonicalNoteDetails(parts) : null;
+    }
+
+    private static IReadOnlyList<CanonicalNoteDetails?>? CreateNotesDetails(IEnumerable<GedcomNoteValue> notes)
+    {
+        var details = notes.Where(note => Normalize(note.Text) is not null).Select(CreateNoteDetails).ToArray();
+        return details.Any(item => item is not null) ? details : null;
     }
 
     private static IReadOnlyList<CanonicalMediaData> CreateMediaList(IEnumerable<Media> media)
@@ -238,7 +293,22 @@ public sealed record CanonicalPersonData(
     IReadOnlyList<CanonicalCensusData> Census,
     IReadOnlyList<CanonicalSourceData> Sources,
     IReadOnlyList<CanonicalMediaData> Media,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CreatedDate = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CreatedDate = null)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CanonicalChildhoodFamilyNotes>? ChildhoodFamilyNotes { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CanonicalNoteDetails?>? NoteDetails { get; init; }
+}
+
+public sealed record CanonicalNotePart(string Text, string? Timestamp);
+public sealed record CanonicalNoteDetails(IReadOnlyList<CanonicalNotePart> Parts);
+
+public sealed record CanonicalChildhoodFamilyNotes(string RecordId, IReadOnlyList<string> Notes)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CanonicalNoteDetails?>? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalFamilyData(
     string RecordId,
@@ -247,7 +317,11 @@ public sealed record CanonicalFamilyData(
     IReadOnlyList<string> ChildRecordIds,
     IReadOnlyList<string> Notes,
     IReadOnlyList<CanonicalEventData> Events,
-    IReadOnlyList<CanonicalSourceData> Sources);
+    IReadOnlyList<CanonicalSourceData> Sources)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CanonicalNoteDetails?>? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalEventData(
     string Identity,
@@ -258,14 +332,22 @@ public sealed record CanonicalEventData(
     string? Place,
     string? Type,
     string? Note,
-    IReadOnlyList<CanonicalSourceData> Sources);
+    IReadOnlyList<CanonicalSourceData> Sources)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalCensusData(
     string Identity,
     string? Date,
     string? Place,
     string? Note,
-    IReadOnlyList<CanonicalSourceData> Sources);
+    IReadOnlyList<CanonicalSourceData> Sources)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalSourceData(
     string Identity,
@@ -278,7 +360,11 @@ public sealed record CanonicalSourceData(
     string? Page,
     string? Data,
     string? Date,
-    string? Note);
+    string? Note)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalMediaData(
     string Identity,
@@ -287,7 +373,11 @@ public sealed record CanonicalMediaData(
     string? Form,
     string? Title,
     string? Type,
-    string? Note);
+    string? Note)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CanonicalNoteDetails? NoteDetails { get; init; }
+}
 
 public sealed record CanonicalSubmitterData(
     string? RecordId,

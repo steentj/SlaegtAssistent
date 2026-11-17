@@ -13,7 +13,8 @@ Denne tabel er den normative datakontrakt for feature 4.8.5. Inputrækkefølgen 
 | `OBJE` | `FILE`, `FORM`, `TITL`, `TYPE`, `NOTE` | `Media` | Inline- og recordbaserede medier følger samme felter. |
 | `SUBM` | `NAME`, `ADDR`, `PHON`, `EMAIL`, `WWW`, `LANG` | `Submitter` | Den submitter, som `HEAD.SUBM` peger på, aktiveres. |
 | `REPO` | Referencen i `SOUR.REPO` | `Source.Repository` | Repository-pointeren bevares. Selvstændige repository-detaljer er ikke del af den nuværende produktmodel. |
-| `NOTE`, `SUBN` og øvrige level-0-records | Ingen strukturerede domænefelter i denne version | Intet selvstændigt domæneobjekt | De må ikke oprette personer, familier eller hændelser. Pointertekst, der optræder i et understøttet `NOTE`-felt, bevares dér. |
+| `NOTE` | Tekst, `CONT`, `CONC` | `FamilyTree.SharedNotes` og de understøttede notatfelter | Delte notater opløses via record-id uanset rækkefølge. Ved fletning opdateres tidligere henvisninger, mens selvstændigt redigerede notater bevares. Manglende henvisninger bevares med diagnostik og kan opløses ved senere fletning. Øvrige underfelter giver diagnostik, hvis de ikke kan importeres. |
+| `SUBN` og øvrige level-0-records | Ingen strukturerede domænefelter i denne version | Intet selvstændigt domæneobjekt | De må ikke oprette personer, familier eller hændelser. |
 
 ## Persondata (`INDI`)
 
@@ -67,6 +68,8 @@ Kategorierne `Birth`, `Baptism`, `Confirmation`, `Marriage`, `Death`, `Burial`, 
 | `TITL`, `AUTH`, `PUBL`, `REPO` | De tilsvarende bibliografiske `Source`-felter. |
 
 Citationstabellen gælder ens under person, personhændelse, census, familie og familiehændelse. Felter på citationen overskriver kun de samme felter på den konkrete citation; den refererede `SOUR`-record ændres ikke.
+
+Gentagne `NOTE`-felter på en hændelse, folketælling, kilde eller et medie bevares i deres oprindelige rækkefølge som afsnit adskilt af to linjeskift.
 
 ## Tegnsæt og fejlgrænser
 

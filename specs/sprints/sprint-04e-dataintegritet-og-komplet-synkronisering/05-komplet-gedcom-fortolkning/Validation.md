@@ -38,3 +38,17 @@
 - **Bemærkninger:** Den repræsentative GEDCOM 5.5.1-import og genimport er godkendt.
 
 - [x] Feature 05 er godkendt, og feature 06 må påbegyndes.
+
+## Udvidelse: notater
+
+- Person- og familienotater samt gentagne notater på hændelser, folketællinger, kilder og medier dækkes af målrettede importtests.
+- Delte notater, fremadrettede og manglende henvisninger, `CONT`/`CONC`, betydende mellemrum, escapede snabel-a'er og dubletter dækkes af tests.
+- Fletning af ændrede og tidligere manglende delte notater, lokale overstyringer og uændrede familierelationer dækkes af tests.
+- Ændrede familienotater indgår i barnets baseline uden at blive til barnets egne familiehændelser.
+
+## Udvidelse: notattidspunkt
+
+- [x] `CREA` og `CHAN` sammenlignes med dato og eventuelt klokkeslæt.
+- [x] Notattidspunkter bevares ved delte henvisninger, genimport og godkendt baseline.
+- [x] Tidspunktet vises efter notatteksten i kursiv og parentes i liste og tabel.
+- [x] Dansk og andet regionalt datoformat vises korrekt uden at ændre baseline eller kassere sekunder.

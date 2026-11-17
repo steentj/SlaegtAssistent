@@ -42,6 +42,8 @@ public sealed record BiographyTemplateEditorModel
                     BiographyTemplateField.Children,
                     BiographyTemplateField.Partners,
                     BiographyTemplateField.CreatedDate,
+                    BiographyTemplateField.PersonNote,
+                    BiographyTemplateField.FamilyNote,
                 ]),
             new(
                 BiographyTemplateBlockType.Events,
@@ -54,6 +56,7 @@ public sealed record BiographyTemplateEditorModel
                     BiographyTemplateField.EventValue,
                     BiographyTemplateField.EventDate,
                     BiographyTemplateField.EventPlace,
+                    BiographyTemplateField.EventNote,
                 ]),
             new(
                 BiographyTemplateBlockType.Census,
@@ -74,13 +77,14 @@ public sealed record BiographyTemplateEditorModel
                     BiographyTemplateField.SourceTitle,
                     BiographyTemplateField.SourceAuthor,
                     BiographyTemplateField.SourcePage,
+                    BiographyTemplateField.SourceNote,
                 ]),
             new(
                 BiographyTemplateBlockType.Media,
                 true,
                 "Medier",
                 BiographyTemplatePresentation.List,
-                [BiographyTemplateField.MediaTitle, BiographyTemplateField.MediaRelativeFile]),
+                [BiographyTemplateField.MediaTitle, BiographyTemplateField.MediaRelativeFile, BiographyTemplateField.MediaNote]),
             new(
                 BiographyTemplateBlockType.Submitter,
                 true,
@@ -171,4 +175,9 @@ public enum BiographyTemplateField
     MediaTitle,
     MediaRelativeFile,
     SubmitterName,
+    PersonNote,
+    FamilyNote,
+    EventNote,
+    SourceNote,
+    MediaNote,
 }

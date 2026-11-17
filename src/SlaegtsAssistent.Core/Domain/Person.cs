@@ -2,6 +2,8 @@ namespace SlaegtsAssistent.Core.Domain;
 
 public sealed class Person
 {
+    private readonly GedcomNoteCollection _notes = new();
+
     public Person(string recordId)
     {
         if (string.IsNullOrWhiteSpace(recordId))
@@ -36,11 +38,17 @@ public sealed class Person
 
     public IList<Family> Families { get; } = new List<Family>();
 
+    internal IList<Family> ChildhoodFamilies { get; } = new List<Family>();
+
     public IEnumerable<GedcomEvent> FamilyEvents => Families.SelectMany(family => family.Events);
 
     public IList<Source> Sources { get; } = new List<Source>();
 
-    public IList<string> Notes { get; } = new List<string>();
+    public IList<string> Notes => _notes;
+
+    internal IReadOnlyList<GedcomNoteValue> NoteValues => _notes.Values;
+
+    internal void AddNote(GedcomNoteValue note) => _notes.Add(note);
 
     public IList<Media> Media { get; } = new List<Media>();
 
