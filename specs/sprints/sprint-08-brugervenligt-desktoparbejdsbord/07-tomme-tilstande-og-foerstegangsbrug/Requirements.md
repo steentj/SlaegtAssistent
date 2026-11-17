@@ -1,6 +1,6 @@
 # Krav: Tilføj handlingsrettede tomme tilstande
 
-Status: **planlagt**. Afhængighed: **01 og 05**.
+Status: **implementeret; afventer manuel validering**. Afhængighed: **01 og 05**.
 
 ## Acceptkriterier
 

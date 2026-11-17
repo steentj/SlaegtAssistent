@@ -301,6 +301,20 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private async void StartImportClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel model) return;
+        await model.SelectGedcomFileCommand.ExecuteAsync(null);
+        if (model.People.Count > 0) PeopleList.Focus();
+    }
+
+    private void ClearSearchClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel model) return;
+        model.ClearPersonFilterCommand.Execute(null);
+        PersonFilter.Focus();
+    }
+
     private void PeopleListKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (e.Key == Avalonia.Input.Key.Enter && DataContext is MainWindowViewModel viewModel && viewModel.IsGraphTab)

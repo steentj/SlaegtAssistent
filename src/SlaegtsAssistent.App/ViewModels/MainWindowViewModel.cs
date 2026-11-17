@@ -166,6 +166,24 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     [ObservableProperty]
     private EditorViewModel? editor;
 
+    public bool HasVisiblePeople => People.Count > 0;
+    public bool ShowEmptyWorkspace => !IsImporting && _allPeople.Count == 0 && string.IsNullOrWhiteSpace(ErrorMessage);
+    public bool ShowNoSearchResults => !IsImporting && _allPeople.Count > 0 && People.Count == 0 && !string.IsNullOrWhiteSpace(PersonFilterText);
+    public bool ShowNoPersonSelected => !IsImporting && SelectedPerson is null;
+
+    private void NotifyEmptyStates()
+    {
+        OnPropertyChanged(nameof(HasVisiblePeople));
+        OnPropertyChanged(nameof(ShowEmptyWorkspace));
+        OnPropertyChanged(nameof(ShowNoSearchResults));
+        OnPropertyChanged(nameof(ShowNoPersonSelected));
+    }
+
+    partial void OnErrorMessageChanged(string? value) => NotifyEmptyStates();
+
+    [RelayCommand]
+    private void ClearPersonFilter() => PersonFilterText = string.Empty;
+
     public bool CanEditImages => Editor is not null && SelectedPerson is not null && !IsImporting;
 
     partial void OnEditorChanged(EditorViewModel? value) => OnPropertyChanged(nameof(CanEditImages));
@@ -1211,6 +1229,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     partial void OnSelectedPersonChanged(PersonListItemViewModel? value)
     {
         OnPropertyChanged(nameof(CanEditImages));
+        NotifyEmptyStates();
         NotifyStatusProperties();
 
         if (value is null && _isReplacingPeople)
@@ -1412,6 +1431,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
                 person.RecordId.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase));
 
         ReplacePeople(filteredPeople);
+        NotifyEmptyStates();
 
         // ListBox nulstiller SelectedItem, når People tømmes, så valget skal gendannes eksplicit.
         SelectedPerson = string.IsNullOrWhiteSpace(selectedRecordId)
@@ -1632,6 +1652,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     partial void OnIsImportingChanged(bool value)
     {
+        NotifyEmptyStates();
         OnPropertyChanged(nameof(CanEditImages));
         if (value)
         {

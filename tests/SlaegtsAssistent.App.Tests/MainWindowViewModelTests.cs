@@ -1126,6 +1126,23 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public void EmptyWorkspace_ShouldNotAppearDuringImportOrError()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.ShowEmptyWorkspace.Should().BeTrue();
+        viewModel.ShowNoPersonSelected.Should().BeTrue();
+
+        viewModel.IsImporting = true;
+        viewModel.ShowEmptyWorkspace.Should().BeFalse();
+        viewModel.ShowNoPersonSelected.Should().BeFalse();
+        viewModel.IsImporting = false;
+        viewModel.ErrorMessage = "Indlæsningen fejlede";
+        viewModel.ShowEmptyWorkspace.Should().BeFalse();
+        viewModel.ErrorMessage = null;
+        viewModel.ShowEmptyWorkspace.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task PersonFilterText_ShouldFilterPeopleByName()
     {
         using var file = CreateTemporaryGedcomFile(
@@ -1150,6 +1167,15 @@ public partial class MainWindowViewModelTests
             }));
 
         await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
+        viewModel.PersonFilterText = "ingen træffere";
+        viewModel.ShowNoSearchResults.Should().BeTrue();
+        viewModel.ShowEmptyWorkspace.Should().BeFalse();
+        viewModel.IsImporting = true;
+        viewModel.ShowNoSearchResults.Should().BeFalse();
+        viewModel.IsImporting = false;
+        viewModel.ClearPersonFilterCommand.Execute(null);
+        viewModel.ShowNoSearchResults.Should().BeFalse();
+        viewModel.People.Should().HaveCount(2);
         viewModel.PersonFilterText = "anna";
 
         viewModel.People.Should().HaveCount(1);

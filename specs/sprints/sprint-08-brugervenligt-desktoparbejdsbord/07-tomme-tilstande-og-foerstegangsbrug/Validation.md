@@ -1,6 +1,6 @@
 # Validering: Tilføj handlingsrettede tomme tilstande
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel validering afventer**.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,5 @@ Asynkron indlæsning kan vise forkert tomtilstand. Test overgangene; tilføj ikk
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026 / macOS | Restore, build og test | Restore og build bestået; 644 prøver bestået, 0 fejlede, 6 oversprunget. Regressioner dækker tomt arbejdsområde, fejl, import og søgefilter. | Native visning, tastatur, skærmlæser, temaer, skalering og billeder er ikke prøvet. |
+| Windows og Linux | Manuel kontrol | Ikke prøvet | Afventer platformadgang. |

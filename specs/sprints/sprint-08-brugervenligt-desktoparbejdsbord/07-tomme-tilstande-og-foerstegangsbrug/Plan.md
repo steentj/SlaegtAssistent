@@ -1,6 +1,6 @@
 # Plan: Tilføj handlingsrettede tomme tilstande
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R7. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **01 og 05**.
+Status: **implementeret; afventer manuel validering**. Kilde: GUI-anbefaling R7. Alvor: **Minor**. Indsats: **S** (relativ størrelse, ikke et tidsestimat). Afhængighed: **01 og 05**.
 
 ## Mål og evidens
 
