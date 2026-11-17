@@ -287,10 +287,40 @@ public partial class MainWindow : Window
     private bool _canCloseWithoutPrompt;
     private EditorViewModel? _subscribedEditor;
     private bool _previewAdapterReady;
+    private bool _contextVisible = true;
+
+    private void ToggleContext(object? sender, RoutedEventArgs e)
+    {
+        SetContextVisible(!_contextVisible);
+        UpdatePersonListLimit();
+    }
+
+    private void SetContextVisible(bool visible)
+    {
+        _contextVisible = visible;
+        ContextPanel.IsVisible = visible;
+        WorkspaceGrid.ColumnDefinitions[3].Width = new GridLength(visible ? 8 : 0);
+        WorkspaceGrid.ColumnDefinitions[4].Width = new GridLength(visible ? 260 : 0);
+        ContextToggle.Content = visible ? "Skjul kontekst" : "Vis kontekst";
+    }
+
+    private void UpdatePersonListLimit()
+    {
+        // 24 til vinduets marginer, 8 til splitteren og 428 til arbejdsfladen med margin.
+        var available = Bounds.Width - 24 - 8 - 428 - (_contextVisible ? 268 : 0);
+        WorkspaceGrid.ColumnDefinitions[0].MaxWidth = Math.Max(220, available);
+    }
 
     public MainWindow()
     {
         InitializeComponent();
+        Opened += (_, _) =>
+        {
+            // Under 1.100 enheder bevarer en lukket kontekst mere plads til arbejdsfladen.
+            SetContextVisible(Bounds.Width >= 1100);
+            UpdatePersonListLimit();
+        };
+        SizeChanged += (_, _) => UpdatePersonListLimit();
         SafePreviewWebViewController.Attach(PreviewWebView, this, destination =>
             (DataContext as MainWindowViewModel)?.Editor?.TryNavigateToPerson(destination) == true);
         DataContextChanged += HandleDataContextChanged;

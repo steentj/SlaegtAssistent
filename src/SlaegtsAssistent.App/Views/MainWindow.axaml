@@ -27,9 +27,7 @@
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="16,10">
-            <Grid RowDefinitions="Auto,Auto"
-                  ColumnDefinitions="Auto,*,Auto"
-                  ColumnSpacing="18">
+            <Grid RowDefinitions="Auto,Auto,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="SLÆGTSASSISTENT"
                                FontSize="15"
@@ -47,7 +45,7 @@
                     </Border>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
                     <Menu>
                         <MenuItem Header="_Fil">
                             <MenuItem Header="Eksportér biografier…" Click="ShowBiographyExport" />
@@ -83,9 +81,9 @@
                             Command="{Binding ShowVersionHistoryCommand}" />
                     <Button Content="Indstillinger"
                             Command="{Binding OpenSettingsCommand}" />
-                </StackPanel>
-            <StackPanel Grid.Row="1"
-                        Grid.ColumnSpan="3"
+                    <Button x:Name="ContextToggle" Content="Skjul kontekst" Click="ToggleContext" />
+                </WrapPanel>
+            <StackPanel Grid.Row="2"
                         Orientation="Horizontal"
                         Spacing="8"
                         Margin="0,8,0,0"
@@ -102,8 +100,9 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="300,*,8,320" ColumnSpacing="12" Margin="12">
+        <Grid x:Name="WorkspaceGrid" Grid.Row="1" ColumnDefinitions="260,8,*,8,260" Margin="12">
             <Border Grid.Column="0"
+                    MinWidth="220" Margin="0,0,4,0"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
@@ -126,22 +125,30 @@
                     <ListBox ItemsSource="{Binding People}"
                              SelectedItem="{Binding SelectedPerson}"
                              Margin="0,12,0,0">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="2,1" />
+                            </Style>
+                        </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PersonListItemViewModel">
-                                <Border Padding="8,7"
-                                        Margin="0,0,0,4"
+                                <Border Padding="6,3"
+                                        Margin="0,0,0,1"
                                         Background="{DynamicResource AppPanelMutedBrush}"
                                         CornerRadius="4"
                                         ToolTip.Tip="{Binding ToolTipText}">
-                                    <StackPanel Spacing="2">
+                                    <StackPanel>
                                         <TextBlock Text="{Binding DisplayName}"
-                                                   FontWeight="SemiBold" />
+                                                   FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <WrapPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding RecordId}"
                                                    FontSize="11"
-                                                   Foreground="{DynamicResource AppMutedTextBrush}" />
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   Margin="0,0,8,0" />
                                         <TextBlock Text="{Binding SyncStatusText}"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource AppAccentBrush}" />
+                                        </WrapPanel>
                                         <TextBlock Text="{Binding StatusNoticeText}"
                                                    IsVisible="{Binding HasStatusNotice}"
                                                    FontSize="11"
@@ -155,7 +162,11 @@
                 </DockPanel>
             </Border>
 
-            <Border Grid.Column="1"
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="{DynamicResource AppBorderBrush}" ResizeDirection="Columns"
+                          AutomationProperties.Name="Tilpas personlistens bredde" />
+
+            <Border Grid.Column="2" Margin="4,0"
                     MinWidth="420"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
@@ -167,13 +178,15 @@
                         <StackPanel Spacing="2" IsVisible="{Binding IsBiographyTab}">
                             <TextBlock Text="{Binding ActivePersonText}"
                                        FontSize="18"
-                                       FontWeight="SemiBold" />
+                                       FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding ActiveMarkdownFilePathText}"
                                        FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding SelectedPerson.MarkdownFilePath}"
                                        Foreground="{DynamicResource AppMutedTextBrush}" />
                         </StackPanel>
                         <StackPanel Spacing="2" IsVisible="{Binding IsGraphTab}">
-                            <TextBlock Text="{Binding PersonGraph.ProbandText}" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding PersonGraph.ProbandText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </StackPanel>
                         <Button Grid.Column="1"
                                 Content="Gem ændringer"
@@ -185,21 +198,22 @@
                     <TabControl Grid.Row="1" SelectedIndex="{Binding DocumentTabIndex, Mode=TwoWay}">
                         <TabItem Header="Graf">
                             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <WrapPanel Orientation="Horizontal">
                                     <Button Content="Opdatér graf" Command="{Binding RefreshGraphCommand}" />
                                     <TextBox Width="180" PlaceholderText="Søg person" Text="{Binding PersonGraph.SearchText}" />
                                     <Button Content="Brug som proband" Command="{Binding PersonGraph.UseAsProbandCommand}" />
                                     <Button Content="Åbn biografi" Command="{Binding PersonGraph.OpenBiographyCommand}" />
-                                </StackPanel>
+                                </WrapPanel>
                                 <Grid Grid.Row="1" ColumnDefinitions="*,200" ColumnSpacing="8">
                                     <Grid RowDefinitions="Auto,Auto,*">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <WrapPanel Orientation="Horizontal">
                                             <Button Content="+" Click="GraphZoomIn" ToolTip.Tip="Zoom ind" />
                                             <Button Content="−" Click="GraphZoomOut" ToolTip.Tip="Zoom ud" />
                                             <Button Content="Vis alle" Click="GraphShowAll" />
                                             <Button Content="Centrér proband" Click="GraphCenterProband" />
-                                        </StackPanel>
-                                        <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,6">
+                                        </WrapPanel>
+                                        <ScrollViewer Grid.Row="1" MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <WrapPanel Orientation="Horizontal" Margin="0,6,0,6">
                                             <CheckBox x:Name="ExportViewport" Content="Aktuelt udsnit" Margin="0,0,12,0" />
                                             <CheckBox x:Name="ExportLabels" Content="Vis navne og datoer" IsChecked="True" Margin="0,0,12,0" />
                                             <ComboBox x:Name="ExportPngSize" SelectedIndex="1" Width="110" Margin="0,0,8,0"><ComboBoxItem Content="2048 px"/><ComboBoxItem Content="4096 px"/><ComboBoxItem Content="8192 px"/></ComboBox>
@@ -210,6 +224,7 @@
                                             <Button Content="Udskriv…" Click="GraphPrint" Margin="6,0,0,0" />
                                             <Button x:Name="CancelGraphExport" Content="Annullér eksport" Click="GraphCancelExport" IsEnabled="False" Margin="6,0,0,0" />
                                         </WrapPanel>
+                                        </ScrollViewer>
                                         <views:PersonGraphControl x:Name="GraphControl" Grid.Row="2" DataContext="{Binding PersonGraph}" />
                                     </Grid>
                                     <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="8">
@@ -227,11 +242,11 @@
                         <TabItem Header="Editor">
                             <Grid RowDefinitions="Auto,*" RowSpacing="8">
                                 <StackPanel Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanEditImages}">
+                                <WrapPanel Orientation="Horizontal" IsEnabled="{Binding CanEditImages}">
                                     <Button Content="Vælg eller skift topbillede…" Click="ChoosePortraitClick" />
                                     <Button Content="Fjern topbillede" Click="RemovePortraitClick" />
                                     <Button Content="Indsæt billede…" Click="InsertBiographyImageClick" />
-                                </StackPanel>
+                                </WrapPanel>
                                 <StackPanel IsVisible="{Binding Editor.HasPersonLinks}" Spacing="4">
                                     <TextBlock Text="Gå til person" FontWeight="SemiBold" />
                                     <ScrollViewer MaxHeight="100" HorizontalScrollBarVisibility="Disabled">
@@ -297,13 +312,7 @@
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="2"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Background="{DynamicResource AppBorderBrush}"
-                          ResizeDirection="Columns" />
-
-            <Border Grid.Column="3"
+            <Border x:Name="ContextPanel" Grid.Column="4"
                     MinWidth="260"
                     Background="{DynamicResource AppPanelBackgroundBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
@@ -392,13 +401,14 @@
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="16,8">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="18">
+            <Grid ColumnDefinitions="*,*,*,Auto" ColumnSpacing="12">
                 <TextBlock Text="{Binding SaveStatusText}"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SaveStatusText}"
                            Foreground="{DynamicResource AppAccentBrush}"
                            FontWeight="SemiBold" />
-                <TextBlock Grid.Column="1" Text="{Binding ActivePersonText}" IsVisible="{Binding IsBiographyTab}" Foreground="{DynamicResource AppMutedTextBrush}" />
-                <TextBlock Grid.Column="1" Text="{Binding PersonGraph.ProbandText}" IsVisible="{Binding IsGraphTab}" Foreground="{DynamicResource AppMutedTextBrush}" />
-                <TextBlock Grid.Column="2" Text="{Binding ActiveFilePathText}" Foreground="{DynamicResource AppMutedTextBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding ActivePersonText}" IsVisible="{Binding IsBiographyTab}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ActivePersonText}" />
+                <TextBlock Grid.Column="1" Text="{Binding PersonGraph.ProbandText}" IsVisible="{Binding IsGraphTab}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PersonGraph.ProbandText}" />
+                <TextBlock Grid.Column="2" Text="{Binding ActiveFilePathText}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SelectedGedcomFilePath}" />
                 <TextBlock Grid.Column="3" Text="Lokal behandling" Foreground="{DynamicResource AppMutedTextBrush}" />
             </Grid>
         </Border>

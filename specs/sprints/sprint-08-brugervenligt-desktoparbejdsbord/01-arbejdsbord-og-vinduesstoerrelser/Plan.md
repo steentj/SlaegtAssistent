@@ -1,12 +1,14 @@
 # Plan: Tilpas arbejdsbordet til minimumsstørrelsen
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R1. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen**.
+Status: **implementeret; afventer manuel og tværplatformsvalidering**. Kilde: GUI-anbefaling R1. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **Ingen**.
 
 ## Mål og evidens
 
 Målet er at tilpas arbejdsbordet til minimumsstørrelsen. Evidensmærke: **Inferred** (udledt af kode, ingen observeret rendering).
 
 Hovedvinduet tillader 960 × 600, mens kolonnernes minimumsbredder, mellemrum og marginer kræver mindst 1.048 logiske enheder. Topbjælken bruger en ubrudt knaprække.
+
+Kontekstpanelet starter lukket under 1.100 logiske enheder og kan åbnes manuelt. Grænsen er en foreløbig layoutvurdering, ikke en visuel måling. Personlistens maksimale bredde begrænses ved størrelsesskift, så der bliver plads til arbejdsfladen og et eventuelt åbent kontekstpanel. Grafens eksportvalg har lodret rulning ved pladsmangel. Native førbilleder kunne ikke optages, da vinduet ikke kunne tilgås under den oprindelige gennemgang; løsningen kræver derfor stadig visuel kontrol.
 
 ## Filer og implementeringsgrundlag
 

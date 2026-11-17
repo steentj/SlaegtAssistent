@@ -1,6 +1,6 @@
 # Krav: Tilpas arbejdsbordet til minimumsstørrelsen
 
-Status: **planlagt**. Afhængighed: **Ingen**.
+Status: **implementeret; accept afventer manuel validering**. Afhængighed: **Ingen**.
 
 ## Acceptkriterier
 

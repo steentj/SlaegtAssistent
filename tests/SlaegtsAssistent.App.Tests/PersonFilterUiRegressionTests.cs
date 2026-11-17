@@ -269,6 +269,46 @@ public sealed class PersonFilterUiRegressionTests
         });
 
     [Fact]
+    public Task ContextPanel_ShouldPreserveSelectionAndEditorAcrossResizingAndToggling() =>
+        HeadlessTestApplication.RunAsync(async () =>
+        {
+            using var workspace = await CreateWorkspaceAsync();
+            var window = new MainWindow { DataContext = workspace.ViewModel, Width = 960, Height = 600 };
+            var webView = window.FindControl<NativeWebView>("PreviewWebView")!;
+            ((Panel)webView.Parent!).Children.Remove(webView);
+            try
+            {
+                window.Show();
+                Flush();
+                var grid = window.FindControl<Grid>("WorkspaceGrid")!;
+                var context = window.FindControl<Border>("ContextPanel")!;
+                var toggle = window.FindControl<Button>("ContextToggle")!;
+                context.IsVisible.Should().BeFalse();
+                grid.ColumnDefinitions[4].Width.Value.Should().Be(0);
+
+                var selected = workspace.ViewModel.SelectedPerson;
+                var editor = workspace.ViewModel.Editor!;
+                editor.MarkdownText = "Ugemt tekst æøå";
+                toggle.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Flush();
+                context.IsVisible.Should().BeTrue();
+                grid.ColumnDefinitions[0].ActualWidth.Should().BeGreaterThanOrEqualTo(220);
+                grid.ColumnDefinitions[2].ActualWidth.Should().BeGreaterThanOrEqualTo(420);
+                toggle.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                window.Width = 1220;
+                Flush();
+                toggle.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Flush();
+                context.IsVisible.Should().BeTrue();
+                workspace.ViewModel.SelectedPerson.Should().BeSameAs(selected);
+                workspace.ViewModel.Editor.Should().BeSameAs(editor);
+                editor.MarkdownText.Should().Be("Ugemt tekst æøå");
+                editor.IsDirty.Should().BeTrue();
+            }
+            finally { window.Close(); }
+        });
+
+    [Fact]
     public Task FilteringPerson_ShouldKeepSelectionPreviewHtmlAndRawGedcom_InRealWindow() =>
         HeadlessTestApplication.RunAsync(async () =>
         {

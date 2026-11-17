@@ -162,7 +162,7 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Specifikation:** [Analyse](sprints/sprint-07e-medier-og-billedvalg/Analyse.md), [sprintplan](sprints/sprint-07e-medier-og-billedvalg/Plan.md), [mediekontrakt](sprints/sprint-07e-medier-og-billedvalg/Mediekontrakt.md), [krav](sprints/sprint-07e-medier-og-billedvalg/Requirements.md) og [validering](sprints/sprint-07e-medier-og-billedvalg/Validation.md).
 
 ### Trin 15: Brugervenligt desktoparbejdsbord SPRINT 8
-*   **Status:** Planlagt på baggrund af en statisk GUI-gennemgang. Implementering og visuel accept er ikke udført.
+*   **Status:** Påbegyndt på baggrund af en statisk GUI-gennemgang. Sektion 01 er implementeret og afventer manuel visuel accept; øvrige sektioner er planlagt.
 *   **Mål:** Gør eksisterende person-, dokument-, import- og eksportflows overskuelige ved minimumsstørrelsen og fuldt betjenelige med tastatur.
 *   **Forudsætning:** De eksisterende flows fra sprint 7A–7E bruges som integrationsgrundlag; åbne fejl og uafsluttede platformprøver registreres, og tidligere sprints erklæres ikke afsluttet af denne plan.
 *   **Sektioner:**

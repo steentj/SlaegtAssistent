@@ -1,6 +1,6 @@
 # Validering: Tilpas arbejdsbordet til minimumsstørrelsen
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel validering udestår**. Headless-kontrol dokumenterer ikke native vinduers udseende eller tilgængelighed.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,5 @@ Panelbredder kan blive ugyldige ved størrelsesskift. Kontrollér genåbning og 
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026, macOS, headless | Bygning og automatiserede prøver | `dotnet restore` og `dotnet build` uden fejl; 628 bestået, 6 oversprunget. Regressionen kontrollerer åbning/lukning ved 960 × 600, kolonnebredder og bevarelse af personvalg og ugemt editorbuffer ved størrelsesskift. | Headless erstatter ikke native prøver. |
+| Ikke udført | R1-01–R1-03, visuel kontrol og tilgængelighed | Ingen native før-/efterbilleder eller manuelle platformprøver. | Kontrollér macOS, Windows og Linux, temaer, skalering, høj kontrast, tastatur og skærmlæser; mål og justér eventuelt brudpunktet. |

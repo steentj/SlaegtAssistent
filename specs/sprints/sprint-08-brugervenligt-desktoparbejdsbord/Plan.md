@@ -1,12 +1,12 @@
 # Plan: sprint 8 – brugervenligt desktoparbejdsbord
 
-Status: **planlagt; ikke implementeret eller godkendt**.
+Status: **påbegyndt; sektion 01 er implementeret og afventer manuel validering**. Øvrige sektioner er planlagt.
 
 ## Mål
 
 Gør de eksisterende kerneopgaver lettere at gennemføre: find en person, skriv og kontrollér biografien, gennemgå GEDCOM-opdateringer, indsæt billeder og eksportér. Appen skal fungere ved den angivne minimumsstørrelse og med tastatur uden tab af brugerdata.
 
-Sprintet omsætter de ti anbefalinger fra GUI-gennemgangen den 17. november 2026. Alle fund er **Inferred**: bygning lykkedes, men appvinduet kunne ikke inspiceres. Klipning, kontrast og faktisk skærmlæseradfærd er ikke observeret. Før implementering optages en visuel baseline; justeringer af løsningsdetaljer dokumenteres, hvis observationerne begrunder dem.
+Sprintet omsætter de ti anbefalinger fra GUI-gennemgangen den 17. november 2026. Alle fund er **Inferred**: bygning lykkedes, men appvinduet kunne ikke inspiceres. Klipning, kontrast og faktisk skærmlæseradfærd er ikke observeret. Den ønskede visuelle baseline kunne derfor ikke optages før sektion 01; native prøver og eventuelle justeringer skal dokumenteres.
 
 ## Forudsætninger og afgrænsning
 
