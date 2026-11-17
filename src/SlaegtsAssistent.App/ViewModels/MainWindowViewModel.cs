@@ -1218,6 +1218,8 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
             return;
         }
 
+        _personGraph?.Select(value?.RecordId);
+
         if (value is null)
         {
             Editor = null;

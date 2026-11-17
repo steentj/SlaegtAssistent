@@ -96,6 +96,30 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel model) new BiographyExportWindow(model).Show(this);
     }
     private CancellationTokenSource? _exportCancellation;
+    private GraphExportSelection _graphExportSelection = new(GraphExportFormat.Png, false, true, 4096, 0);
+
+    private async void ShowGraphExport(object? sender, RoutedEventArgs e) => await ShowGraphExportOptions(GraphExportFormat.Png);
+    private async void ShowGraphPrint(object? sender, RoutedEventArgs e) => await ShowGraphExportOptions(GraphExportFormat.Print);
+
+    private async Task ShowGraphExportOptions(GraphExportFormat format)
+    {
+        if (DataContext is not MainWindowViewModel model || model.PersonGraph.Layout is null)
+        {
+            if (DataContext is MainWindowViewModel missing) missing.PersonGraph.Status = "Indlæs grafen før eksport eller udskrift.";
+            return;
+        }
+        var selection = await new GraphExportOptionsWindow(format).ShowDialog<GraphExportSelection?>(this);
+        if (selection is null) return;
+        _graphExportSelection = selection;
+        var args = new RoutedEventArgs();
+        switch (selection.Format)
+        {
+            case GraphExportFormat.Svg: GraphExportSvg(null, args); break;
+            case GraphExportFormat.Png: GraphExportPng(null, args); break;
+            case GraphExportFormat.Pdf: GraphExportPdf(null, args); break;
+            case GraphExportFormat.Print: GraphPrint(null, args); break;
+        }
+    }
     private void GraphCancelExport(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _exportCancellation?.Cancel();
     private CancellationTokenSource BeginGraphExport()
     {
@@ -116,8 +140,8 @@ public partial class MainWindow : Window
     private void GraphCenterProband(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GraphControl.CenterProband();
     private GraphExportOptions CaptureExportOptions(string? proband)
     {
-        var labels = ExportLabels.IsChecked == true;
-        if (ExportViewport.IsChecked != true) return new(GraphExportScope.WholeGraph, labels, proband);
+        var labels = _graphExportSelection.Labels;
+        if (!_graphExportSelection.Viewport) return new(GraphExportScope.WholeGraph, labels, proband);
         var viewport = GraphControl.GetVisibleWorldBounds();
         return new(GraphExportScope.CurrentViewport, labels, proband, viewport.Bounds, viewport.Origin);
     }
@@ -137,8 +161,8 @@ public partial class MainWindow : Window
         {
             var scene = new GraphExportSceneBuilder().Build(viewModel.PersonGraph.Graph, layout, CaptureExportOptions(viewModel.PersonGraph.ProbandId));
             var html = "<html><body>" + new GraphSvgWriter().Write(scene) + "</body></html>";
-            var paper = ExportPaper.SelectedIndex >= 2 ? "A3" : "A4";
-            var orientation = ExportPaper.SelectedIndex % 2 == 1 ? "portrait" : "landscape";
+            var paper = _graphExportSelection.PaperIndex >= 2 ? "A3" : "A4";
+            var orientation = _graphExportSelection.PaperIndex % 2 == 1 ? "portrait" : "landscape";
             viewModel.PersonGraph.Status = "PDF'en dannes. Vælg Udskriv i PDF-fremviseren for at vælge printer.";
             var pdf = await sidecar.RenderGraphPdfAsync(html, paper, orientation, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
@@ -170,7 +194,7 @@ public partial class MainWindow : Window
         {
             var scene = new GraphExportSceneBuilder().Build(viewModel.PersonGraph.Graph, layout,
                 CaptureExportOptions(viewModel.PersonGraph.ProbandId));
-            var resolution = ExportPngSize.SelectedIndex switch { 0 => 2048, 2 => 8192, _ => 4096 };
+            var resolution = _graphExportSelection.Resolution;
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Gem graf som PNG",
@@ -211,8 +235,8 @@ public partial class MainWindow : Window
         {
             var scene = new GraphExportSceneBuilder().Build(viewModel.PersonGraph.Graph, layout,
                 CaptureExportOptions(viewModel.PersonGraph.ProbandId));
-            var paper = ExportPaper.SelectedIndex >= 2 ? "A3" : "A4";
-            var orientation = ExportPaper.SelectedIndex % 2 == 1 ? "portrait" : "landscape";
+            var paper = _graphExportSelection.PaperIndex >= 2 ? "A3" : "A4";
+            var orientation = _graphExportSelection.PaperIndex % 2 == 1 ? "portrait" : "landscape";
             var html = "<html><body>" + new GraphSvgWriter().Write(scene) + "</body></html>";
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -277,18 +301,11 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void GraphListKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    private void PeopleListKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel) return;
-        if (e.Key == Avalonia.Input.Key.Enter)
+        if (e.Key == Avalonia.Input.Key.Enter && DataContext is MainWindowViewModel viewModel && viewModel.IsGraphTab)
         {
-            viewModel.PersonGraph.OpenBiographyCommand.Execute(null);
-            e.Handled = true;
-        }
-        else if (e.Key == Avalonia.Input.Key.Escape)
-        {
-            viewModel.PersonGraph.Select(null);
-            viewModel.PersonGraph.Hover(null);
+            viewModel.OpenSelectedBiographyCommand.Execute(null);
             e.Handled = true;
         }
     }

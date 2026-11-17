@@ -98,8 +98,9 @@
                                    Margin="0,2,0,0" />
                     </StackPanel>
 
-                    <ListBox ItemsSource="{Binding People}"
-                             SelectedItem="{Binding SelectedPerson}"
+                    <ListBox x:Name="PeopleList" ItemsSource="{Binding People}"
+                             SelectedItem="{Binding SelectedPerson}" KeyDown="PeopleListKeyDown"
+                             AutomationProperties.Name="Personer"
                              Margin="0,12,0,0">
                         <ListBox.Styles>
                             <Style Selector="ListBoxItem">
@@ -176,7 +177,6 @@
                             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
                                 <WrapPanel Orientation="Horizontal">
                                     <Button Content="Opdatér graf" Command="{Binding RefreshGraphCommand}" />
-                                    <TextBox Width="180" PlaceholderText="Søg person" Text="{Binding PersonGraph.SearchText}" />
                                     <Button Content="Brug som proband" Command="{Binding PersonGraph.UseAsProbandCommand}" />
                                     <Button Content="Åbn biografi" Command="{Binding PersonGraph.OpenBiographyCommand}" />
                                 </WrapPanel>
@@ -188,40 +188,28 @@
                                             <Button Content="Vis alle" Click="GraphShowAll" />
                                             <Button Content="Centrér proband" Click="GraphCenterProband" />
                                         </WrapPanel>
-                                        <ScrollViewer Grid.Row="1" MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                        <WrapPanel Orientation="Horizontal" Margin="0,6,0,6">
-                                            <CheckBox x:Name="ExportViewport" Content="Aktuelt udsnit" Margin="0,0,12,0" />
-                                            <CheckBox x:Name="ExportLabels" Content="Vis navne og datoer" IsChecked="True" Margin="0,0,12,0" />
-                                            <ComboBox x:Name="ExportPngSize" SelectedIndex="1" Width="110" Margin="0,0,8,0"><ComboBoxItem Content="2048 px"/><ComboBoxItem Content="4096 px"/><ComboBoxItem Content="8192 px"/></ComboBox>
-                                            <ComboBox x:Name="ExportPaper" SelectedIndex="0" Width="130" Margin="0,0,8,0"><ComboBoxItem Content="A4 liggende"/><ComboBoxItem Content="A4 stående"/><ComboBoxItem Content="A3 liggende"/><ComboBoxItem Content="A3 stående"/></ComboBox>
-                                            <Button Content="SVG…" Click="GraphExportSvg" Margin="0,0,6,0" />
-                                            <Button Content="PDF…" Click="GraphExportPdf" Margin="0,0,6,0" />
-                                            <Button Content="PNG…" Click="GraphExportPng" />
-                                            <Button Content="Udskriv…" Click="GraphPrint" Margin="6,0,0,0" />
-                                            <Button x:Name="CancelGraphExport" Content="Annullér eksport" Click="GraphCancelExport" IsEnabled="False" Margin="6,0,0,0" />
+                                        <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6">
+                                            <Button Content="Eksportér graf…" Click="ShowGraphExport" />
+                                            <Button Content="Udskriv…" Click="ShowGraphPrint" />
+                                            <Button x:Name="CancelGraphExport" Content="Annullér eksport" Click="GraphCancelExport" IsEnabled="False" />
                                         </WrapPanel>
-                                        </ScrollViewer>
                                         <views:PersonGraphControl x:Name="GraphControl" Grid.Row="2" DataContext="{Binding PersonGraph}"
                                             AutomationProperties.Name="Personnetværk"
                                             AutomationProperties.HelpText="Brug piletaster til panorering, plus og minus til zoom og Home til at vise alle. Vælg personer i listen." />
                                     </Grid>
-                                    <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="8">
-                                        <ListBox ItemsSource="{Binding PersonGraph.SearchResults}" SelectedItem="{Binding PersonGraph.SelectedPerson, Mode=TwoWay}" KeyDown="GraphListKeyDown" AutomationProperties.Name="Søgte personer">
-                                            <ListBox.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
-                                        </ListBox>
-                                        <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding PersonGraph.DirectConnections}"
-                                            AutomationProperties.Name="Person og direkte forbindelser">
+                                    <ScrollViewer Grid.Column="1" AutomationProperties.Name="Person og direkte forbindelser">
+                                        <StackPanel Spacing="8">
+                                        <TextBlock Text="{Binding PersonGraph.ConnectionSummary}" TextWrapping="Wrap"
+                                                   AutomationProperties.LiveSetting="Polite" />
+                                        <ItemsControl ItemsSource="{Binding PersonGraph.DirectConnections}">
                                             <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GraphPersonItemViewModel"><TextBlock Text="{Binding Details}" TextWrapping="Wrap" Margin="0,0,0,8" /></DataTemplate></ItemsControl.ItemTemplate>
-                                        </ItemsControl></ScrollViewer>
-                                    </Grid>
+                                        </ItemsControl>
+                                        </StackPanel>
+                                    </ScrollViewer>
                                 </Grid>
                                 <StackPanel Grid.Row="2" Spacing="2">
                                     <TextBlock Text="Klik i grafen eller vælg graffanen med tastaturet. Piletaster: panorér. Plus/minus: zoom. Home: vis alle. Enter i personlisten åbner biografien."
                                                TextWrapping="Wrap" />
-                                    <ScrollViewer MaxHeight="70" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                                        <TextBlock Text="{Binding PersonGraph.ConnectionSummary}" TextWrapping="Wrap"
-                                                   AutomationProperties.LiveSetting="Polite" />
-                                    </ScrollViewer>
                                     <TextBlock Text="{Binding PersonGraph.Status}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>

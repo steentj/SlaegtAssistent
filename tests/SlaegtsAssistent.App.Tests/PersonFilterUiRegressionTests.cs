@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 using System.IO.Compression;
 using SlaegtsAssistent.Core.Export;
 using SlaegtsAssistent.Core.Biography;
@@ -145,6 +146,38 @@ public sealed class PersonFilterUiRegressionTests
                 editor.MarkdownText.Should().Be(before);
                 textbox.Redo();
                 editor.MarkdownText.Should().StartWith(BiographyImageEditService.PortraitStartMarker);
+            }
+            finally { window.Close(); }
+        });
+
+    [Fact]
+    public Task FællesPersonvalgStyrerGrafenUdenFaneskiftOgBevarerUgemtTekst() =>
+        HeadlessTestApplication.RunAsync(async () =>
+        {
+            using var workspace = await CreateWorkspaceAsync();
+            var vm = workspace.ViewModel;
+            var window = ShowWindow(vm);
+            try
+            {
+                var anna = vm.People.Single(person => person.DisplayName == "Anna Jensen");
+                var bo = vm.People.Single(person => person.DisplayName == "Bo Jensen");
+                vm.SelectedPerson = anna;
+                vm.Editor!.MarkdownText += "\nUgemt tekst";
+                vm.DocumentTabIndex = 0;
+                vm.PersonGraph.SetGraph(new SlaegtsAssistent.Core.Graph.PersonGraphBuilder().Build(
+                    [new(anna.RecordId, anna.DisplayName, null, null, null), new(bo.RecordId, bo.DisplayName, null, null, null)], []), null);
+                vm.PersonFilterText = "Bo";
+                vm.SelectedPerson!.RecordId.Should().Be(bo.RecordId);
+                vm.PersonGraph.SelectedPerson!.RecordId.Should().Be(bo.RecordId);
+                vm.DocumentTabIndex.Should().Be(0);
+                vm.PersonGraph.Select(anna.RecordId);
+                vm.SelectedPerson!.RecordId.Should().Be(anna.RecordId);
+                vm.PersonFilterText.Should().BeEmpty();
+                vm.Editor!.MarkdownText.Should().Contain("Ugemt tekst");
+                var list = window.FindControl<ListBox>("PeopleList")!;
+                list.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+                vm.DocumentTabIndex.Should().Be(1);
+                vm.Editor.MarkdownText.Should().Contain("Ugemt tekst");
             }
             finally { window.Close(); }
         });

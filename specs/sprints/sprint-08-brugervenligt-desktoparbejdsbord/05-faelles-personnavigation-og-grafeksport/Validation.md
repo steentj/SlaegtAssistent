@@ -1,6 +1,6 @@
 # Validering: Saml navigation og skjul grafeksportens detaljer
 
-Status: **ikke udført**. Denne fil er en prøveplan, ikke evidens for implementering.
+Status: **automatiseret kontrol udført; manuel og native platformprøver udestår**.
 
 ## Automatiseret kontrol
 
@@ -21,4 +21,5 @@ Samling af personvalg kan skabe rekursive opdateringer eller utilsigtede faneski
 
 | Dato/platform | Krav/test | Resultat og evidens | Afvigelse/opfølgning |
 | --- | --- | --- | --- |
-| Ikke udført | Alle sektionens krav | Ingen implementering eller manuel prøve udført | Afventer implementering |
+| 17. november 2026, macOS headless | Bygning og automatiserede test | `dotnet restore` og `dotnet build --no-restore` lykkedes; `dotnet test --no-restore`: 640 bestået, 0 fejl, 6 oversprunget. Efterfølgende målrettet test af Enter i personlisten og eksportdialogen bestod. Test dækker personvalg i begge retninger, ugemt tekst, formatvalg, relevante indstillinger og annullering. | Ikke en native visuel prøve. |
+| Ikke prøvet | R5-01–R5-03, native macOS, Windows og Linux | Manuel afprøvning af alle eksportformater og udskrift, tastatur, skærmlæser, temaer og billeder udestår. | Accept afventer dokumenteret platformprøve. |

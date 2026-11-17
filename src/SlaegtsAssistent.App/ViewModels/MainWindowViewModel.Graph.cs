@@ -28,6 +28,7 @@ public partial class MainWindowViewModel
             if (_personGraph is not null) return _personGraph;
             _personGraph = new PersonGraphViewModel(OpenGraphPerson);
             _personGraph.PropertyChanged += GraphPropertyChanged;
+            _personGraph.Select(SelectedPerson?.RecordId);
             return _personGraph;
         }
     }
@@ -60,8 +61,19 @@ public partial class MainWindowViewModel
 
     private void GraphPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (_settingGraph || args.PropertyName != nameof(PersonGraphViewModel.ProbandId) ||
-            string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder) || _personGraph?.ProbandId is null) return;
+        if (_settingGraph || _personGraph is null) return;
+        if (args.PropertyName == nameof(PersonGraphViewModel.SelectedPerson) && _personGraph.SelectedPerson is { } selected)
+        {
+            var matches = _allPeople.Where(person => person.RecordId == selected.RecordId).ToArray();
+            if (matches.Length == 1 && SelectedPerson != matches[0])
+            {
+                if (!People.Contains(matches[0])) PersonFilterText = string.Empty;
+                SelectedPerson = matches[0];
+            }
+            return;
+        }
+        if (args.PropertyName != nameof(PersonGraphViewModel.ProbandId) ||
+            string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder) || _personGraph.ProbandId is null) return;
         try { new GraphSettingsStore(new AtomicFileWriter()).Save(StandardMarkdownOutputFolder, _personGraph.ProbandId); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         { _personGraph.Status = $"Probanden kunne ikke gemmes: {exception.Message}"; }
@@ -108,6 +120,7 @@ public partial class MainWindowViewModel
                 _settingGraph = true;
                 try { PersonGraph.SetGraph(graph, null, PersonGraph.ProbandId ?? SelectedPerson?.RecordId); }
                 finally { _settingGraph = false; }
+                PersonGraph.Select(SelectedPerson?.RecordId);
                 PersonGraph.Status = "Grafens lokale Graphviz-værktøj mangler i programpakken.";
                 return;
             }
@@ -129,12 +142,19 @@ public partial class MainWindowViewModel
             _settingGraph = true;
             try { PersonGraph.SetGraph(graph, layout, PersonGraph.ProbandId ?? savedProband ?? SelectedPerson?.RecordId); }
             finally { _settingGraph = false; }
+            PersonGraph.Select(SelectedPerson?.RecordId);
         }
         catch (OperationCanceledException) { }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException or InvalidOperationException or GedcomSnapshotException or System.ComponentModel.Win32Exception)
         {
             if (revision == _graphRevision) PersonGraph.Status = $"Grafen kunne ikke indlæses: {exception.Message}";
         }
+    }
+
+    [RelayCommand]
+    private void OpenSelectedBiography()
+    {
+        if (SelectedPerson is not null) OpenGraphPerson(SelectedPerson.RecordId);
     }
 
     private void OpenGraphPerson(string recordId)

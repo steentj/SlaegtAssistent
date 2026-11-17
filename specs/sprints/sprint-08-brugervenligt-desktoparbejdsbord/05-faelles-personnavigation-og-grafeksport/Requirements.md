@@ -1,6 +1,6 @@
 # Krav: Saml navigation og skjul grafeksportens detaljer
 
-Status: **planlagt**. Afhængighed: **01, 03 og 04**.
+Status: **implementeret; manuel validering udestår**. Afhængighed: **01, 03 og 04**.
 
 ## Acceptkriterier
 

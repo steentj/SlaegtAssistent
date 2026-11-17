@@ -1,6 +1,6 @@
 # Plan: sprint 8 – brugervenligt desktoparbejdsbord
 
-Status: **påbegyndt; sektion 01, 02, 03 og 04 er implementeret og afventer manuel validering**. Øvrige sektioner er planlagt.
+Status: **påbegyndt; sektion 01, 02, 03, 04 og 05 er implementeret og afventer manuel validering**. Øvrige sektioner er planlagt.
 
 ## Mål
 

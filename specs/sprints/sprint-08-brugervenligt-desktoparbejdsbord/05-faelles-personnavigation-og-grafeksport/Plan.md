@@ -1,6 +1,6 @@
 # Plan: Saml navigation og skjul grafeksportens detaljer
 
-Status: **planlagt; ikke implementeret eller godkendt**. Kilde: GUI-anbefaling R5. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **01, 03 og 04**.
+Status: **implementeret; manuel validering og godkendelse udestår**. Kilde: GUI-anbefaling R5. Alvor: **Major**. Indsats: **M** (relativ størrelse, ikke et tidsestimat). Afhængighed: **01, 03 og 04**.
 
 ## Mål og evidens
 

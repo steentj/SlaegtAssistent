@@ -14,7 +14,7 @@ namespace SlaegtsAssistent.App.Tests;
 public sealed class GraphWorkspaceUiTests
 {
     [Fact]
-    public Task GraffanenSøgerAllePersonerOgViserProbanden() => HeadlessTestApplication.RunAsync(async () =>
+    public Task GraffanenHarFællesPersonsøgningOgViserProbanden() => HeadlessTestApplication.RunAsync(async () =>
     {
         var vm = new MainWindowViewModel();
         var window = new MainWindow();
@@ -36,11 +36,9 @@ public sealed class GraphWorkspaceUiTests
                 [new("A", "Anna", "F", null, null), new("B", "Bo", "M", null, null)], []), null, "A");
             window.GetVisualDescendants().OfType<TabControl>().Single().Items
                 .Cast<TabItem>().Select(tab => tab.Header).Should().Equal("Graf", "Editor", "Preview");
-            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg person");
-            search.Text = "Bo";
-            Dispatcher.UIThread.RunJobs();
-            vm.PersonGraph.SearchResults.Select(item => item.RecordId).Should().Equal("B");
-            vm.PersonGraph.SelectedPerson = vm.PersonGraph.SearchResults.Single();
+            window.GetVisualDescendants().OfType<TextBox>().Count(box => box.PlaceholderText == "Søg navn eller record-id").Should().Be(1);
+            window.GetVisualDescendants().OfType<TextBox>().Should().NotContain(box => box.PlaceholderText == "Søg person");
+            vm.PersonGraph.Select("B");
             vm.PersonGraph.UseAsProbandCommand.Execute(null);
             vm.PersonGraph.ProbandText.Should().Be("Proband: Bo");
             vm.IsBiographyTab.Should().BeFalse();
@@ -75,7 +73,7 @@ public sealed class GraphWorkspaceUiTests
             graph.GetVisibleWorldBounds().Bounds.Width.Should().BeLessThan(before.Bounds.Width);
             window.KeyPress(Key.OemQuestion, RawInputModifiers.None, default, "-");
             graph.GetVisibleWorldBounds().Bounds.Width.Should().BeApproximately(before.Bounds.Width, 0.001);
-            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg person");
+            var search = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.PlaceholderText == "Søg navn eller record-id");
             search.Focus();
             window.KeyPress(Key.Right, RawInputModifiers.None, default, null);
             graph.GetVisibleWorldBounds().Origin.X.Should().BeApproximately(before.Origin.X + 40 / (graph.Bounds.Width / before.Bounds.Width), 0.001);
