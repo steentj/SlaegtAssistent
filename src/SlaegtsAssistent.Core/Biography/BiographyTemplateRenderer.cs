@@ -123,6 +123,8 @@ public sealed class BiographyTemplateRenderer
                 "createdDate" => person.CreatedDate,
                 "notes" => person.Notes,
                 "familyNotes" => person.FamilyNotes,
+                "sectionNotes" => person.SectionNotes,
+                "familySectionNotes" => person.FamilySectionNotes,
                 _ => null,
             },
             PersonReferenceTemplateContext person => name switch
@@ -137,6 +139,7 @@ public sealed class BiographyTemplateRenderer
             NoteTemplateContext note => name switch
             {
                 "text" => new NoteText(note.Text, note.NoteDetails),
+                "date" => note.Date,
                 _ => null,
             },
             EventTemplateContext @event => name switch

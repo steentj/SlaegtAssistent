@@ -87,7 +87,7 @@ public sealed class TemplateEditorViewModelTests
         var viewModel = new TemplateEditorViewModel(BiographyTemplateEditorModel.CreateDefault());
 
         viewModel.Blocks.Select(block => block.Label).Should().Equal(
-            "Titel", "Fakta", "Hændelser", "Folketællinger", "Kilder", "Medier", "Afsender", "Biografi");
+            "Titel", "Fakta", "Notater", "Hændelser", "Folketællinger", "Kilder", "Medier", "Afsender", "Biografi");
         viewModel.SelectedBlock.Should().Be(viewModel.Blocks[0]);
         viewModel.CanEditHeading.Should().BeFalse();
         viewModel.HasFields.Should().BeFalse();

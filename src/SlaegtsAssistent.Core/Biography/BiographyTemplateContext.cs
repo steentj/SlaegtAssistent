@@ -249,6 +249,8 @@ public sealed record PersonTemplateContext(
     public IReadOnlyList<PersonReferenceTemplateContext> Partners { get; init; } = [];
     public IReadOnlyList<NoteTemplateContext> Notes { get; init; } = [];
     public IReadOnlyList<NoteTemplateContext> FamilyNotes { get; init; } = [];
+    public IReadOnlyList<NoteTemplateContext> SectionNotes => NoteTemplateContext.ForSection(Notes);
+    public IReadOnlyList<NoteTemplateContext> FamilySectionNotes => NoteTemplateContext.ForSection(FamilyNotes);
 
     public PersonTemplateContext WithLinks(BiographyPersonLinks? links)
     {
@@ -297,6 +299,14 @@ public sealed record PersonReferenceTemplateContext(string RecordId, string? Ful
 public sealed record NoteTemplateContext(string Text)
 {
     public CanonicalNoteDetails? NoteDetails { get; init; }
+    public string? Date { get; init; }
+
+    internal static IReadOnlyList<NoteTemplateContext> ForSection(IEnumerable<NoteTemplateContext> notes) =>
+        notes.SelectMany(note => note.NoteDetails?.Parts ?? [new CanonicalNotePart(note.Text, null)])
+            .Select(part => new NoteTemplateContext(part.Text)
+            {
+                Date = part.Timestamp is null ? null : NoteTimestampFormatter.Format(part.Timestamp),
+            }).ToArray();
 
     internal static NoteTemplateContext FromValue(GedcomNoteValue value) => new(value.Text)
     {

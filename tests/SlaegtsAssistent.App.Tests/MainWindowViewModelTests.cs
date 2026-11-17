@@ -745,7 +745,7 @@ public partial class MainWindowViewModelTests
         var templatePath = Path.Combine(outputFolder, "uden-notater.slaegtskabelon");
         var standard = BiographyTemplateEditorModel.CreateDefault();
         var template = new BiographyTemplateEditorModel(standard.Version, standard.Blocks.Select(block =>
-            block.Type == BiographyTemplateBlockType.Facts
+            block.Type == BiographyTemplateBlockType.Notes
                 ? new BiographyTemplateBlock(block.Type, block.IsVisible, block.Heading, block.Presentation,
                     block.Fields.Where(field => field != BiographyTemplateField.PersonNote).ToArray())
                 : block).ToArray());
@@ -816,14 +816,14 @@ public partial class MainWindowViewModelTests
             await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
             viewModel.ErrorMessage.Should().BeNull();
-            viewModel.Editor!.MarkdownText.Should().Contain("**Notat:** Første notat");
+            viewModel.Editor!.MarkdownText.Should().Contain("Person: Første notat");
             viewModel.Editor.MarkdownText = viewModel.Editor.MarkdownText.Replace(
                 "_Skriv den fulde livshistorie her._", "Min egen tekst.", StringComparison.Ordinal);
 
             await viewModel.SelectGedcomFileCommand.ExecuteAsync(null);
 
             viewModel.ErrorMessage.Should().BeNull();
-            viewModel.Editor.MarkdownText.Should().Contain("**Notat:** Ændret notat")
+            viewModel.Editor.MarkdownText.Should().Contain("Person: Ændret notat")
                 .And.Contain("Min egen tekst.");
             viewModel.Editor.CreateDocument().Metadata!.SyncBaseline!.Approved.Person.Notes
                 .Should().Equal("Ændret notat");

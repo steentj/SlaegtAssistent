@@ -49,4 +49,18 @@ public sealed class Sprint04dFeature04Tests
         candidate.Content.Should().NotContain("_Placeret tekst._");
         candidate.RequiresMigration.Should().BeFalse();
     }
+
+    [Fact]
+    public void GeneratedSectionMerger_AdskillerTabelOgSlutmarkoerOgBevarerBiografi()
+    {
+        var existing = BiographyGeneratedSectionMerger.StartMarker + "\nGammel tekst\n" +
+            BiographyGeneratedSectionMerger.EndMarker + "\n## Biografi\n\nMin egen tekst.\n";
+        const string table = "## Notater\r\n| Dato | Notat |\r\n| --- | --- |\r\n\r\n";
+
+        var candidate = BiographyGeneratedSectionMerger.CreateCandidate(existing, table);
+
+        candidate.Content.Should().Contain("| --- | --- |\n\n" + BiographyGeneratedSectionMerger.EndMarker)
+            .And.Contain("## Biografi\n\nMin egen tekst.");
+        candidate.RequiresMigration.Should().BeFalse();
+    }
 }

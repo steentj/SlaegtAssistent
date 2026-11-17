@@ -13,7 +13,7 @@ public static class BiographyGeneratedSectionMerger
     public static string Wrap(string generatedContent)
     {
         ArgumentNullException.ThrowIfNull(generatedContent);
-        return $"{StartMarker}\n{generatedContent.TrimEnd('\r', '\n')}\n{EndMarker}\n";
+        return $"{StartMarker}\n{generatedContent.TrimEnd('\r', '\n')}\n\n{EndMarker}\n";
     }
 
     public static BiographyGeneratedSectionCandidate CreateCandidate(

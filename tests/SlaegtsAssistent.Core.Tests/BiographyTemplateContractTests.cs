@@ -109,7 +109,7 @@ public sealed class BiographyTemplateContractTests
         var withoutNotes = BiographyDocumentParser.Parse(
             generator.Generate(new Person("@I2@") { FullName = "Bent" })).Body;
 
-        directBody.Should().Contain("- **Notat:** Første notat\n- **Notat:** Andet \\*notat\\*");
+        directBody.Should().Contain("- Person: Første notat\n- Person: Andet \\*notat\\*");
         snapshotBody.Should().Be(directBody);
         customBody.Should().NotContain("Første notat").And.NotContain("**Notat:**");
         withoutNotes.Should().NotContain("**Notat:**");
@@ -125,7 +125,7 @@ public sealed class BiographyTemplateContractTests
         var body = BiographyDocumentParser.Parse(generated).Body;
 
         body.Should().Contain(
-            "**Notat:** Første linje  \n  \\## Ikke en overskrift  \n  \\- Ikke en liste  \n  1\\. Heller ikke en liste");
+            "Person: Første linje  \n  \\## Ikke en overskrift  \n  \\- Ikke en liste  \n  1\\. Heller ikke en liste");
         body.Should().NotContain("\n## Ikke en overskrift");
     }
 

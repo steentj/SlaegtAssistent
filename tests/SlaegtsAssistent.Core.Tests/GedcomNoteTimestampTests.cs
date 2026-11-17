@@ -14,6 +14,77 @@ public sealed class GedcomNoteTimestampTests : IDisposable
     public void Dispose() => CultureInfo.CurrentCulture = _originalCulture;
 
     [Theory]
+    [InlineData(BiographyTemplatePresentation.List)]
+    [InlineData(BiographyTemplatePresentation.Table)]
+    public void Notatsektion_ViserPersonOgFamilieMedDatoOgSikkerTekst(BiographyTemplatePresentation presentation)
+    {
+        var path = WriteFixture("""
+            0 HEAD
+            1 CHAR UTF-8
+            0 @I1@ INDI
+            1 NOTE @N1@
+            1 NOTE Uden dato
+            0 @F1@ FAM
+            1 HUSB @I1@
+            1 NOTE @N2@
+            0 @N1@ NOTE Person | tekst
+            1 CONT ## Ikke overskrift
+            1 CREA
+            2 DATE 20 NOV 2025
+            1 CHAN
+            2 DATE 21 NOV 2025
+            3 TIME 14:32:00
+            0 @N2@ NOTE Familien flyttede
+            1 CREA
+            2 DATE 19 NOV 2025
+            1 CHAN
+            2 DATE 18 NOV 2025
+            0 TRLR
+            """);
+        try
+        {
+            var person = new GedcomLoader().Load(path).FindPerson("@I1@")!;
+            var snapshot = CanonicalBiographySnapshot.Create(person);
+            person.Notes[1] = "Ny import";
+            var block = new BiographyTemplateBlock(BiographyTemplateBlockType.Notes, true, "Notater",
+                presentation, [BiographyTemplateField.PersonNote, BiographyTemplateField.FamilyNote]);
+            var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion, [block]);
+            var source = new BiographyTemplateEditorCompiler().Compile(model);
+            var template = new BiographyTemplateLoader().Parse(source);
+            var renderer = new BiographyTemplateRenderer();
+            var output = renderer.Render(template, BiographyTemplateContext.FromSnapshot(snapshot));
+
+            if (presentation == BiographyTemplatePresentation.Table)
+            {
+                output.Should().Contain("| Dato | Notat |\n| --- | --- |")
+                    .And.Contain("| 21-11-2025 14:32 | Person: Person \\| tekst \\## Ikke overskrift |")
+                    .And.Contain("|  | Person: Uden dato |")
+                    .And.Contain("| 19-11-2025 | Familie: Familien flyttede |");
+            }
+            else
+            {
+                output.Should().Contain("- **21-11-2025 14:32**: Person: Person \\| tekst")
+                    .And.Contain("- Person: Uden dato")
+                    .And.Contain("- **19-11-2025**: Familie: Familien flyttede");
+            }
+            output.Should().NotContain("\n## Ikke overskrift").And.NotContain("Ny import");
+            renderer.Render(template, BiographyTemplateContext.FromPerson(person)).Should().Contain("Ny import");
+
+            var hidden = new BiographyTemplateEditorModel(model.Version, [block with { IsVisible = false }]);
+            new BiographyTemplateEditorCompiler().Compile(hidden).Should().NotContain("Notater");
+            var familyOnly = new BiographyTemplateEditorModel(model.Version,
+                [new(block.Type, true, block.Heading, presentation, [BiographyTemplateField.FamilyNote])]);
+            var familyOutput = renderer.Render(new BiographyTemplateLoader().Parse(
+                new BiographyTemplateEditorCompiler().Compile(familyOnly)), BiographyTemplateContext.FromSnapshot(snapshot));
+            familyOutput.Should().Contain("Familie: Familien flyttede").And.NotContain("Person:");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
     [InlineData("1 CHAN\n2 DATE 20 OCT 2023\n3 TIME 14:03:19\n1 CREA\n2 DATE 20 OCT 2023\n3 TIME 14:02:20", "20-10-2023 14:03")]
     [InlineData("1 CHAN\n2 DATE 19 OCT 2023\n1 CREA\n2 DATE 20 OCT 2023\n3 TIME 14:02:20", "20-10-2023 14:02")]
     [InlineData("1 CHAN\n2 DATE 20 OCT 2023", "20-10-2023")]
@@ -41,14 +112,14 @@ public sealed class GedcomNoteTimestampTests : IDisposable
             tree.Diagnostics.Should().BeEmpty();
             if (expected is null)
             {
-                direct.Should().Contain("**Notat:** Tekst\n");
-                restored.Should().Contain("**Notat:** Tekst\n");
+                direct.Should().Contain("- Person: Tekst\n");
+                restored.Should().Contain("- Person: Tekst\n");
                 snapshot.Person.NoteDetails.Should().BeNull();
             }
             else
             {
-                direct.Should().Contain($"**Notat:** Tekst *({expected})*");
-                restored.Should().Contain($"**Notat:** Tekst *({expected})*");
+                direct.Should().Contain($"- **{expected}**: Person: Tekst");
+                restored.Should().Contain($"- **{expected}**: Person: Tekst");
             }
         }
         finally
@@ -114,13 +185,14 @@ public sealed class GedcomNoteTimestampTests : IDisposable
             tree.Diagnostics.Should().BeEmpty();
             foreach (var output in new[] { direct, restored })
             {
-                output.Split("*(20-10-2023 14:03)*", StringSplitOptions.None).Length.Should().Be(8);
+                output.Split("*(20-10-2023 14:03)*", StringSplitOptions.None).Length.Should().Be(6);
+                output.Split("**20-10-2023 14:03**", StringSplitOptions.None).Length.Should().Be(3);
                 output.Should().Contain("Andet notat").And.NotContain("14:02:20");
             }
-            childBody.Should().Contain("Fælles notat *(20-10-2023 14:03)*");
+            childBody.Should().Contain("**20-10-2023 14:03**: Familie:").And.Contain("Fælles notat");
             foreach (var (type, field) in new[]
                      {
-                         (BiographyTemplateBlockType.Facts, BiographyTemplateField.PersonNote),
+                         (BiographyTemplateBlockType.Notes, BiographyTemplateField.PersonNote),
                          (BiographyTemplateBlockType.Events, BiographyTemplateField.EventNote),
                          (BiographyTemplateBlockType.Census, BiographyTemplateField.CensusNote),
                          (BiographyTemplateBlockType.Sources, BiographyTemplateField.SourceNote),
@@ -137,7 +209,11 @@ public sealed class GedcomNoteTimestampTests : IDisposable
                              BiographyTemplateContext.FromSnapshot(snapshot),
                          })
                 {
-                    renderer.Render(template, context).Should().Contain("Fælles notat *(20-10-2023 14:03)*");
+                    var rendered = renderer.Render(template, context);
+                    if (type == BiographyTemplateBlockType.Notes)
+                        rendered.Should().Contain("| 20-10-2023 14:03 | Person:");
+                    else
+                        rendered.Should().Contain("Fælles notat *(20-10-2023 14:03)*");
                 }
             }
         }
@@ -178,7 +254,7 @@ public sealed class GedcomNoteTimestampTests : IDisposable
                 var result = decisions.Apply(approved, imported, new Dictionary<string, bool> { [difference.Path] = select });
                 result.Person.Notes.Should().Equal("Samme tekst");
                 BiographyDocumentParser.Parse(generator.Generate(result, imported)).Body
-                    .Should().Contain($"Samme tekst *({expected})*");
+                    .Should().Contain($"**{expected}**: Person: Samme tekst");
             }
         }
         finally
@@ -244,13 +320,13 @@ public sealed class GedcomNoteTimestampTests : IDisposable
             snapshot.Person.NoteDetails![0]!.Parts.Single().Timestamp.Should().Be("2 JAN 2023 08:04:59");
             var generator = new BiographyTemplateMarkdownGenerator();
             var danish = BiographyDocumentParser.Parse(generator.Generate(snapshot, snapshot));
-            danish.Body.Should().Contain("Tekst *(02-01-2023 08:04)*");
+            danish.Body.Should().Contain("**02-01-2023 08:04**: Person: Tekst");
 
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             var restored = danish.Metadata!.SyncBaseline!.Approved;
             var american = BiographyDocumentParser.Parse(generator.Generate(restored, restored)).Body;
             var expected = new DateTime(2023, 1, 2, 8, 4, 59).ToString("g", CultureInfo.CurrentCulture);
-            american.Should().Contain($"Tekst *({expected})*");
+            american.Should().Contain($"**{expected}**: Person: Tekst");
             restored.ComputeFingerprint().Should().Be(fingerprint);
             restored.Person.NoteDetails![0]!.Parts.Single().Timestamp.Should().Be("2 JAN 2023 08:04:59");
         }

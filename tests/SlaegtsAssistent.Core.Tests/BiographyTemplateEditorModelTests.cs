@@ -15,6 +15,7 @@ public sealed class BiographyTemplateEditorModelTests
         model.Blocks.Select(block => block.Type).Should().Equal(
             BiographyTemplateBlockType.Title,
             BiographyTemplateBlockType.Facts,
+            BiographyTemplateBlockType.Notes,
             BiographyTemplateBlockType.Events,
             BiographyTemplateBlockType.Census,
             BiographyTemplateBlockType.Sources,
@@ -84,7 +85,7 @@ public sealed class BiographyTemplateEditorModelTests
     }
 
     [Fact]
-    public void Faktatabel_ViserValgteFelterOgNotaterIRaekkefoelge()
+    public void AeldreFaktatabel_FlytterNotaterOgBevarerFaktaraekkefoelgen()
     {
         var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion,
         [
@@ -111,14 +112,36 @@ public sealed class BiographyTemplateEditorModelTests
         var result = new BiographyTemplateRenderer().Render(template, BiographyTemplateContext.FromPerson(person, personLinks: links));
 
         result.Should().Contain("| Oplysning | Værdi |")
-            .And.Contain("| Notat | Første \\## Anden \\| linje |")
+            .And.Contain("|  | Person: Første \\## Anden \\| linje |")
             .And.Contain("| Forældre | [Anna Jensen](anna.md) |")
             .And.Contain("| Født | 1900 i Odense \\| Fyn |")
-            .And.Contain("| Familienotat | Familienotat |")
+            .And.Contain("|  | Familie: Familienotat |")
             .And.NotContain("| Død |");
-        result.IndexOf("| Notat |", StringComparison.Ordinal).Should().BeLessThan(result.IndexOf("| Forældre |", StringComparison.Ordinal));
         result.IndexOf("| Forældre |", StringComparison.Ordinal).Should().BeLessThan(result.IndexOf("| Født |", StringComparison.Ordinal));
-        result.Split('\n').Count(line => line.StartsWith("| Notat |", StringComparison.Ordinal)).Should().Be(1);
+        result.Split('\n').Count(line => line.StartsWith("|  | Person:", StringComparison.Ordinal)).Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(true, "PersonNote")]
+    [InlineData(false, "FamilyNote")]
+    public void AeldreSkabelon_FlytterKunValgteNotaterOgBevarerSynlighed(bool visible, string selected)
+    {
+        var old = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion,
+        [
+            new(BiographyTemplateBlockType.Facts, visible, "Mine fakta", BiographyTemplatePresentation.Table,
+                [BiographyTemplateField.Birth, Enum.Parse<BiographyTemplateField>(selected)]),
+        ]);
+        var serializer = new BiographyTemplateEditorSerializer();
+        var migrated = serializer.Deserialize(serializer.Serialize(old));
+        var facts = migrated.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+        var notes = migrated.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Notes);
+
+        facts.Fields.Should().Equal(BiographyTemplateField.Birth);
+        facts.Heading.Should().Be("Mine fakta");
+        notes.Fields.Should().Equal(Enum.Parse<BiographyTemplateField>(selected));
+        notes.IsVisible.Should().Be(visible);
+        notes.Presentation.Should().Be(BiographyTemplatePresentation.Table);
+        serializer.Deserialize(serializer.Serialize(migrated)).Should().BeEquivalentTo(migrated);
     }
 
     [Theory]
@@ -246,8 +269,9 @@ public sealed class BiographyTemplateEditorModelTests
         "{{#if person.children }}- **Børn:** {{ person.childNames }}\n{{/if}}" +
         "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}" +
         "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}" +
-        "{{#each person.notes }}{{#if text }}- **Notat:** {{ text }}\n{{/if}}{{/each}}" +
-        "{{#each person.familyNotes }}{{#if text }}- **Familienotat:** {{ text }}\n{{/if}}{{/each}}\n" +
+        "\n## Notater\n" +
+        "{{#each person.sectionNotes }}{{#if text }}- {{#if date }}**{{ date }}**: {{/if}}Person: {{ text }}\n{{/if}}{{/each}}" +
+        "{{#each person.familySectionNotes }}{{#if text }}- {{#if date }}**{{ date }}**: {{/if}}Familie: {{ text }}\n{{/if}}{{/each}}\n" +
         "## Hændelser\n" +
         "{{#each allEvents }}- **{{ category }}**{{#if type }} ({{ type }}){{/if}}{{#if value }}: {{ value }}{{/if}}{{#if date }} ({{ date }}){{/if}}{{#if place }} i {{ place }}{{/if}}{{#if note }} – **Notat:** {{ note }}{{/if}}\n{{/each}}\n" +
         "## Folketællinger\n" +

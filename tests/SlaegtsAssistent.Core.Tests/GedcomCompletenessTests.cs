@@ -146,7 +146,7 @@ public class GedcomCompletenessTests
             tree.FindMedia("@M1@")!.Note.Should().Be(firstNote);
             var generatedBody = BiographyDocumentParser.Parse(
                 new BiographyTemplateMarkdownGenerator().Generate(person)).Body;
-            generatedBody.Should().Contain("**Notat:** Eget notat")
+            generatedBody.Should().Contain("Person: Eget notat")
                 .And.Contain("**Notat:** Første linje  \n  Anden linje fortsat")
                 .And.NotContain("@N1@");
             tree.ImportReport.ImportedRecords.Should().Be(6);

@@ -6,6 +6,7 @@ public static class BiographyTemplateEditorCatalog
     [
         new(BiographyTemplateBlockType.Title, "Titel", "Personens navn som dokumentets titel."),
         new(BiographyTemplateBlockType.Facts, "Fakta", "Fødsel, død og nære relationer."),
+        new(BiographyTemplateBlockType.Notes, "Notater", "Notater knyttet til personen og familien."),
         new(BiographyTemplateBlockType.Events, "Hændelser", "Personlige hændelser og familiehændelser."),
         new(BiographyTemplateBlockType.Census, "Folketællinger", "Registrerede folketællinger."),
         new(BiographyTemplateBlockType.Sources, "Kilder", "Kilder knyttet til personen."),
@@ -23,8 +24,8 @@ public static class BiographyTemplateEditorCatalog
         new(BiographyTemplateField.Children, BiographyTemplateBlockType.Facts, "Børn", ["person.children", "person.childNames"]),
         new(BiographyTemplateField.Partners, BiographyTemplateBlockType.Facts, "Partnere", ["person.partners", "person.partnerNames"]),
         new(BiographyTemplateField.CreatedDate, BiographyTemplateBlockType.Facts, "Oprettelsesdato", ["person.createdDate"]),
-        new(BiographyTemplateField.PersonNote, BiographyTemplateBlockType.Facts, "Notat", ["person.notes", "person.notes[].text"]),
-        new(BiographyTemplateField.FamilyNote, BiographyTemplateBlockType.Facts, "Familienotat", ["person.familyNotes", "person.familyNotes[].text"]),
+        new(BiographyTemplateField.PersonNote, BiographyTemplateBlockType.Notes, "Personnotater", ["person.sectionNotes", "person.sectionNotes[].date", "person.sectionNotes[].text"]),
+        new(BiographyTemplateField.FamilyNote, BiographyTemplateBlockType.Notes, "Familienotater", ["person.familySectionNotes", "person.familySectionNotes[].date", "person.familySectionNotes[].text"]),
         new(BiographyTemplateField.EventCategory, BiographyTemplateBlockType.Events, "Kategori", ["allEvents[].category"]),
         new(BiographyTemplateField.EventType, BiographyTemplateBlockType.Events, "Type", ["allEvents[].type"]),
         new(BiographyTemplateField.EventValue, BiographyTemplateBlockType.Events, "Oplysning", ["allEvents[].value"]),
@@ -68,6 +69,7 @@ public static class BiographyTemplateEditorCatalog
         BiographyTemplatePresentation[] allowed = type switch
         {
             BiographyTemplateBlockType.Facts or
+            BiographyTemplateBlockType.Notes or
             BiographyTemplateBlockType.Events or
             BiographyTemplateBlockType.Census or
             BiographyTemplateBlockType.Sources or
@@ -88,7 +90,8 @@ public sealed record BiographyTemplateBlockDescriptor(
     public string Help => Type switch
     {
         BiographyTemplateBlockType.Title => "Viser personens navn øverst. Skjul sektionen, hvis navnet ikke skal gentages i dokumentet.",
-        BiographyTemplateBlockType.Facts => "Vælg fødsel, død, relationer og notater. Flyt felterne for at ændre rækkefølgen, og vælg liste eller tabel under Flere muligheder. Manglende oplysninger udelades.",
+        BiographyTemplateBlockType.Facts => "Vælg fødsel, død og relationer. Flyt felterne for at ændre rækkefølgen, og vælg liste eller tabel under Flere muligheder. Manglende oplysninger udelades.",
+        BiographyTemplateBlockType.Notes => "Vælg person- og familienotater og vis dem som liste eller tabel. Notaternes seneste dato vises, når den findes.",
         BiographyTemplateBlockType.Events => "Vælg oplysninger om hændelser. Åbn Flere muligheder for at skifte mellem liste og tabel.",
         BiographyTemplateBlockType.Census => "Vis folketællingernes dato, sted og notat. Åbn Flere muligheder for at vælge liste eller tabel.",
         BiographyTemplateBlockType.Sources => "Vælg kildens titel, forfatter, side og notat. Flyt sektionen for at placere kilderne før eller efter hændelserne.",
@@ -102,6 +105,7 @@ public sealed record BiographyTemplateBlockDescriptor(
     {
         BiographyTemplateBlockType.Title => "Anna Jensen",
         BiographyTemplateBlockType.Facts => "Født: 12. marts 1880 i Odense. Forældre: Jens Jensen og Marie Hansen.",
+        BiographyTemplateBlockType.Notes => "21-11-2025: Person: Familien flyttede til Odense.",
         BiographyTemplateBlockType.Events => "Vielse – 4. maj 1902 i Odense.",
         BiographyTemplateBlockType.Census => "1911 – Odense – Bopæl i Vestergade.",
         BiographyTemplateBlockType.Sources => "Kirkebog for Odense, side 42.",

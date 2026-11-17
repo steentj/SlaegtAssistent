@@ -109,6 +109,9 @@ public sealed class BiographyTemplateEditorCompiler
             case BiographyTemplateBlockType.Facts:
                 AppendFacts(result, block);
                 break;
+            case BiographyTemplateBlockType.Notes:
+                AppendPersonNotes(result, block);
+                break;
             case BiographyTemplateBlockType.Events:
                 AppendEvents(result, block);
                 break;
@@ -157,10 +160,6 @@ public sealed class BiographyTemplateEditorCompiler
                     "{{#if person.partners }}- **Partnere:** {{ person.partnerNames }}\n{{/if}}",
                 BiographyTemplateField.CreatedDate =>
                     "{{#if person.createdDate }}- **Oprettet dato:** {{ person.createdDate }}\n{{/if}}",
-                BiographyTemplateField.PersonNote =>
-                    "{{#each person.notes }}{{#if text }}- **Notat:** {{ text }}\n{{/if}}{{/each}}",
-                BiographyTemplateField.FamilyNote =>
-                    "{{#each person.familyNotes }}{{#if text }}- **Familienotat:** {{ text }}\n{{/if}}{{/each}}",
                 _ => throw UnexpectedField(block, field),
             });
         }
@@ -192,12 +191,38 @@ public sealed class BiographyTemplateEditorCompiler
                     "{{#if person.partners }}| Partnere | {{ person.partnerNames }} |\n{{/if}}",
                 BiographyTemplateField.CreatedDate =>
                     "{{#if person.createdDate }}| Oprettet dato | {{ person.createdDate }} |\n{{/if}}",
-                BiographyTemplateField.PersonNote =>
-                    "{{#each person.notes }}{{#if text }}| Notat | {{ text }} |\n{{/if}}{{/each}}",
-                BiographyTemplateField.FamilyNote =>
-                    "{{#each person.familyNotes }}{{#if text }}| Familienotat | {{ text }} |\n{{/if}}{{/each}}",
                 _ => throw UnexpectedField(block, field),
             });
+        }
+        result.Append('\n');
+    }
+
+    private static void AppendPersonNotes(StringBuilder result, BiographyTemplateBlock block)
+    {
+        AppendHeading(result, block);
+        if (block.Presentation == BiographyTemplatePresentation.Table && block.Fields.Count > 0)
+        {
+            result.Append("| Dato | Notat |\n| --- | --- |\n");
+        }
+
+        foreach (var field in block.Fields)
+        {
+            var (collection, label) = field switch
+            {
+                BiographyTemplateField.PersonNote => ("person.sectionNotes", "Person"),
+                BiographyTemplateField.FamilyNote => ("person.familySectionNotes", "Familie"),
+                _ => throw UnexpectedField(block, field),
+            };
+            result.Append("{{#each ").Append(collection).Append(" }}{{#if text }}");
+            if (block.Presentation == BiographyTemplatePresentation.Table)
+            {
+                result.Append("| {{ date }} | ").Append(label).Append(": {{ text }} |\n");
+            }
+            else
+            {
+                result.Append("- {{#if date }}**{{ date }}**: {{/if}}").Append(label).Append(": {{ text }}\n");
+            }
+            result.Append("{{/if}}{{/each}}");
         }
         result.Append('\n');
     }

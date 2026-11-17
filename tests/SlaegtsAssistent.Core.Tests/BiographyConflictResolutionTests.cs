@@ -109,7 +109,7 @@ public sealed class BiographyConflictResolutionTests
         var body = BiographyDocumentParser.Parse(
             new BiographyTemplateMarkdownGenerator().Generate(selected, imported)).Body;
 
-        body.Should().Contain($"**Notat:** {expected}");
+        body.Should().Contain($"Person: {expected}");
         selected.Person.Notes.Should().Equal(expected);
     }
 

@@ -49,7 +49,7 @@ public sealed class BiographyTemplateNotesTests
         BiographyTemplateContract.PublicFieldPaths.Should().Contain("person.familyNotes");
         BiographyTemplateContract.PublicFieldPaths.Should().Contain("person.familyNotes[].text");
         BiographyTemplateEditorCatalog.GetField(BiographyTemplateField.FamilyNote).TechnicalPaths
-            .Should().Contain("person.familyNotes");
+            .Should().Contain("person.familySectionNotes");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class BiographyTemplateNotesTests
         var person = CreatePerson();
         var without = Render(reloaded, BiographyTemplateContext.FromPerson(person));
 
-        foreach (var (type, field) in NoteFields())
+        foreach (var (type, field) in NoteFields().Where(item => item.Type != BiographyTemplateBlockType.Notes))
         {
             reloaded.Blocks.Single(block => block.Type == type).Fields.Should().NotContain(field);
         }
@@ -106,11 +106,12 @@ public sealed class BiographyTemplateNotesTests
             reloaded.Version,
             reloaded.Blocks.Select(block =>
             {
-                var field = NoteFields().Single(item => item.Type == block.Type).Field;
+                var field = NoteFields().FirstOrDefault(item => item.Type == block.Type).Field;
                 return new BiographyTemplateBlock(
                     block.Type, block.IsVisible, block.Heading, block.Presentation,
-                    block.Fields.Append(field).ToArray());
-            }).ToArray());
+                    block.Type == BiographyTemplateBlockType.Facts ? block.Fields : block.Fields.Append(field).ToArray());
+            }).Append(new BiographyTemplateBlock(BiographyTemplateBlockType.Notes, true, "Notater",
+                BiographyTemplatePresentation.List, [BiographyTemplateField.FamilyNote])).ToArray());
         var restored = serializer.Deserialize(serializer.Serialize(selected));
         var with = Render(restored, BiographyTemplateContext.FromPerson(person));
 
@@ -121,7 +122,7 @@ public sealed class BiographyTemplateNotesTests
     }
 
     [Theory]
-    [InlineData(BiographyTemplateBlockType.Facts, BiographyTemplateField.FamilyNote, "Første familienotat")]
+    [InlineData(BiographyTemplateBlockType.Notes, BiographyTemplateField.FamilyNote, "Første familienotat")]
     [InlineData(BiographyTemplateBlockType.Events, BiographyTemplateField.EventNote, "Personhændelsens notat")]
     [InlineData(BiographyTemplateBlockType.Sources, BiographyTemplateField.SourceNote, "Kildens notat")]
     [InlineData(BiographyTemplateBlockType.Media, BiographyTemplateField.MediaNote, "Mediets notat")]
@@ -144,7 +145,7 @@ public sealed class BiographyTemplateNotesTests
         }
         foreach (var other in ExpectedNotes.Where(note => note != expected &&
                      !(type == BiographyTemplateBlockType.Events && note == "Familiehændelsens notat") &&
-                     !(type == BiographyTemplateBlockType.Facts && note.Contains("familienotat", StringComparison.Ordinal))))
+                     !(type == BiographyTemplateBlockType.Notes && note.Contains("familienotat", StringComparison.Ordinal))))
         {
             direct.Should().NotContain(other);
         }
@@ -232,7 +233,7 @@ public sealed class BiographyTemplateNotesTests
         {
             foreach (var model in new[]
                      {
-                         Model(BiographyTemplateBlockType.Facts, BiographyTemplatePresentation.List, BiographyTemplateField.FamilyNote),
+                         Model(BiographyTemplateBlockType.Notes, BiographyTemplatePresentation.List, BiographyTemplateField.FamilyNote),
                          Model(BiographyTemplateBlockType.Media, BiographyTemplatePresentation.Standard, BiographyTemplateField.MediaNote),
                      })
             {
@@ -362,7 +363,7 @@ public sealed class BiographyTemplateNotesTests
 
     private static (BiographyTemplateBlockType Type, BiographyTemplateField Field)[] NoteFields() =>
     [
-        (BiographyTemplateBlockType.Facts, BiographyTemplateField.FamilyNote),
+        (BiographyTemplateBlockType.Notes, BiographyTemplateField.FamilyNote),
         (BiographyTemplateBlockType.Events, BiographyTemplateField.EventNote),
         (BiographyTemplateBlockType.Sources, BiographyTemplateField.SourceNote),
         (BiographyTemplateBlockType.Media, BiographyTemplateField.MediaNote),

@@ -14,7 +14,7 @@ public sealed class TemplateEditorNotesPreviewTests
 {
     private static readonly (BiographyTemplateBlockType Block, BiographyTemplateField Field)[] NoteFields =
     [
-        (BiographyTemplateBlockType.Facts, BiographyTemplateField.FamilyNote),
+        (BiographyTemplateBlockType.Notes, BiographyTemplateField.FamilyNote),
         (BiographyTemplateBlockType.Events, BiographyTemplateField.EventNote),
         (BiographyTemplateBlockType.Sources, BiographyTemplateField.SourceNote),
         (BiographyTemplateBlockType.Media, BiographyTemplateField.MediaNote),
@@ -23,7 +23,7 @@ public sealed class TemplateEditorNotesPreviewTests
     [Theory]
     [InlineData(BiographyTemplatePresentation.List)]
     [InlineData(BiographyTemplatePresentation.Table)]
-    public async Task NotatetsTidspunkt_VisesIKursivIForhaandsvisningen(BiographyTemplatePresentation presentation)
+    public async Task NotatetsTidspunkt_VisesFoerTekstenIForhaandsvisningen(BiographyTemplatePresentation presentation)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ged");
         var originalCulture = CultureInfo.CurrentCulture;
@@ -36,11 +36,11 @@ public sealed class TemplateEditorNotesPreviewTests
                 "1 CREA\n2 DATE 20 OCT 2023\n3 TIME 14:02:20\n0 TRLR\n");
             var person = new GedcomLoader().Load(path).FindPerson("@I1@")!;
             var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion,
-                [new(BiographyTemplateBlockType.Facts, true, "Fakta", presentation, [BiographyTemplateField.PersonNote])]);
+                [new(BiographyTemplateBlockType.Notes, true, "Notater", presentation, [BiographyTemplateField.PersonNote])]);
 
             var preview = await new TemplateEditorPreviewService().RenderAsync(model, person, null, CancellationToken.None);
 
-            preview.SafePreview.Html.Should().Contain("Tekst <em>(20-10-2023 14:03)</em>")
+            preview.SafePreview.Html.Should().Contain("20-10-2023 14:03").And.Contain("Person: Tekst")
                 .And.NotContain("14:02:20");
             preview.SafePreview.NetworkRequestAttempts.Should().Be(0);
         }
@@ -155,11 +155,11 @@ public sealed class TemplateEditorNotesPreviewTests
             viewModel.PreviewErrorMessage.Should().BeNull();
             var html = viewModel.PreviewHtmlDocument;
             html.Should().Contain("Bodil Sørensen").And.NotContain("Anna Marie Jensen");
-            var facts = Section(html, "Fakta");
+            var notes = Section(html, "Notater");
             var events = Section(html, "Hændelser");
             var sources = Section(html, "Kilder");
             var media = Section(html, "Medier");
-            var familyItems = Elements(facts, "li");
+            var familyItems = Elements(notes, "li");
             var eventItems = Elements(events, "li");
             var sourceItems = Elements(sources, "li");
             familyItems.Should().ContainSingle();
@@ -269,7 +269,7 @@ public sealed class TemplateEditorNotesPreviewTests
         [
             new(BiographyTemplateBlockType.Title, true, "", BiographyTemplatePresentation.Standard,
                 [BiographyTemplateField.PersonFullName]),
-            new(BiographyTemplateBlockType.Facts, true, "Fakta", BiographyTemplatePresentation.List,
+            new(BiographyTemplateBlockType.Notes, true, "Notater", presentation,
                 [BiographyTemplateField.FamilyNote]),
             new(BiographyTemplateBlockType.Events, true, "Hændelser", presentation,
                 [BiographyTemplateField.EventCategory, BiographyTemplateField.EventNote]),

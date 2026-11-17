@@ -86,7 +86,7 @@ public sealed class GedcomHelpViewModel : ViewModelBase
         ## Sådan behandler SlægtsAssistenten tags
 
         - **Hændelser** (fx `BIRT`, `DEAT`, `MARR`, `OCCU`) vises som hændelser i biografien.
-        - **`NOTE`** importeres som notat. Personens notater kan vises eller fravælges under Fakta i skabelonredigeringen; henvisninger til delte notater opløses.
+        - **`NOTE`** importeres som notat. Personens og familiens notater kan vises eller fravælges under Notater i skabelonredigeringen; henvisninger til delte notater opløses.
         - **`CREA`** (oprettelsesdato) er metadata om, hvornår en post blev oprettet, og er ikke en hændelse. Datoen er tilgængelig i skabeloner som `person.createdDate` ("Oprettet dato") og kan udelades i skabelonen.
         - **Private tags** (starter med `_`, fx `_MYTAG`) er programspecifikke og medtages ikke som hændelser.
         - **`CHAN`** (seneste ændring) er metadata og vises ikke som hændelse.

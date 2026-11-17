@@ -42,6 +42,13 @@ public sealed record BiographyTemplateEditorModel
                     BiographyTemplateField.Children,
                     BiographyTemplateField.Partners,
                     BiographyTemplateField.CreatedDate,
+                ]),
+            new(
+                BiographyTemplateBlockType.Notes,
+                true,
+                "Notater",
+                BiographyTemplatePresentation.List,
+                [
                     BiographyTemplateField.PersonNote,
                     BiographyTemplateField.FamilyNote,
                 ]),
@@ -141,6 +148,7 @@ public enum BiographyTemplateBlockType
     Media,
     Submitter,
     Biography,
+    Notes,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<BiographyTemplatePresentation>))]

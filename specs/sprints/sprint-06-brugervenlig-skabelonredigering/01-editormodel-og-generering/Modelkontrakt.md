@@ -30,6 +30,7 @@ Serialiseringen er kanonisk: samme model giver byte-identisk JSON med afsluttend
 | `Title` | Titel | Standard |
 | `Facts` | Fakta | Liste eller tabel |
 | `Events` | Hændelser | Liste eller tabel |
+| `Notes` | Notater | Liste eller tabel |
 | `Census` | Folketællinger | Liste eller tabel |
 | `Sources` | Kilder | Liste eller tabel |
 | `Media` | Medier | Liste eller tabel (`Standard` i ældre modeller understøttes) |
@@ -41,7 +42,8 @@ En bloktype må højst forekomme én gang. Skjulte blokke bevares i modellen, me
 ## Feltgrupper
 
 - Titel: personens navn.
-- Fakta: fødsel, død, forældre, børn, partnere, oprettelsesdato, notat og familienotat.
+- Fakta: fødsel, død, forældre, børn, partnere og oprettelsesdato.
+- Notater: personnotater og familienotater med dato.
 - Hændelser: kategori, type, oplysning, dato, sted og notat.
 - Folketællinger: dato, sted og notat.
 - Kilder: titel, forfatter, side og notat.

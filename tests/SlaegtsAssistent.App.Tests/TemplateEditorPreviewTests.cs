@@ -63,23 +63,23 @@ public sealed class TemplateEditorPreviewTests
     {
         var standard = BiographyTemplateEditorModel.CreateDefault();
         var existing = new BiographyTemplateEditorModel(standard.Version, standard.Blocks.Select(block =>
-            block.Type == BiographyTemplateBlockType.Facts
+            block.Type == BiographyTemplateBlockType.Notes
                 ? new BiographyTemplateBlock(block.Type, block.IsVisible, block.Heading, block.Presentation,
                     block.Fields.Where(field => field != BiographyTemplateField.PersonNote).ToArray())
                 : block).ToArray());
         var viewModel = new TemplateEditorViewModel(existing, previewDelay: TimeSpan.Zero);
         await viewModel.PreviewUpdateTask;
-        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts);
+        viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Notes);
         var note = viewModel.Fields.Single(field => field.Field == BiographyTemplateField.PersonNote);
 
-        note.Label.Should().Be("Notat");
+        note.Label.Should().Be("Personnotater");
         note.IsSelected.Should().BeFalse();
         viewModel.PreviewMarkdown.Should().NotContain("Familien huskede Anna som en ivrig fortæller.");
 
         viewModel.ToggleFieldCommand.Execute(note);
         await viewModel.PreviewUpdateTask;
-        viewModel.PreviewMarkdown.Should().Contain("**Notat:** Familien huskede Anna som en ivrig fortæller.");
-        viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Facts)
+        viewModel.PreviewMarkdown.Should().Contain("Person: Familien huskede Anna som en ivrig fortæller.");
+        viewModel.CreateModel().Blocks.Single(block => block.Type == BiographyTemplateBlockType.Notes)
             .Fields.Should().Contain(BiographyTemplateField.PersonNote);
 
         viewModel.ToggleFieldCommand.Execute(note);
@@ -102,6 +102,55 @@ public sealed class TemplateEditorPreviewTests
             .And.Contain("Ikke en liste")
             .And.Contain("<br")
             .And.NotContain("<h2>Ikke en overskrift</h2>");
+    }
+
+    [Fact]
+    public async Task Notater_KanVisesSomTabelOgFravaelges()
+    {
+        var viewModel = CreateViewModel();
+        try
+        {
+            viewModel.SelectedBlock = viewModel.Blocks.Single(block => block.Type == BiographyTemplateBlockType.Notes);
+            viewModel.AvailablePresentations.Select(item => item.Presentation).Should().Equal(
+                BiographyTemplatePresentation.List, BiographyTemplatePresentation.Table);
+            viewModel.SelectedPresentation = viewModel.AvailablePresentations.Single(
+                item => item.Presentation == BiographyTemplatePresentation.Table);
+            await viewModel.PreviewUpdateTask;
+
+            viewModel.PreviewHtmlDocument.Should().Contain("<th>Dato</th>").And.Contain("<th>Notat</th>")
+                .And.Contain("Person: Familien huskede Anna").And.Contain("Familie: Familien boede");
+            viewModel.SelectedBlockIsVisible = false;
+            await viewModel.PreviewUpdateTask;
+            viewModel.PreviewMarkdown.Should().NotContain("## Notater").And.NotContain("Person: Familien huskede Anna");
+        }
+        finally
+        {
+            viewModel.StopPreview();
+        }
+    }
+
+    [Fact]
+    public async Task AeldreSkabelonUdenNotater_KanTilfoejeNotatsektionen()
+    {
+        const string json = """
+            {"version":1,"blocks":[{"type":"Facts","isVisible":true,"heading":"Fakta","presentation":"List","fields":["Birth"]}]}
+            """;
+        var model = new BiographyTemplateEditorSerializer().Deserialize(json);
+        var viewModel = new TemplateEditorViewModel(model, previewDelay: TimeSpan.Zero);
+        try
+        {
+            await viewModel.PreviewUpdateTask;
+            viewModel.PreviewMarkdown.Should().NotContain("Familien huskede Anna");
+            viewModel.SelectedAvailableBlock = viewModel.AvailableBlocks.Single(block => block.Type == BiographyTemplateBlockType.Notes);
+            viewModel.AddBlockCommand.Execute(null);
+            await viewModel.PreviewUpdateTask;
+
+            viewModel.PreviewMarkdown.Should().Contain("## Notater").And.Contain("Person: Familien huskede Anna");
+        }
+        finally
+        {
+            viewModel.StopPreview();
+        }
     }
 
     [Fact]

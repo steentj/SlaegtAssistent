@@ -32,7 +32,7 @@ public sealed class BiographyTemplateEditorSerializer
                     BiographyTemplateEditorJsonContext.Default.BiographyTemplateEditorModel)
                 ?? throw new BiographyTemplateEditorException("Skabelonfilen indeholder ingen model.");
             ValidateVersion(model.Version);
-            return model;
+            return MoveLegacyNotes(model);
         }
         catch (BiographyTemplateEditorException)
         {
@@ -44,6 +44,41 @@ public sealed class BiographyTemplateEditorSerializer
                 $"Skabelonfilen kunne ikke læses: {exception.Message}",
                 exception);
         }
+    }
+
+    private static BiographyTemplateEditorModel MoveLegacyNotes(BiographyTemplateEditorModel model)
+    {
+        if (model.Blocks.Any(block => block is null))
+        {
+            return model;
+        }
+
+        var facts = model.Blocks.FirstOrDefault(block => block.Type == BiographyTemplateBlockType.Facts);
+        var noteFields = facts?.Fields.Where(field =>
+            field is BiographyTemplateField.PersonNote or BiographyTemplateField.FamilyNote).ToArray() ?? [];
+        if (facts is null || noteFields.Length == 0)
+        {
+            return model;
+        }
+
+        var blocks = model.Blocks.ToList();
+        var factsIndex = blocks.IndexOf(facts);
+        blocks[factsIndex] = new BiographyTemplateBlock(facts.Type, facts.IsVisible, facts.Heading,
+            facts.Presentation, facts.Fields.Except(noteFields).ToArray());
+        var existingIndex = blocks.FindIndex(block => block.Type == BiographyTemplateBlockType.Notes);
+        if (existingIndex < 0)
+        {
+            blocks.Insert(factsIndex + 1, new BiographyTemplateBlock(
+                BiographyTemplateBlockType.Notes, facts.IsVisible, "Notater", facts.Presentation, noteFields));
+        }
+        else
+        {
+            var existing = blocks[existingIndex];
+            blocks[existingIndex] = new BiographyTemplateBlock(existing.Type, existing.IsVisible, existing.Heading,
+                existing.Presentation, existing.Fields.Concat(noteFields).Distinct().ToArray());
+        }
+
+        return new BiographyTemplateEditorModel(model.Version, blocks);
     }
 
     public void Save(string filePath, BiographyTemplateEditorModel model)

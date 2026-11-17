@@ -17,6 +17,8 @@ public static class BiographyTemplateContract
         "{{#each person.parents}}{{ recordId }}{{ fullName }}{{/each}}",
         "{{#each person.notes}}{{ text }}{{/each}}",
         "{{#each person.familyNotes}}{{ text }}{{/each}}",
+        "{{#each person.sectionNotes}}{{ date }}{{ text }}{{/each}}",
+        "{{#each person.familySectionNotes}}{{ date }}{{ text }}{{/each}}",
         "{{#each events}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{#each sources}}{{ title }}{{/each}}{{/each}}",
         "{{#each familyEvents}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{/each}}",
         "{{#each allEvents}}{{ tag }}{{ category }}{{ value }}{{ date }}{{ place }}{{ type }}{{ note }}{{/each}}",
@@ -28,6 +30,8 @@ public static class BiographyTemplateContract
     public static IReadOnlyList<string> PublicFieldPaths { get; } = RootScalarPaths
         .Concat(new[] { "parents", "children", "partners" }.SelectMany(relation => new[] { $"person.{relation}", $"person.{relation}[].recordId", $"person.{relation}[].fullName", $"person.{relation}[].link", $"person.{relation}[].plainName", $"person.{relation}[].documentPath" }))
         .Concat(["person.notes", "person.notes[].text", "person.familyNotes", "person.familyNotes[].text"])
+        .Concat(["person.sectionNotes", "person.sectionNotes[].date", "person.sectionNotes[].text",
+            "person.familySectionNotes", "person.familySectionNotes[].date", "person.familySectionNotes[].text"])
         .Concat(EventCollectionPaths("events"))
         .Concat(EventCollectionPaths("familyEvents"))
         .Concat(EventCollectionPaths("allEvents"))
@@ -173,10 +177,10 @@ public static class BiographyTemplateContract
     private static readonly IReadOnlyDictionary<Context, IReadOnlyDictionary<string, Field>> Fields =
         new Dictionary<Context, IReadOnlyDictionary<string, Field>>
         {
-            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "childNames", "partnerNames", "createdDate", ("parents", Collection(Context.Parent)), ("children", Collection(Context.Parent)), ("partners", Collection(Context.Parent)), ("notes", Collection(Context.Note)), ("familyNotes", Collection(Context.Note))),
+            [Context.Person] = ScalarFields("recordId", "fullName", "sex", "birthDate", "birthPlace", "deathDate", "deathPlace", "parentNames", "childNames", "partnerNames", "createdDate", ("parents", Collection(Context.Parent)), ("children", Collection(Context.Parent)), ("partners", Collection(Context.Parent)), ("notes", Collection(Context.Note)), ("familyNotes", Collection(Context.Note)), ("sectionNotes", Collection(Context.Note)), ("familySectionNotes", Collection(Context.Note))),
             [Context.Submitter] = ScalarFields("recordId", "name", "address", "phone", "email", "website", "language"),
             [Context.Parent] = ScalarFields("recordId", "fullName", "plainName", "link", "documentPath"),
-            [Context.Note] = ScalarFields("text"),
+            [Context.Note] = ScalarFields("text", "date"),
             [Context.Event] = ScalarFields("tag", "category", "value", "date", "place", "type", "note", ("sources", Collection(Context.Source))),
             [Context.Census] = ScalarFields("date", "place", "note", ("sources", Collection(Context.Source))),
             [Context.Source] = ScalarFields("key", "recordId", "title", "author", "publication", "text", "repository", "page", "data", "date", "note"),

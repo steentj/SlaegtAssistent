@@ -1,10 +1,45 @@
 using FluentAssertions;
 using SlaegtsAssistent.App.Services;
+using SlaegtsAssistent.Core.Biography;
+using SlaegtsAssistent.Core.Domain;
 
 namespace SlaegtsAssistent.App.Tests;
 
 public sealed class SafeMarkdownPreviewServiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GenereretNotattabel_AfsluttesFoerMarkoerOgVisesIPreview(bool withNote)
+    {
+        var person = new Person("@I1@") { FullName = "Anna" };
+        if (withNote)
+        {
+            person.Notes.Add("Et notat");
+        }
+
+        var model = new BiographyTemplateEditorModel(BiographyTemplateEditorModel.CurrentVersion,
+        [
+            new(BiographyTemplateBlockType.Notes, true, "Notater", BiographyTemplatePresentation.Table,
+                [BiographyTemplateField.PersonNote, BiographyTemplateField.FamilyNote]),
+        ]);
+        var generator = new BiographyTemplateMarkdownGenerator(new BiographyTemplateEditorCompiler().Compile(model));
+        var snapshot = CanonicalBiographySnapshot.Create(person);
+        foreach (var document in new[] { generator.Generate(person), generator.Generate(snapshot, snapshot) })
+        {
+            var body = BiographyDocumentParser.Parse(document).Body;
+            body.Should().Contain((withNote ? "|  | Person: Et notat |" : "| --- | --- |")
+                + "\n\n" + BiographyGeneratedSectionMerger.EndMarker);
+
+            var html = new SafeMarkdownPreviewService().Render(body, "/tmp/person.md").Html;
+            html.Should().Contain("<table>").And.Contain("<th>Dato</th>").And.Contain("<th>Notat</th>");
+            if (withNote)
+            {
+                html.Should().Contain("Person: Et notat");
+            }
+        }
+    }
+
     [Theory]
     [InlineData(25)]
     [InlineData(50)]
