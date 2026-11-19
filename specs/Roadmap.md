@@ -180,21 +180,45 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 *   **Afgrænsning:** Bevar datakontrakter, fri tekst, ugemte buffers, sikker preview, eksport og versionsadfærd. Ingen nye afhængigheder eller cloudkald. AI, RAG og HTR flyttes fra sprint 8–10 til sprint 9–11; deres indbyrdes rækkefølge bevares.
 *   **Specifikation:** [Sprintplan og sektionsoversigt](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Plan.md), [samlede krav](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Requirements.md) og [valideringsplan](sprints/sprint-08-brugervenligt-desktoparbejdsbord/Validation.md). Hver sektion har egen plan, krav og validering.
 
-### Trin 16: Den Lokale AI-Assistent SPRINT 9
+### Trin 16 — Hierarkisk slægtstræ og generationsudskrift, sprint 8A–8B
+
+**Status:** Planlagt. Sprint 8A bygger videre på arbejdsbordets fælles personvalg og personnetværk. Sprint 8B følger efter 8A og genbruger den lokale eksportkæde fra 7B–7C. De eksisterende sprintnumre for AI, kilder og transkribering bevares.
+
+#### Sprint 8A — GEDCOM-grundlag og interaktiv visning
+
+1. **Bevar navne og familiepladser.** Udvid GEDCOM-indlæsningen med strukturerede navne og oplysninger om familietilknytning. Byg et relationsindeks i Core med entydige far- og morpladser, stabile person-id'er, stibaseret cyklusbeskyttelse og opslag på vilkårlige gyldige anenumre.
+2. **Tildel anenumre efter Kekulé.** Proband er 1, far er 2n og mor er 2n + 1. Anesammenfald kan give samme person flere numre. Efterkommere uden anenummer viser »Ukendt«. Noder viser fødenavn, dokumenterede senere navne i parentes samt fødsels- og dødsdato. Tomme felter viser »Ukendt«.
+3. **Integrér det hierarkiske træ i fanen »Graf«.** Tilføj underfanerne »Slægtstræ« og »Personnetværk«, med slægtstræet som standard. Brug Avalonia TreeView og tilbyd »Forfædre«, »Efterkommere« og »Begge«. Start med »Begge« og to synlige personniveauer, proband og de direkte relationer. Hver gren kan udfoldes eller sammenklappes uafhængigt.
+4. **Del proband og personnavigation.** Genbrug den lokale grafindstilling og dokumentnavigationen. Prøv arbejdsområdeskift, genstart fra GEDCOM-snapshot, ugemte dokumenter og tastaturbetjening. Afslut 8A med et brugbart træ og en regression af personnetværket.
+
+- [8A.1 — GEDCOM og anenumre](sprints/sprint-08a-hierarkisk-slaegtstrae/01-gedcom-og-anenumre/Plan.md) · [krav](sprints/sprint-08a-hierarkisk-slaegtstrae/01-gedcom-og-anenumre/Requirements.md) · [validering](sprints/sprint-08a-hierarkisk-slaegtstrae/01-gedcom-og-anenumre/Validation.md)
+- [8A.2 — Trævisning og navigation](sprints/sprint-08a-hierarkisk-slaegtstrae/02-traevisning-og-navigation/Plan.md) · [krav](sprints/sprint-08a-hierarkisk-slaegtstrae/02-traevisning-og-navigation/Requirements.md) · [validering](sprints/sprint-08a-hierarkisk-slaegtstrae/02-traevisning-og-navigation/Validation.md)
+
+#### Sprint 8B — Én liggende side til eksport og udskrift
+
+1. **Byg én generationsplan.** Hent de valgte grene fra samme indeks som træet. Vis én række pr. generation og én celle pr. person i rækken, inklusive eventuelle nummererede »Ukendt«-pladser. Placér forfædre over roden og efterkommere under den. Begræns resultatet til seks generationer inklusive roden på tværs af de valgte retninger.
+2. **Vælg en ane som midlertidig eksportrod.** Med et kendt anenummer fra hovedtræet kan brugeren udskrive en dybere gren. Dokumentet bruger nummer 1 for sin egen rod og viser oprindeligt anenummer i overskriften. Brugeren vælger retning og antal generationer uafhængigt af træets udfoldning.
+3. **Tilpas cellerne efter rækkens bredde.** Ved op til fem celler vises anenummer, navn, fødselsdato og -sted samt dødsdato og -sted. Ved seks til otte vises anenummer, navn og fødselsår – dødsår. Fra ni celler roteres den kompakte tekst 90 grader. A4 er standard med A3 som valgmulighed. Vis en forklaring, hvis samtlige valgte celler ikke kan være læselige på det valgte papir.
+4. **Eksportér ODT, DOCX og PDF samt åbn til udskrift.** Genbrug det lokale konverterings- og PDF-flow. Prøv én liggende side med redigerbare tabelceller i Word og LibreOffice samt samme generationer ved PDF-eksport og udskrift. Dæk grænserne ved 5, 6, 8 og 9 celler, dybe rødder og den eksisterende graf- og biografieksport ved afslutning.
+
+- [8B.1 — Generationsplan og valg af rod](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Plan.md) · [krav](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Requirements.md) · [validering](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Validation.md)
+- [8B.2 — Filformater og udskrift](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Plan.md) · [krav](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Requirements.md) · [validering](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Validation.md)
+
+### Trin 17: Den Lokale AI-Assistent SPRINT 9
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**
     *   Etabler C#-forbindelse til en lokal kørende Ollama (f.eks. med en letvægtsmodel) via Microsoft.Extensions.AI.
     *   Tilføj en "AI Berig"-knap i editoren.
     *   Lav et fast system-prompt, der beder AI'en om at omdanne punktforme-facts fra GEDCOM til en pæn, flydende dansk livshistorie.
 
-### Trin 17: Lokale Bøger som Sandhed (RAG) SPRINT 10
+### Trin 18: Lokale Bøger som Sandhed (RAG) SPRINT 10
 *   **Mål:** Berig tekst med lokalhistorie uden hallucinationer.
 *   **Opgaver:**
     *   Lav en "Kilde-mappe" i appen, hvor brugeren kan smide PDF-filer (f.eks. fra slægtsbibliotek.dk).
     *   Brug `PdfPig` til at gennemsøge disse PDF'er efter personens fødeby, bopæl eller erhverv (f.eks. "Skomager" + "Rye").
     *   Udvælg de 2-3 mest relevante sider, og send dem med som skjult kontekst til Ollama, når der trykkes på "Berig".
 
-### Trin 18: Transkriberings-modulet (HTR) SPRINT 11
+### Trin 19: Transkriberings-modulet (HTR) SPRINT 11
 *   **Mål:** Tyde gammel håndskrift lokalt.
 *   **Opgaver:**
     *   Byg et simpelt Python-script, der kan tage et billednavn som argument og køre en lokal TrOCR-model.

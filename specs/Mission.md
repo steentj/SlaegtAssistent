@@ -14,8 +14,7 @@ SlægtsAssistenten er en privatlivsfokuseret desktop-applikation, der skal hjæl
 2. **Dokumentførst arbejdsgang:** Indlæse eksisterende persondokumenter lokalt ved opstart, før en GEDCOM-fil læses, og lade brugeren kontrollere alle efterfølgende faktuelle forskelle.
    Nye personer vises som nye med GEDCOM-værdier valgt som standard. En uændret genindlæsning af samme GEDCOM-fil skal ikke skabe ændringsnotifikationer.
 3. **Universel Dokumenteksport:** Konvertering af de færdige, redigerede biografier til trykklare PDF'er og redigerbare kontorformater (OOXML/ODF) til nem deling.
-4. **Visuelt Slægtstræ:** Interaktiv grafisk visning af slægtstræet med mulighed for navigation, direkte udskrift
-og eksport i højopløselige billedformater.
+4. **Slægtstræ og personnetværk:** Navigér fra en valgt proband i sammenklappelige grene for forfædre og efterkommere, med anenumre efter Kekulé. Eksportér op til seks generationer inklusive rodpersonen som én liggende tabelside i ODT, DOCX eller PDF, eller åbn PDF'en til udskrift. En kendt ane kan vælges som rod for et dybere udsnit. Personnetværket viser øvrige personforbindelser og har sin egen grafeksport.
 5. **Lokal AI-Berigelse:** Bruge lokale sprogmodeller (LLM) til at sætte kød på biografierne samt integrere historisk kontekst.
 6. **Lokal RAG (Søgning i kilder):** Automatisk gennemsøgning af egne, downloadede lokalhistoriske PDF-bøger (f.eks. fra Danskernes Historie Online) for at berige biografier med historisk præcision baseret på geografi og erhverv.
 7. **Lokal Transkribering (HTR):** Hjælpe med at tyde og transkribere indscannede, håndskrevne kilder direkte i appen.
@@ -42,8 +41,8 @@ Input kommer primært i form a GEDCOM filer. Standarden for GEDCOM er defineret 
 Slægtstræet er applikationens centrale navigationspunkt. Alle andre skærme (biografi, kildesøgning, transskribering, import, indstillinger) tilgås enten via sidebar eller ved at klikke på en person i træet.
 
 - **Personsøgning**: Én fælles personsøgning i navigationen finder *alle* personer i datasættet – ikke kun direkte aner. Søgning og personvalg deles af liste, graf og biografi.
-- **Listevisning**: Slægtstræet kan skiftes til en tabel-liste for hurtig scanning af mange personer.
-- Valg i personlisten markerer personen og centrerer grafen uden automatisk faneskift. Enter eller »Åbn biografi« åbner personens dokument. Klik på en person i grafen åbner biografien direkte.
+- **Grafvisninger:** Fanen »Graf« viser som standard »Slægtstræ« med proband og nærmeste generationer. Brugeren vælger forfædre, efterkommere eller begge og styrer selv udfoldningen. Underfanen »Personnetværk« giver adgang til den kraftbaserede graf. Se [planen for sprint 8A–8B](Roadmap.md#trin-16--hierarkisk-slægtstræ-og-generationsudskrift-sprint-8a8b).
+- Valg i personlisten markerer personen og centrerer personnetværket uden automatisk faneskift. Slægtstræet markerer en allerede synlig forekomst. Enter eller »Åbn biografi« åbner personens dokument. Klik på en person i personnetværket åbner også biografien.
 - Navne og direkte forbindelser er tilgængelige ved valg og tastaturfokus; de må ikke kræve hover.
 
 ### Biografi-editor
