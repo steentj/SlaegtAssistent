@@ -58,9 +58,23 @@ public partial class MainWindow
         if (mac)
         {
             var native = new NativeMenu();
-            var appMenu = new NativeMenu();
-            appMenu.Items.Add(new NativeMenuItem { Header = "Indstillinger…", Command = model.OpenSettingsCommand, Gesture = new KeyGesture(Key.OemComma, modifier) });
-            if (Application.Current is { } app) NativeMenu.SetMenu(app, appMenu);
+            if (Application.Current is { } app)
+            {
+                var appMenu = NativeMenu.GetMenu(app);
+                if (appMenu is null)
+                {
+                    appMenu = new NativeMenu();
+                    NativeMenu.SetMenu(app, appMenu);
+                }
+                var settings = appMenu.Items.OfType<NativeMenuItem>()
+                    .FirstOrDefault(item => item.Header == "Indstillinger…");
+                if (settings is null)
+                {
+                    settings = new NativeMenuItem { Header = "Indstillinger…", Gesture = new KeyGesture(Key.OemComma, modifier) };
+                    appMenu.Items.Insert(0, settings);
+                }
+                settings.Command = model.OpenSettingsCommand;
+            }
             AddNativeGroup(native, "Fil", file.Where(item => item.Item1 != "Indstillinger…").ToArray());
             AddNativeGroup(native, "Rediger", edit);
             AddNativeGroup(native, "Hjælp", help);

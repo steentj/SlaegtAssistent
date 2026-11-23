@@ -1,7 +1,13 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SlaegtsAssistent.App.App"
+             Name="Slægtsassistent"
              RequestedThemeVariant="Default">
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="Indstillinger…" Gesture="Meta+OemComma" />
+        </NativeMenu>
+    </NativeMenu.Menu>
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>

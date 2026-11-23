@@ -15,6 +15,7 @@ public sealed class MainWindowMenuTests
     public Task MenuenBrugerSammeKommandoerOgRedigererDetFokuseredeFelt() => HeadlessTestApplication.RunAsync(() =>
     {
         var model = new MainWindowViewModel();
+        var appMenu = NativeMenu.GetMenu(Application.Current!);
         var window = new MainWindow();
         var webView = window.FindControl<NativeWebView>("PreviewWebView")!;
         ((Panel)webView.Parent!).Children.Remove(webView);
@@ -36,8 +37,11 @@ public sealed class MainWindowMenuTests
                 ((NativeMenuItem)file.Items[1]).Command.Should().BeSameAs(model.SaveAllCommand);
                 var edit = ((NativeMenuItem)menu.Items[1]).Menu!;
                 ((NativeMenuItem)edit.Items[5]).Command!.Execute(null);
-                NativeMenu.GetMenu(Application.Current!)!.Items.OfType<NativeMenuItem>()
-                    .Single(item => item.Header == "Indstillinger…").Gesture!.Key.Should().Be(Key.OemComma);
+                NativeMenu.GetMenu(Application.Current!).Should().BeSameAs(appMenu);
+                var settings = appMenu!.Items.OfType<NativeMenuItem>()
+                    .Single(item => item.Header == "Indstillinger…");
+                settings.Gesture!.Key.Should().Be(Key.OemComma);
+                settings.Command.Should().BeSameAs(model.OpenSettingsCommand);
             }
             else
             {
