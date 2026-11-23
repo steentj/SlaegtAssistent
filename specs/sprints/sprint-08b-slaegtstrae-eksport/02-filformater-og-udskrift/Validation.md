@@ -1,6 +1,10 @@
 # Validering af filformater og udskrift
 
-Status: Planlagt.
+Status: Implementeret og prøvet automatisk. Native platformprøver og manuel godkendelse udestår.
+
+23. november 2026: `dotnet test --no-restore` bestod med 275 Core-tests og 400 App-tests uden overspring, med både udviklingssidecar og genskabt macOS-sidecar aktiveret. Python-suiten bestod med 27 tests uden overspring, herunder PDF og kontorformater konverteret med LibreOffice. En syntetisk A3-prøve med seks rækker og op til 32 celler gav én liggende side i PDF, DOCX og ODT. DOCX og ODT blev åbnet af LibreOffice i headless-tilstand og konverteret til PDF; alle 32 navne kunne udtrækkes. Et PDF-eksempel og et ODT-eksempel med 32 celler er gennemset visuelt.
+
+De tre arkiver er genbygget og genskabt fra de opdaterede kontrolsummer. macOS-pakken bestod integration fra App-service til PDF, DOCX og ODT samt eksisterende graf- og biografieksportprøver. Linux x64 og Windows x64 dannede alle tre slægtstræsformater uden netværk under emulering. Windows-prøven under Wine udsendte fontconfig-advarsler. Prøverne dokumenterer ikke native Windows- og Linux-forhold, åbning i Word eller fysisk udskrift. Forsøg på at åbne den lokale app via computerstyringen kunne ikke finde appens vindue, så dialogens native filvælger og udskriftsflow er ikke godkendt manuelt.
 
 ## Automatiske prøver
 

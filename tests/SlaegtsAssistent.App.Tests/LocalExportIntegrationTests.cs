@@ -2,12 +2,61 @@ using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.Core.Graph;
 using SlaegtsAssistent.Core.Graph.Export;
+using SlaegtsAssistent.Core.FamilyTrees;
+using SlaegtsAssistent.Core.Gedcom;
 using Xunit;
+using System.Numerics;
 
 namespace SlaegtsAssistent.App.Tests;
 
 public sealed class LocalExportIntegrationTests
 {
+    [BundledExportIntegrationFact]
+    public async Task PakketSidecarEksportererSlaegtstraeIAlleFormater()
+    {
+        var fixture = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ged");
+        await File.WriteAllTextAsync(fixture, """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Søren /Æble/
+            0 TRLR
+            """);
+        try
+        {
+            var tree = new GedcomLoader().Load(fixture);
+            var plan = new FamilyTreeExportPlanner(new FamilyTreeIndex(tree)).Create("@I1@", "1", 0, 0);
+            var sidecar = new LocalExportSidecar(new LocalProcessRunner(),
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"),
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+            foreach (var format in new[] { "pdf", "docx", "odt" })
+            {
+                var bytes = await sidecar.RenderFamilyTreeAsync(plan, format, "A4", CancellationToken.None);
+                bytes.Should().NotBeEmpty();
+                if (format == "pdf") bytes.Should().StartWith("%PDF-"u8.ToArray());
+                else bytes.Should().StartWith("PK"u8.ToArray());
+            }
+        }
+        finally { File.Delete(fixture); }
+    }
+
+    [BundledExportIntegrationFact]
+    public async Task PakketSidecarAfviserForStortSlaegtstraeMedDanskForklaring()
+    {
+        var person = new FamilyTreePerson("@I@", new string('Å', 3000), "Ukendt", "Ukendt", "Ukendt", "Ukendt");
+        var cells = Enumerable.Range(0, 9)
+            .Select(_ => new FamilyTreeExportCell(person, Array.Empty<BigInteger>())).ToArray();
+        var plan = new FamilyTreeExportPlan("@I@", "1", person,
+            [new FamilyTreeExportRow(1, "Børn", cells)]);
+        var sidecar = new LocalExportSidecar(new LocalProcessRunner(),
+            Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+            Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"),
+            Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+        Func<Task> action = () => sidecar.RenderFamilyTreeAsync(plan, "pdf", "A3", CancellationToken.None);
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*kan ikke være læseligt på én side*");
+    }
+
     [LocalExportIntegrationFact]
     public async Task RigtigSidecarReturnererEnPdf()
     {

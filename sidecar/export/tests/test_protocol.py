@@ -45,6 +45,22 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ProtocolError):
             self.read()
 
+    def test_slaegtstrae_kraever_json_og_liggende_papir(self):
+        (self.root / "tree.json").write_text("{}", encoding="utf-8")
+        self.request["inputPath"] = str(self.root / "tree.json")
+        for extension in ("pdf", "docx", "odt"):
+            self.request["operation"] = "family-tree-" + extension
+            self.request["outputPath"] = str(self.root / ("result." + extension))
+            self.assertEqual(self.read()[0]["operation"], "family-tree-" + extension)
+            self.request["options"]["orientation"] = "portrait"
+            with self.assertRaises(ProtocolError):
+                self.read()
+            self.request["options"]["orientation"] = "landscape"
+            self.request["inputPath"] = str(self.root / "input.html")
+            with self.assertRaises(ProtocolError):
+                self.read()
+            self.request["inputPath"] = str(self.root / "tree.json")
+
     def test_active_resources_are_rejected(self):
         for element in ('<image href="https://example.org/a"/>', '<script/>', '<circle style="fill:url(http://example.org)"/>', '<foreignObject/>'):
             with self.subTest(element=element), self.assertRaises(ProtocolError):

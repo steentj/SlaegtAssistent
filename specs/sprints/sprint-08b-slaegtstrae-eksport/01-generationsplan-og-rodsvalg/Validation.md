@@ -1,6 +1,8 @@
 # Validering af eksportgrundlaget
 
-Status: Planlagt.
+Status: Implementeret og prøvet med automatiske tests. Den samlede manuelle validering nedenfor udestår.
+
+Automatiske prøver dækker valg af dyb rod, ny nummerering, anesammenfald, sammenfald af efterkommere, cyklusstop, ugyldige niveauer og grænserne for celleformatering. En headless-prøve kontrollerer dialogens binding til generationstal.
 
 - Byg en syntetisk fixture med mindst syv kendte led på begge sider af roden, to forældre, anesammenfald, genbrug af efterkommer via to stier, en manglende forælder og en cyklus. Bevis korrekt rækkefølge, øvre grænse, gruppering af anenumre og udelukkelse af cykliske led.
 - Prøv 0, 1 og 5 led i én retning. Prøv 3 + 2, 1 + 4 og det ugyldige 3 + 3 i »Begge«. Kontrollér standardfordeling, hvis én side har færre led, og at roden altid tælles med.

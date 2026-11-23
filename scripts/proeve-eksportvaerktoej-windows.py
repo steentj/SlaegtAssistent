@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from proeve_slaegtstrae_pakke import check_family_tree
 
 
 def copy_file(source, destination):
@@ -127,6 +128,7 @@ def main():
                     prefix = 'word/media/' if extension == 'docx' else 'Pictures/'
                     if 'Åse Østergaard' not in xml or not any(name.startswith(prefix) for name in archive.namelist()):
                         raise RuntimeError('Kontorprøven mangler dansk tekst eller billede.')
+        check_family_tree(package, job, environment)
         shutil.copytree(package, target, copy_function=copy_file)
     print('Foreløbig Windows-prøvepakke dannet og afprøvet:', target)
     print('Pakken kræver yderligere native, visuelle og distributionsmæssige prøver.')

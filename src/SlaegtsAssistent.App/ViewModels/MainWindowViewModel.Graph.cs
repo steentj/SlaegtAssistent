@@ -7,6 +7,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SlaegtsAssistent.App.Services;
+using SlaegtsAssistent.Core.FamilyTrees;
 
 namespace SlaegtsAssistent.App.ViewModels;
 
@@ -20,6 +21,67 @@ public partial class MainWindowViewModel
     private string? _graphWorkspace;
     private string? _graphLayoutKey;
     private SlaegtsAssistent.Core.Graph.PersonGraphLayout? _graphLayout;
+    private FamilyTreeViewModel? _familyTreeView;
+    private SlaegtsAssistent.Core.Domain.FamilyTree? _treeSource;
+    private FamilyTreeIndex? _treeIndex;
+
+    public FamilyTreeViewModel FamilyTreeView => _familyTreeView ??= new FamilyTreeViewModel(
+        SelectTreePerson, OpenGraphPerson, SetTreeProband);
+
+    public FamilyTreeExportViewModel? CreateFamilyTreeExportViewModel()
+    {
+        var proband = PersonGraph.ProbandId;
+        return _treeIndex is not null && _treeIndex.Find(proband) is not null
+            ? new FamilyTreeExportViewModel(_treeIndex, proband!, FamilyTreeView.DirectionIndex)
+            : null;
+    }
+
+    [ObservableProperty] private int graphViewIndex;
+    public bool IsPersonNetwork => GraphViewIndex == 1;
+
+    partial void OnGraphViewIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsPersonNetwork));
+        if (value == 1) QueueGraphRefresh();
+    }
+
+    private void SelectTreePerson(string id)
+    {
+        var person = _allPeople.Where(item => item.RecordId == id).ToArray();
+        if (person.Length != 1) return;
+        if (!People.Contains(person[0])) PersonFilterText = string.Empty;
+        SelectedPerson = person[0];
+    }
+
+    private void SetTreeProband(string id)
+    {
+        PersonGraph.ProbandId = id;
+    }
+
+    [RelayCommand]
+    private void UseFamilyTreeProband()
+    {
+        var id = FamilyTreeView.SelectedNode?.PersonId ?? SelectedPerson?.RecordId;
+        if (id is not null && _treeIndex?.Find(id) is not null) SetTreeProband(id);
+        else FamilyTreeView.Status = "Vælg en person fra GEDCOM-filen som proband.";
+    }
+
+    private void ClearGraphWorkspace()
+    {
+        _graphCancellation?.Cancel();
+        _graphDebounce?.Cancel();
+        _graphRevision++;
+        _treeSource = null;
+        _displayedTreeSource = null;
+        _treeIndex = null;
+        _graphWorkspace = null;
+        _graphLayout = null;
+        _graphLayoutKey = null;
+        FamilyTreeView.SetTree(null, null);
+        _settingGraph = true;
+        try { PersonGraph.SetGraph(new SlaegtsAssistent.Core.Graph.PersonGraphBuilder().Build([], []), null); }
+        finally { _settingGraph = false; }
+    }
 
     public PersonGraphViewModel PersonGraph
     {
@@ -73,7 +135,9 @@ public partial class MainWindowViewModel
             return;
         }
         if (args.PropertyName != nameof(PersonGraphViewModel.ProbandId) ||
-            string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder) || _personGraph.ProbandId is null) return;
+            _personGraph.ProbandId is null) return;
+        FamilyTreeView.SetTree(_treeIndex, _personGraph.ProbandId);
+        if (string.IsNullOrWhiteSpace(StandardMarkdownOutputFolder)) return;
         try { new GraphSettingsStore(new AtomicFileWriter()).Save(StandardMarkdownOutputFolder, _personGraph.ProbandId); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         { _personGraph.Status = $"Probanden kunne ikke gemmes: {exception.Message}"; }
@@ -93,6 +157,10 @@ public partial class MainWindowViewModel
             _graphWorkspace = workspace;
             _graphLayoutKey = null;
             _graphLayout = null;
+            _treeSource = null;
+            _treeIndex = null;
+            _displayedTreeSource = null;
+            FamilyTreeView.SetTree(null, null);
             _settingGraph = true;
             PersonGraph.SetGraph(new SlaegtsAssistent.Core.Graph.PersonGraphBuilder().Build([], []), null);
             _settingGraph = false;
@@ -101,6 +169,8 @@ public partial class MainWindowViewModel
         try
         {
             var tree = _familyTree;
+            if (tree is null && _treeSource is not null)
+                tree = _treeSource;
             if (tree is null && !string.IsNullOrWhiteSpace(workspace))
             {
                 var path = _gedcomSnapshotStore.GetValidatedSourceCopyPath(workspace);
@@ -108,6 +178,31 @@ public partial class MainWindowViewModel
             }
             token.ThrowIfCancellationRequested();
             if (revision != _graphRevision || workspace != StandardMarkdownOutputFolder) return;
+            string? savedProband = null;
+            try { savedProband = new GraphSettingsStore(new AtomicFileWriter()).Load(workspace); }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            { FamilyTreeView.Status = $"Grafens indstillinger kunne ikke læses: {exception.Message}"; }
+            if (!ReferenceEquals(tree, _treeSource))
+            {
+                _treeSource = tree;
+                _treeIndex = tree is null ? null : new FamilyTreeIndex(tree);
+            }
+            bool IsKnown(string? id) => id is not null &&
+                (_treeIndex?.Find(id) is not null || _allPeople.Any(person => person.RecordId == id));
+            var preferred = IsKnown(PersonGraph.ProbandId) ? PersonGraph.ProbandId
+                : IsKnown(savedProband) ? savedProband
+                : IsKnown(SelectedPerson?.RecordId) ? SelectedPerson?.RecordId
+                :
+                _treeIndex?.People.OrderBy(person => person.Name, StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("da-DK"), false))
+                    .ThenBy(person => person.Id, StringComparer.Ordinal).FirstOrDefault()?.Id;
+            if (PersonGraph.ProbandId != preferred)
+                PersonGraph.ProbandId = preferred;
+            if (FamilyTreeView.ProbandId != PersonGraph.ProbandId || !ReferenceEquals(tree, _displayedTreeSource))
+            {
+                _displayedTreeSource = tree;
+                FamilyTreeView.SetTree(_treeIndex, PersonGraph.ProbandId);
+            }
+            if (!IsPersonNetwork) return;
             var graph = new WorkspaceGraphSource(_markdownFileStore).CreateSnapshot(_allPeople.ToArray(), _editors, tree);
             var executable = Path.Combine(AppContext.BaseDirectory, "tools", OperatingSystem.IsWindows() ? "sfdp.exe" : "sfdp");
 #if DEBUG
@@ -135,10 +230,6 @@ public partial class MainWindowViewModel
             if (revision != _graphRevision || workspace != StandardMarkdownOutputFolder) return;
             _graphLayoutKey = key;
             _graphLayout = layout;
-            string? savedProband = null;
-            try { savedProband = new GraphSettingsStore(new AtomicFileWriter()).Load(workspace); }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            { PersonGraph.Status = $"Grafens indstillinger kunne ikke læses: {exception.Message}"; }
             _settingGraph = true;
             try { PersonGraph.SetGraph(graph, layout, PersonGraph.ProbandId ?? savedProband ?? SelectedPerson?.RecordId); }
             finally { _settingGraph = false; }
@@ -147,9 +238,15 @@ public partial class MainWindowViewModel
         catch (OperationCanceledException) { }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException or InvalidOperationException or GedcomSnapshotException or System.ComponentModel.Win32Exception)
         {
-            if (revision == _graphRevision) PersonGraph.Status = $"Grafen kunne ikke indlæses: {exception.Message}";
+            if (revision == _graphRevision)
+            {
+                PersonGraph.Status = $"Grafen kunne ikke indlæses: {exception.Message}";
+                FamilyTreeView.Status = PersonGraph.Status;
+            }
         }
     }
+
+    private SlaegtsAssistent.Core.Domain.FamilyTree? _displayedTreeSource;
 
     [RelayCommand]
     private void OpenSelectedBiography()
@@ -164,6 +261,7 @@ public partial class MainWindowViewModel
         if (matches.Length != 1 || matches[0].HasDocumentDiagnostic || matches[0].SyncStatus == SlaegtsAssistent.Core.Biography.BiographySyncStatus.Tvetydig || !File.Exists(matches[0].MarkdownFilePath))
         {
             PersonGraph.Status = "Personens dokument kan ikke åbnes. Det mangler eller er ikke entydigt.";
+            FamilyTreeView.Status = PersonGraph.Status;
             return;
         }
         OpenPersonDocument(new PersonDocumentLink(recordId, matches[0].DisplayName, matches[0].MarkdownFilePath));

@@ -20,6 +20,10 @@ public sealed class Person
 
     public string? FullName { get; set; }
 
+    public IList<PersonName> Names { get; } = new List<PersonName>();
+
+    public IList<ChildhoodFamilyLink> ChildhoodFamilyLinks { get; } = new List<ChildhoodFamilyLink>();
+
     public string? Sex { get; set; }
 
     public string? BirthDate { get; set; }

@@ -295,9 +295,32 @@ public partial class MainWindow : Window
     }
     private void HandleGraphTabKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
-        if (!GraphTab.IsFocused || DataContext is not MainWindowViewModel { IsGraphTab: true, IsImporting: false }) return;
+        if (!GraphTab.IsFocused || DataContext is not MainWindowViewModel { IsGraphTab: true, IsPersonNetwork: true, IsImporting: false }) return;
         if (!GraphControl.HandleNavigationKey(e)) return;
         GraphControl.Focus();
+        e.Handled = true;
+    }
+
+    private async void ShowFamilyTreeExport(object? sender, RoutedEventArgs e) => await OpenFamilyTreeExport(false);
+    private async void ShowFamilyTreePrint(object? sender, RoutedEventArgs e) => await OpenFamilyTreeExport(true);
+
+    private async System.Threading.Tasks.Task OpenFamilyTreeExport(bool print)
+    {
+        if (DataContext is not MainWindowViewModel model) return;
+        var export = model.CreateFamilyTreeExportViewModel();
+        if (export is null)
+        {
+            model.FamilyTreeView.Status = "Vælg en person fra GEDCOM-filen som proband.";
+            return;
+        }
+        await new FamilyTreeExportWindow(export, print).ShowDialog(this);
+    }
+
+    private void FamilyTreeKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key != Avalonia.Input.Key.Enter || DataContext is not MainWindowViewModel viewModel) return;
+        if (!viewModel.FamilyTreeView.OpenBiographyCommand.CanExecute(null)) return;
+        viewModel.FamilyTreeView.OpenBiographyCommand.Execute(null);
         e.Handled = true;
     }
 

@@ -19,6 +19,22 @@
         "sha256": "a5a4d7b78febfada791f24746a64ef9639f630aaeb4a01d04ea16fa8f9453839"
       },
       {
+        "sti": "_internal/PIL/.dylibs/libbrotlicommon.1.2.0.dylib",
+        "sha256": "d9bff700c2b05dd6acf2bc649463a40fd293ae4f2983ab4575a3a48ac6311991"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libbrotlidec.1.2.0.dylib",
+        "sha256": "cf8625968bf5a9be3ef00b80da192841074fd93ae0c82b4c742b03f6a0cf830f"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libfreetype.6.dylib",
+        "sha256": "f95f357e2a1feb6f686de9f5a66e09093e8f91fc2c6c589166626d7b6c3ccea3"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libharfbuzz.0.dylib",
+        "sha256": "48948e07ee47c0e49c2499991cf7582e3d3a35f8370473f615620ca5e6483462"
+      },
+      {
         "sti": "_internal/PIL/.dylibs/libjpeg.62.4.0.dylib",
         "sha256": "5b9c19697633f9bfe374dcd7d07c2b1a3d54597e4b0ac393cc840ed3d1087413"
       },
@@ -33,6 +49,10 @@
       {
         "sti": "_internal/PIL/.dylibs/libopenjp2.2.5.4.dylib",
         "sha256": "2a32c480981eb8d0be84de27adca79a464c3d0c32867100b37bf69f03616317d"
+      },
+      {
+        "sti": "_internal/PIL/.dylibs/libpng16.16.dylib",
+        "sha256": "b7eb385a924d80c9f06e6ebbcf01b0b634fd6876346325520f0f97c360824c3f"
       },
       {
         "sti": "_internal/PIL/.dylibs/libsharpyuv.0.dylib",
@@ -75,6 +95,10 @@
         "sha256": "dae3ad30069f362110181cd8caa439d11fe83a25dc78b9dce1509c454e426c71"
       },
       {
+        "sti": "_internal/PIL/_imagingft.cpython-313-darwin.so",
+        "sha256": "c62d6dde6a5f3e67c969720ddf769c7f24b27df4be67591fb2ed167842928d8b"
+      },
+      {
         "sti": "_internal/PIL/_imagingtk.cpython-313-darwin.so",
         "sha256": "58f14fc2ef1272f2ec2ad1f062e5882b691341ee4d14c5333cff460c74df9811"
       },
@@ -92,7 +116,7 @@
       },
       {
         "sti": "_internal/base_library.zip",
-        "sha256": "7d14d289d587ef4e5bb200bc7504a81518a4acbba80b96bddbfdb33283d41db2"
+        "sha256": "ad885d4141fcdd55db595e26637afd3188230e185df84d89ca810bf9987689f2"
       },
       {
         "sti": "_internal/fontTools/misc/bezierTools.cpython-313-darwin.so",
@@ -123,12 +147,20 @@
         "symbolskLink": "PIL/.dylibs/libavif.16.4.2.dylib"
       },
       {
+        "sti": "_internal/libbrotlicommon.1.2.0.dylib",
+        "symbolskLink": "PIL/.dylibs/libbrotlicommon.1.2.0.dylib"
+      },
+      {
         "sti": "_internal/libbrotlicommon.1.2.1.dylib",
         "sha256": "fefa60a0a92a97029a88c41826bd9454443913639e2e6b8558f8dc4aeab52de9"
       },
       {
         "sti": "_internal/libbrotlicommon.1.dylib",
         "symbolskLink": "libbrotlicommon.1.2.1.dylib"
+      },
+      {
+        "sti": "_internal/libbrotlidec.1.2.0.dylib",
+        "symbolskLink": "PIL/.dylibs/libbrotlidec.1.2.0.dylib"
       },
       {
         "sti": "_internal/libbrotlidec.1.2.1.dylib",
@@ -156,7 +188,7 @@
       },
       {
         "sti": "_internal/libfreetype.6.dylib",
-        "sha256": "25753ff95f14a03f8f8dde2fc4d17d10994ae52ca451ababe405cff77a4f5454"
+        "symbolskLink": "PIL/.dylibs/libfreetype.6.dylib"
       },
       {
         "sti": "_internal/libfribidi.0.dylib",
@@ -204,7 +236,7 @@
       },
       {
         "sti": "_internal/libharfbuzz.0.dylib",
-        "sha256": "3701888a948c66cd7e88ac014f4fce6ff2b099a0280f58d46319a6c3a47fdb84"
+        "symbolskLink": "PIL/.dylibs/libharfbuzz.0.dylib"
       },
       {
         "sti": "_internal/libharfbuzz.dylib",
@@ -256,7 +288,7 @@
       },
       {
         "sti": "_internal/libpng16.16.dylib",
-        "sha256": "c662c15e52f71da5914295393a71718043afaa1f50cbfc85cfc863f4f7a9cb83"
+        "symbolskLink": "PIL/.dylibs/libpng16.16.dylib"
       },
       {
         "sti": "_internal/libpython3.13.dylib",
@@ -1140,7 +1172,7 @@
       },
       {
         "sti": "_internal/weasyprint-66.0.dist-info/RECORD",
-        "sha256": "8abbf5a2b7bdc446193b3c1976ee2d4e202a2ca0c0ed55df5fea48c6f9c33cf4"
+        "sha256": "52a07aea1e7c2482d3fb9bacb473025b749e38d775d7eed95791b7eb4ab88a4e"
       },
       {
         "sti": "_internal/weasyprint-66.0.dist-info/REQUESTED",
@@ -1224,7 +1256,7 @@
       },
       {
         "sti": "licenser/python/pakker.json",
-        "sha256": "07e5a88f0f84cc13c2605742a377921a7f6d473e2b24dc859cb10ead34069b43"
+        "sha256": "aecfc445c42e56575a07cb452d35d866fafec27561f18c81d7a257b79f5e810d"
       },
       {
         "sti": "licenser/python/pillow/licenses/LICENSE",
@@ -1328,7 +1360,7 @@
       },
       {
         "sti": "slaegt-export",
-        "sha256": "d33bc922b0fd7185ca86ef7d2c2b3b402466e737d76da26c5584b2ce581f8b99"
+        "sha256": "a85a62a061db88114b6a8ef416c15c38c80e0293184f91d69560cff53aeea807"
       }
     ]
   },

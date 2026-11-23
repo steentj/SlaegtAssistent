@@ -34,7 +34,7 @@ public sealed class GraphWorkspaceUiTests
             Dispatcher.UIThread.RunJobs();
             vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build(
                 [new("A", "Anna", "F", null, null), new("B", "Bo", "M", null, null)], []), null, "A");
-            window.GetVisualDescendants().OfType<TabControl>().Single().Items
+            window.GetVisualDescendants().OfType<TabControl>().First().Items
                 .Cast<TabItem>().Select(tab => tab.Header).Should().Equal("Graf", "Editor", "Forhåndsvisning");
             window.GetVisualDescendants().OfType<TextBox>().Count(box => box.PlaceholderText == "Søg navn eller person-id").Should().Be(1);
             window.GetVisualDescendants().OfType<TextBox>().Should().NotContain(box => box.PlaceholderText == "Søg person");
@@ -56,6 +56,7 @@ public sealed class GraphWorkspaceUiTests
         try
         {
             vm.DocumentTabIndex = 0;
+            vm.GraphViewIndex = 1;
             window.Show();
             Dispatcher.UIThread.RunJobs();
             vm.PersonGraph.SetGraph(new PersonGraphBuilder().Build([new("A", "Anna", null, null, null)], []),

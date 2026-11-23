@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using SlaegtsAssistent.Core.Export;
+using SlaegtsAssistent.Core.FamilyTrees;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -164,6 +165,70 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
         return new(bytes, html.Warnings.Concat(response.Warnings).Distinct(StringComparer.Ordinal).ToArray(), BiographyExportHtmlBuilder.ComputeFingerprint(html));
     }
 
+    public async Task<byte[]> RenderFamilyTreeAsync(FamilyTreeExportPlan plan, string format, string paper, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (format is not ("pdf" or "docx" or "odt") || paper is not ("A4" or "A3"))
+            throw new ArgumentException("Format eller papirstørrelse er ugyldig.");
+        if (!Path.IsPathFullyQualified(executable) || !File.Exists(executable) ||
+            (script is not null && (!Path.IsPathFullyQualified(script) || !File.Exists(script))) ||
+            (libraryDirectory is not null && (!Path.IsPathFullyQualified(libraryDirectory) || !Directory.Exists(libraryDirectory))) ||
+            (fontConfigFile is not null && (!Path.IsPathFullyQualified(fontConfigFile) || !File.Exists(fontConfigFile))))
+            throw new InvalidOperationException("Det lokale eksportværktøj mangler i programpakken.");
+        cancellationToken.ThrowIfCancellationRequested();
+        var document = new FamilyTreeExportDocument(
+            $"Rodperson nr. {plan.OriginalAncestorNumber} i hovedtræet: {plan.Root.Name}",
+            plan.Rows.Select(row => new FamilyTreeExportDocumentRow(row.Label,
+                row.Cells.Select(cell => cell.Format(row.Layout).ToArray()).ToArray())).ToArray());
+        var content = JsonSerializer.Serialize(document, ExportJsonContext.Default.FamilyTreeExportDocument);
+        if (Encoding.UTF8.GetByteCount(content) > MaximumInput)
+            throw new ArgumentException("Slægtstræet er for stort til eksport.");
+        var jobId = Guid.NewGuid().ToString("N");
+        using var job = new ExportJobDirectory(jobId);
+        var input = Path.Combine(job.Path, "input.json");
+        var output = Path.Combine(job.Path, "result." + format);
+        var assets = Path.Combine(job.Path, "assets");
+        var requestPath = Path.Combine(job.Path, "request.json");
+        Directory.CreateDirectory(assets);
+        await File.WriteAllTextAsync(input, content, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+        var request = new ExportRequest(1, jobId, "family-tree-" + format, input, output, assets, new ExportOptions(paper, "landscape"));
+        await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(request, ExportJsonContext.Default.ExportRequest), cancellationToken).ConfigureAwait(false);
+        var environment = new Dictionary<string, string?>();
+        if (libraryDirectory is not null && OperatingSystem.IsMacOS()) environment["DYLD_FALLBACK_LIBRARY_PATH"] = libraryDirectory;
+        if (libraryDirectory is not null && OperatingSystem.IsLinux()) environment["LD_LIBRARY_PATH"] = libraryDirectory;
+        if (libraryDirectory is not null && OperatingSystem.IsWindows()) environment["PATH"] = libraryDirectory + Path.PathSeparator + Environment.GetFolderPath(Environment.SpecialFolder.System);
+        if (fontConfigFile is not null) environment["FONTCONFIG_FILE"] = fontConfigFile;
+        await EnsureVersionAsync(job.Path, environment, cancellationToken).ConfigureAwait(false);
+        var arguments = script is null ? new[] { "--request", requestPath } : new[] { script, "--request", requestPath };
+        LocalProcessResult result;
+        try { result = await runner.RunAsync(new(executable, arguments, job.Path, TimeSpan.FromSeconds(120), environment), cancellationToken).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { throw new TimeoutException("Eksporten af slægtstræet overskred tidsgrænsen."); }
+        cancellationToken.ThrowIfCancellationRequested();
+        ExportResult? response;
+        try { response = ParseResponse(result.StandardOutput); }
+        catch (JsonException) { throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar."); }
+        if (response is null || response.ProtocolVersion != 1 || response.JobId != jobId || response.Warnings is null)
+            throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar.");
+        if (result.ExitCode != 0 && response.Status == "error" && response.OutputPath is null)
+            throw new InvalidOperationException(response.ErrorCode switch
+            {
+                "page-overflow" => "Slægtstræet kan ikke være læseligt på én side. Vælg større papir, færre generationer eller en anden rodperson.",
+                "missing-tool" => "Det lokale eksportværktøj eller dets skrifttype mangler.",
+                "timeout" => "Eksporten overskred tidsgrænsen.",
+                _ => "Eksportværktøjet kunne ikke danne slægtstræet."
+            });
+        if (result.ExitCode != 0 || response.Status != "ok" || response.OutputPath != output || response.ErrorCode is not null)
+            throw new InvalidDataException("Eksportværktøjet gav et ugyldigt svar.");
+        var file = new FileInfo(output);
+        if (!file.Exists || file.LinkTarget is not null || file.Length < 5 || file.Length > MaximumOutput)
+            throw new InvalidDataException("Eksportfilen er ugyldig eller for stor.");
+        var bytes = await File.ReadAllBytesAsync(output, cancellationToken).ConfigureAwait(false);
+        var validationFormat = format switch { "pdf" => BiographyExportFormat.Pdf, "docx" => BiographyExportFormat.Docx, _ => BiographyExportFormat.Odt };
+        ValidateBiographyOutput(bytes, validationFormat);
+        return bytes;
+    }
+
     private static void ValidateBiographyOutput(byte[] bytes, BiographyExportFormat format)
     {
         if (bytes.Length > MaximumOutput) throw new InvalidDataException("Eksportfilen er for stor.");
@@ -241,6 +306,13 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
 
 public sealed record BiographyConversionResult(byte[] Content, IReadOnlyList<string> Warnings, string? Fingerprint = null);
 
+internal sealed record FamilyTreeExportDocument(
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("rows")] FamilyTreeExportDocumentRow[] Rows);
+internal sealed record FamilyTreeExportDocumentRow(
+    [property: JsonPropertyName("label")] string Label,
+    [property: JsonPropertyName("cells")] string[][] Cells);
+
 internal sealed record ExportOptions([property: JsonPropertyName("paper")] string Paper, [property: JsonPropertyName("orientation")] string Orientation);
 internal sealed record ExportRequest(
     [property: JsonPropertyName("protocolVersion")] int ProtocolVersion,
@@ -260,4 +332,5 @@ internal sealed record ExportResult(
 
 [JsonSerializable(typeof(ExportRequest))]
 [JsonSerializable(typeof(ExportResult))]
+[JsonSerializable(typeof(FamilyTreeExportDocument))]
 internal partial class ExportJsonContext : JsonSerializerContext;

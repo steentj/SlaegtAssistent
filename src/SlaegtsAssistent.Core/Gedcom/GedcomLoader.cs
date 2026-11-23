@@ -384,6 +384,8 @@ public sealed class GedcomLoader : IGedcomLoader
             currentMedia = null;
             currentSourceData = false;
             person.InCreation = false;
+            person.CurrentChildhoodFamily = null;
+            person.CurrentAdoptionFamily = null;
 
             switch (tag)
             {
@@ -395,6 +397,14 @@ public sealed class GedcomLoader : IGedcomLoader
 
                 case "SEX":
                     person.Sex = NormalizeToken(value);
+                    break;
+
+                case "FAMC":
+                    if (NormalizeToken(value) is { } familyId)
+                    {
+                        person.CurrentChildhoodFamily = new ParsedChildhoodFamilyLink(familyId);
+                        person.ChildhoodFamilyLinks.Add(person.CurrentChildhoodFamily);
+                    }
                     break;
 
                 case var eventTag when PersonEventTags.Contains(eventTag):
@@ -456,6 +466,29 @@ public sealed class GedcomLoader : IGedcomLoader
         if (currentMedia is not null)
         {
             ParseMediaLine(currentMedia, level, tag, value);
+            return;
+        }
+
+        if (level == 2 && tag == "PEDI" && person.CurrentChildhoodFamily is { } childhoodFamily)
+        {
+            childhoodFamily.Pedigree = NormalizeToken(value);
+            return;
+        }
+
+        if (currentEvent?.Tag == "ADOP" && level == 2 && tag == "FAMC")
+        {
+            person.CurrentAdoptionFamily = NormalizeToken(value);
+            if (person.CurrentAdoptionFamily is { } adoptionFamilyId)
+            {
+                person.Adoptions.Add((adoptionFamilyId, null));
+            }
+            return;
+        }
+
+        if (currentEvent?.Tag == "ADOP" && level == 3 && tag == "ADOP"
+            && person.CurrentAdoptionFamily is { } adoptionFamily)
+        {
+            person.Adoptions[^1] = (adoptionFamily, NormalizeToken(value));
             return;
         }
 
@@ -841,6 +874,38 @@ public sealed class GedcomLoader : IGedcomLoader
             var person = tree.GetOrAddPerson(parsedPerson.RecordId);
             person.RawGedcom = parsedPerson.RawGedcom;
             person.FullName = parsedPerson.FullName;
+            person.Names.Clear();
+            foreach (var name in parsedPerson.Names)
+            {
+                var fullName = string.Join(' ', new[] { name.GivenName, name.Surname }
+                    .Where(part => !string.IsNullOrWhiteSpace(part)));
+                if (!string.IsNullOrWhiteSpace(fullName))
+                {
+                    person.Names.Add(new PersonName(fullName, name.Type));
+                }
+            }
+            person.ChildhoodFamilyLinks.Clear();
+            foreach (var link in parsedPerson.ChildhoodFamilyLinks)
+            {
+                var adoptionRoles = parsedPerson.Adoptions
+                    .Where(adoption => adoption.FamilyId == link.FamilyId)
+                    .Select(adoption => adoption.Role ?? "BOTH")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                person.ChildhoodFamilyLinks.Add(new ChildhoodFamilyLink(
+                    link.FamilyId, link.Pedigree, adoptionRoles.Length == 0 ? null :
+                        adoptionRoles.Length == 1 ? adoptionRoles[0] : "UAFKLARET"));
+            }
+            foreach (var adoption in parsedPerson.Adoptions.GroupBy(item => item.FamilyId, StringComparer.Ordinal))
+            {
+                if (person.ChildhoodFamilyLinks.All(link => link.FamilyId != adoption.Key))
+                {
+                    var roles = adoption.Select(item => item.Role ?? "BOTH")
+                        .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                    person.ChildhoodFamilyLinks.Add(new ChildhoodFamilyLink(
+                        adoption.Key, null, roles.Length == 1 ? roles[0] : "UAFKLARET"));
+                }
+            }
             person.Sex = parsedPerson.Sex;
             person.BirthDate = parsedPerson.BirthDate;
             person.BirthPlace = parsedPerson.BirthPlace;
@@ -2296,6 +2361,14 @@ public sealed class GedcomLoader : IGedcomLoader
 
         public IList<ParsedName> Names { get; } = new List<ParsedName>();
 
+        public IList<ParsedChildhoodFamilyLink> ChildhoodFamilyLinks { get; } = new List<ParsedChildhoodFamilyLink>();
+
+        public IList<(string FamilyId, string? Role)> Adoptions { get; } = new List<(string, string?)>();
+
+        public ParsedChildhoodFamilyLink? CurrentChildhoodFamily { get; set; }
+
+        public string? CurrentAdoptionFamily { get; set; }
+
         public string? Sex { get; set; }
 
         public string? BirthDate { get; set; }
@@ -2321,6 +2394,12 @@ public sealed class GedcomLoader : IGedcomLoader
         public IList<ParsedCensus> Census { get; } = new List<ParsedCensus>();
 
         public IList<GedcomDiagnostic> Diagnostics { get; } = new List<GedcomDiagnostic>();
+    }
+
+    private sealed class ParsedChildhoodFamilyLink(string familyId)
+    {
+        public string FamilyId { get; } = familyId;
+        public string? Pedigree { get; set; }
     }
 
     private sealed class ParsedName

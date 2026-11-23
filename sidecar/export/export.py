@@ -8,6 +8,7 @@ from pathlib import Path
 from protocol import ProtocolError, read_request
 from pdf_renderer import render_pdf
 from biography_renderer import render_biography
+from family_tree_renderer import render_family_tree
 
 
 def main():
@@ -33,6 +34,8 @@ def main():
         with open(os.devnull, "w", encoding="utf-8") as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
             if data["operation"] == "graph-pdf":
                 render_pdf(input_path, output_path, data["options"])
+            elif data["operation"].startswith("family-tree-"):
+                render_family_tree(input_path, output_path, data["operation"], data["options"])
             else:
                 render_biography(input_path, output_path, Path(data["assetRoot"]), data["operation"])
         result = {"protocolVersion": 1, "jobId": job_id, "status": "ok", "outputPath": str(output_path), "warnings": []}

@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from proeve_slaegtstrae_pakke import check_family_tree
 
 
 def main():
@@ -83,6 +84,8 @@ def main():
         response = json.loads(result.stdout)
         if response.get("status") != "ok" or not (job / "result.pdf").read_bytes().startswith(b"%PDF-"):
             raise RuntimeError("Prøvepakken gav ikke en gyldig PDF.")
+        if args.pandoc:
+            check_family_tree(package, job, probe_env)
         shutil.copytree(package, target, symlinks=True)
     print(f"Foreløbig prøvepakke dannet og afprøvet: {target}")
     print("Pakken er ikke en færdig distribution: versioner, licenser og platformstest mangler.")

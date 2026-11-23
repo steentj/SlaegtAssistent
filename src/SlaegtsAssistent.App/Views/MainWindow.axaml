@@ -176,12 +176,47 @@
                                        Foreground="{DynamicResource AppMutedTextBrush}" />
                         </StackPanel>
                         <StackPanel Spacing="2" IsVisible="{Binding IsGraphTab}">
-                            <TextBlock Text="{Binding PersonGraph.ProbandText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding FamilyTreeView.ProbandText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
 
                     <TabControl Grid.Row="1" SelectedIndex="{Binding DocumentTabIndex, Mode=TwoWay}">
                         <TabItem x:Name="GraphTab" Header="Graf">
+                            <TabControl SelectedIndex="{Binding GraphViewIndex, Mode=TwoWay}">
+                              <TabItem Header="Slægtstræ">
+                                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
+                                  <WrapPanel Orientation="Horizontal">
+                                    <ComboBox SelectedIndex="{Binding FamilyTreeView.DirectionIndex, Mode=TwoWay}" AutomationProperties.Name="Vis slægtninge">
+                                      <ComboBoxItem Content="Begge" />
+                                      <ComboBoxItem Content="Forfædre" />
+                                      <ComboBoxItem Content="Efterkommere" />
+                                    </ComboBox>
+                                    <Button Content="Brug som proband" Command="{Binding UseFamilyTreeProbandCommand}" />
+                                    <Button Content="Åbn biografi" Command="{Binding FamilyTreeView.OpenBiographyCommand}" />
+                                    <Button Content="Eksportér slægtstræ…" Click="ShowFamilyTreeExport" />
+                                    <Button Content="Udskriv…" Click="ShowFamilyTreePrint" />
+                                  </WrapPanel>
+                                  <TreeView Grid.Row="1" ItemsSource="{Binding FamilyTreeView.Roots}"
+                                            SelectedItem="{Binding FamilyTreeView.SelectedNode, Mode=TwoWay}"
+                                            KeyDown="FamilyTreeKeyDown" AutomationProperties.Name="Slægtstræ">
+                                    <TreeView.Styles>
+                                      <Style Selector="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+                                      </Style>
+                                    </TreeView.Styles>
+                                    <TreeView.ItemTemplate>
+                                      <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:FamilyTreeNodeViewModel">
+                                        <StackPanel Spacing="2">
+                                          <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                                          <TextBlock Text="{Binding Details}" TextWrapping="Wrap" Foreground="{DynamicResource AppMutedTextBrush}" />
+                                        </StackPanel>
+                                      </TreeDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                  </TreeView>
+                                  <TextBlock Grid.Row="2" Text="{Binding FamilyTreeView.Status}" TextWrapping="Wrap" />
+                                </Grid>
+                              </TabItem>
+                              <TabItem Header="Personnetværk">
                             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" IsEnabled="{Binding !IsImporting}">
                                 <WrapPanel Orientation="Horizontal">
                                     <Button Content="Opdatér graf" Command="{Binding RefreshGraphCommand}" />
@@ -222,6 +257,8 @@
                                     <TextBlock Text="{Binding PersonGraph.Status}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
+                              </TabItem>
+                            </TabControl>
                         </TabItem>
                         <TabItem Header="Editor">
                             <Grid RowDefinitions="Auto,*" RowSpacing="8">
@@ -388,7 +425,7 @@
                            Foreground="{DynamicResource AppAccentBrush}"
                            FontWeight="SemiBold" />
                 <TextBlock Grid.Column="1" Text="{Binding ActivePersonText}" IsVisible="{Binding IsBiographyTab}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ActivePersonText}" />
-                <TextBlock Grid.Column="1" Text="{Binding PersonGraph.ProbandText}" IsVisible="{Binding IsGraphTab}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PersonGraph.ProbandText}" />
+                <TextBlock Grid.Column="1" Text="{Binding FamilyTreeView.ProbandText}" IsVisible="{Binding IsGraphTab}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FamilyTreeView.ProbandText}" />
                 <TextBlock Grid.Column="2" Text="{Binding ActiveFilePathText}" Foreground="{DynamicResource AppMutedTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SelectedGedcomFilePath}" />
                 <TextBlock Grid.Column="3" Text="Lokal behandling" Foreground="{DynamicResource AppMutedTextBrush}" />
             </Grid>

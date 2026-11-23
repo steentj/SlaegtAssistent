@@ -1,6 +1,8 @@
 # Validering af trævisningen
 
-Status: Planlagt.
+Status: Implementeret og prøvet automatisk. Native platform- og tilgængelighedsprøver udestår.
+
+19. november 2026: App-testpakken bestod med 390 tests og 6 oversprungne eksportintegrationer. Headless-prøver dækker TreeView-binding, udfoldning, retningsskift og personnetværkets tastaturflow. Den samlede native validering nedenfor er endnu ikke gennemført.
 
 - Headless med `GraphWorkspaceUiTests` som mønster. Verificér, at grafens første underfane viser proband og direkte relationer, at de tre valg ændrer gruppesynlighed, og at ingen dybere personrækker er synlige som standard. Kontroller ydre dokumentindekser.
 - ViewModel-test. Åbn en gren, skift underfane, retning og editorfane, og vend tilbage. Kontrollér bevaret tilstand og separat udfoldning af samme person i to anepositioner. Simulér import med én ændret sti og hurtigt skift mellem to arbejdsområder, inklusive forsinket indlæsning fra det første.

@@ -1,6 +1,8 @@
 # Validering af GEDCOM-grundlag og anenumre
 
-Status: Planlagt.
+Status: Implementeret med automatiske prøver. Den fulde valideringsmatrix nedenfor er ikke gennemført.
+
+19. november 2026: Core-testpakken bestod med 264 tests. Nye prøver dækker GEDCOM-navne og genindlæsning, biologisk prioritering, rollebestemt adoption, anesammenfald, nummeropslag over 64 bit og cyklusstop. De resterende kombinationer i tabellen skal fortsat prøves.
 
 | Prøve | Forventet resultat |
 | --- | --- |

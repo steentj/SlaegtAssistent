@@ -182,7 +182,7 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 
 ### Trin 16 — Hierarkisk slægtstræ og generationsudskrift, sprint 8A–8B
 
-**Status:** Planlagt. Sprint 8A bygger videre på arbejdsbordets fælles personvalg og personnetværk. Sprint 8B følger efter 8A og genbruger den lokale eksportkæde fra 7B–7C. De eksisterende sprintnumre for AI, kilder og transkribering bevares.
+**Status:** Sprint 8A og 8B er implementeret og prøvet automatisk. Slægtstræets PDF, DOCX og ODT er prøvet med den lokale macOS-pakke. De genskabte Linux- og Windows-pakker er prøvet under emulering. Den fulde valideringsmatrix, native platformprøver og manuel godkendelse udestår. De eksisterende sprintnumre for AI, kilder og transkribering bevares.
 
 #### Sprint 8A — GEDCOM-grundlag og interaktiv visning
 

@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
+        x:Class="SlaegtsAssistent.App.Views.FamilyTreeExportWindow"
+        x:DataType="vm:FamilyTreeExportViewModel"
+        Title="Eksportér slægtstræ" Width="560" Height="660"
+        MinWidth="460" MinHeight="480" WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="*,Auto" Margin="18" RowSpacing="12">
+    <ScrollViewer IsEnabled="{Binding !IsExporting}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Anenummer i hovedtræet" />
+        <TextBox Text="{Binding AncestorNumber, Mode=TwoWay}" AutomationProperties.Name="Anenummer i hovedtræet" />
+        <TextBlock Text="{Binding RootDescription}" TextWrapping="Wrap" FontWeight="SemiBold" />
+        <TextBlock Text="Vis slægtninge" />
+        <ComboBox SelectedIndex="{Binding DirectionIndex, Mode=TwoWay}" AutomationProperties.Name="Vis slægtninge">
+          <ComboBoxItem Content="Begge" />
+          <ComboBoxItem Content="Forfædre" />
+          <ComboBoxItem Content="Efterkommere" />
+        </ComboBox>
+        <StackPanel Spacing="4" IsVisible="{Binding ShowAncestors}">
+          <TextBlock Text="Antal generationer af forfædre" />
+          <NumericUpDown Value="{Binding AncestorDepth, Mode=TwoWay}" Minimum="0" Maximum="5" Increment="1"
+                         AutomationProperties.Name="Antal generationer af forfædre" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding ShowDescendants}">
+          <TextBlock Text="Antal generationer af efterkommere" />
+          <NumericUpDown Value="{Binding DescendantDepth, Mode=TwoWay}" Minimum="0" Maximum="5" Increment="1"
+                         AutomationProperties.Name="Antal generationer af efterkommere" />
+        </StackPanel>
+        <TextBlock Text="Papir" />
+        <ComboBox SelectedIndex="{Binding PaperIndex, Mode=TwoWay}" AutomationProperties.Name="Papirstørrelse">
+          <ComboBoxItem Content="A4, liggende" />
+          <ComboBoxItem Content="A3, liggende" />
+        </ComboBox>
+        <StackPanel x:Name="FormatPanel" Spacing="4">
+          <TextBlock Text="Format" />
+          <ComboBox SelectedIndex="{Binding FormatIndex, Mode=TwoWay}" AutomationProperties.Name="Eksportformat">
+            <ComboBoxItem Content="PDF" />
+            <ComboBoxItem Content="Word (DOCX)" />
+            <ComboBoxItem Content="OpenDocument (ODT)" />
+          </ComboBox>
+        </StackPanel>
+        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Luk" Click="CloseClick" />
+      <Button Content="Annullér handling" Click="CancelClick" IsEnabled="{Binding IsExporting}" />
+      <Button x:Name="StartButton" Content="Eksportér…" Click="StartClick" IsEnabled="{Binding CanStart}" />
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1238,6 +1238,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         }
 
         _personGraph?.Select(value?.RecordId);
+        _familyTreeView?.SelectVisible(value?.RecordId);
 
         if (value is null)
         {
@@ -1500,6 +1501,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     private void ActivateWorkspace()
     {
+        ClearGraphWorkspace();
         SelectedPerson = null;
         foreach (var editor in _editors.Values)
         {

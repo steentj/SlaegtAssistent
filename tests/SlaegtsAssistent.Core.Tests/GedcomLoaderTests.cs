@@ -44,6 +44,50 @@ public class GedcomLoaderTests
 
             person.Should().NotBeNull();
             person!.FullName.Should().Be("Marie Hansen (Jensen)");
+            person.Names.Should().Equal(
+                new SlaegtsAssistent.Core.Domain.PersonName("Marie Hansen", "birth"),
+                new SlaegtsAssistent.Core.Domain.PersonName("Marie Jensen", "married"));
+        }
+        finally
+        {
+            File.Delete(fixturePath);
+        }
+    }
+
+    [Fact]
+    public void Load_FamilyLinksAndNames_ReplacesValuesOnReload()
+    {
+        var fixturePath = CreateTemporaryFixture(
+            """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Anna /Jensen/
+            2 TYPE birth
+            1 FAMC @F1@
+            2 PEDI adopted
+            1 ADOP
+            2 FAMC @F1@
+            3 ADOP WIFE
+            0 TRLR
+            """);
+        try
+        {
+            var tree = _loader.Load(fixturePath);
+            var person = tree.FindPerson("@I1@")!;
+            person.ChildhoodFamilyLinks.Should().ContainSingle()
+                .Which.Should().Be(new SlaegtsAssistent.Core.Domain.ChildhoodFamilyLink("@F1@", "adopted", "WIFE"));
+
+            File.WriteAllText(fixturePath, """
+                0 HEAD
+                0 @I1@ INDI
+                1 NAME Anna /Hansen/
+                2 TYPE married
+                0 TRLR
+                """);
+            _loader.Load(fixturePath, tree);
+            person.Names.Should().ContainSingle()
+                .Which.Should().Be(new SlaegtsAssistent.Core.Domain.PersonName("Anna Hansen", "married"));
+            person.ChildhoodFamilyLinks.Should().BeEmpty();
         }
         finally
         {
