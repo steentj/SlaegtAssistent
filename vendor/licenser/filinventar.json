@@ -116,7 +116,7 @@
       },
       {
         "sti": "_internal/base_library.zip",
-        "sha256": "ad885d4141fcdd55db595e26637afd3188230e185df84d89ca810bf9987689f2"
+        "sha256": "e91267006f041fe1d8267d3f07bf11dcaab8105332299490005a7ffa737e7ca8"
       },
       {
         "sti": "_internal/fontTools/misc/bezierTools.cpython-313-darwin.so",
@@ -225,14 +225,6 @@
       {
         "sti": "_internal/libgraphite2.3.dylib",
         "symbolskLink": "libgraphite2.3.3.1.dylib"
-      },
-      {
-        "sti": "_internal/libgthread-2.0.0.dylib",
-        "sha256": "b37cd46aed7f1da997b3edb4b93d87d4d39cd0de752d0b5d7ff600d42d67e0ff"
-      },
-      {
-        "sti": "_internal/libgthread-2.0.dylib",
-        "symbolskLink": "libgthread-2.0.0.dylib"
       },
       {
         "sti": "_internal/libharfbuzz.0.dylib",
@@ -1360,7 +1352,7 @@
       },
       {
         "sti": "slaegt-export",
-        "sha256": "a85a62a061db88114b6a8ef416c15c38c80e0293184f91d69560cff53aeea807"
+        "sha256": "d3f25e2a7f42947b6a076b58d55814568494f2045ee6f0438efde5c7704bd3ca"
       }
     ]
   },

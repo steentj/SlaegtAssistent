@@ -99,7 +99,7 @@ public partial class FamilyTreeViewModel : ViewModelBase
         var path = new HashSet<string>(StringComparer.Ordinal) { person.Id };
         _ancestors = Group("Forfædre", () => AncestorChildren(person, BigInteger.One, path), index!.Parents(person.Id).HasCandidates);
         _descendants = Group("Efterkommere", () => DescendantChildren(person, path), index!.Children(person.Id).Count > 0);
-        _root = new FamilyTreeNodeViewModel($"Anenummer: 1  {person.Name}",
+        _root = new FamilyTreeNodeViewModel($"#1 {person.Name}",
             $"Født: {person.BirthDate}   Død: {person.DeathDate}", person.Id);
         _root.IsExpanded = true;
         UpdateGroups();
@@ -193,10 +193,10 @@ public partial class FamilyTreeViewModel : ViewModelBase
 
     private FamilyTreeNodeViewModel Ancestor(FamilyTreePerson? person, BigInteger number, HashSet<string> path, string? explanation)
     {
-        if (person is null) return new($"Anenummer: {number}  Ukendt", explanation ?? "", null);
-        if (path.Contains(person.Id)) return new($"Anenummer: {number}  Ukendt", "Slægtslinjen indeholder en cirkel.", null);
+        if (person is null) return new($"#{number} Ukendt", explanation ?? "", null);
+        if (path.Contains(person.Id)) return new($"#{number} Ukendt", "Slægtslinjen indeholder en cirkel.", null);
         var next = new HashSet<string>(path, StringComparer.Ordinal) { person.Id };
-        return new($"Anenummer: {number}  {person.Name}", $"Født: {person.BirthDate}   Død: {person.DeathDate}", person.Id,
+        return new($"#{number} {person.Name}", $"Født: {person.BirthDate}   Død: {person.DeathDate}", person.Id,
             () => AncestorChildren(person, number, next), _index!.Parents(person.Id).HasCandidates);
     }
 
@@ -206,11 +206,11 @@ public partial class FamilyTreeViewModel : ViewModelBase
         return _index.Children(person.Id).Select(child =>
         {
             if (path.Contains(child.Person.Id))
-                return new FamilyTreeNodeViewModel($"Anenummer: Ukendt  {child.Person.Name}",
+                return new FamilyTreeNodeViewModel($"#Ukendt {child.Person.Name}",
                     $"Født: {child.Person.BirthDate}   Død: {child.Person.DeathDate}   Slægtslinjen indeholder en cirkel.", null);
             var next = new HashSet<string>(path, StringComparer.Ordinal) { child.Person.Id };
             var relation = child.Relation is null ? "" : $"  ({child.Relation})";
-            return new FamilyTreeNodeViewModel($"Anenummer: Ukendt  {child.Person.Name}{relation}",
+            return new FamilyTreeNodeViewModel($"#Ukendt {child.Person.Name}{relation}",
                 $"Født: {child.Person.BirthDate}   Død: {child.Person.DeathDate}", child.Person.Id,
                 () => DescendantChildren(child.Person, next), _index.Children(child.Person.Id).Count > 0);
         }).ToArray();

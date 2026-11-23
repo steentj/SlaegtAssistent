@@ -6,11 +6,45 @@ using SlaegtsAssistent.Core.FamilyTrees;
 using SlaegtsAssistent.Core.Gedcom;
 using Xunit;
 using System.Numerics;
+using System.IO.Compression;
+using System.Xml.Linq;
+using System.Text;
 
 namespace SlaegtsAssistent.App.Tests;
 
 public sealed class LocalExportIntegrationTests
 {
+    [BundledExportIntegrationFact]
+    public async Task SlaegtstraeDocxHarRodFoerstOgPladsTilManglendeAner()
+    {
+        var fixture = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ged");
+        var gedcom = new StringBuilder("0 HEAD\n");
+        for (var i = 0; i <= 5; i++) gedcom.AppendLine($"0 @I{i}@ INDI\n1 NAME A");
+        for (var i = 0; i < 5; i++) gedcom.AppendLine($"0 @F{i}@ FAM\n1 WIFE @I{i + 1}@\n1 CHIL @I{i}@");
+        gedcom.AppendLine("0 TRLR");
+        await File.WriteAllTextAsync(fixture, gedcom.ToString());
+        try
+        {
+            var index = new FamilyTreeIndex(new GedcomLoader().Load(fixture));
+            var plan = new FamilyTreeExportPlanner(index).Create("@I0@", "1", 5, 0);
+            var sidecar = new LocalExportSidecar(new LocalProcessRunner(),
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_BUNDLE")!, null,
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_LIBRARIES"),
+                Environment.GetEnvironmentVariable("SLAEGTSASSISTENT_TEST_EXPORT_FONTS"));
+            var bytes = await sidecar.RenderFamilyTreeAsync(plan, "docx", "A3", CancellationToken.None);
+            using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            using var input = archive.GetEntry("word/document.xml")!.Open();
+            var document = XDocument.Load(input);
+            XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+            var tables = document.Descendants(word + "tbl").ToArray();
+            tables.Select(table => table.Descendants(word + "tc").Count()).Should().Equal(1, 2, 4, 8, 16, 32);
+            document.ToString().Should().NotContain("Rodperson nr.");
+            tables[0].Value.Should().Contain("#1 A");
+            tables[5].Value.Should().Contain("#63 A");
+        }
+        finally { File.Delete(fixture); }
+    }
+
     [BundledExportIntegrationFact]
     public async Task PakketSidecarEksportererSlaegtstraeIAlleFormater()
     {
@@ -44,7 +78,7 @@ public sealed class LocalExportIntegrationTests
     public async Task PakketSidecarAfviserForStortSlaegtstraeMedDanskForklaring()
     {
         var person = new FamilyTreePerson("@I@", new string('Å', 3000), "Ukendt", "Ukendt", "Ukendt", "Ukendt");
-        var cells = Enumerable.Range(0, 9)
+        var cells = Enumerable.Range(0, 32)
             .Select(_ => new FamilyTreeExportCell(person, Array.Empty<BigInteger>())).ToArray();
         var plan = new FamilyTreeExportPlan("@I@", "1", person,
             [new FamilyTreeExportRow(1, "Børn", cells)]);

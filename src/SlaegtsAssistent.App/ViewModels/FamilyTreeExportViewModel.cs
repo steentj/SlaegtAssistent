@@ -66,7 +66,20 @@ public partial class FamilyTreeExportViewModel : ViewModelBase
             else
             {
                 var maxAncestors = ShowAncestors ? -planner.Create(_probandId, number, 5, 0).Rows.Min(row => row.Generation) : 0;
-                var maxDescendants = ShowDescendants ? planner.Create(_probandId, number, 0, 5).Rows.Max(row => row.Generation) : 0;
+                var maxDescendants = 0;
+                if (ShowDescendants)
+                {
+                    for (var depth = 1; depth <= 5; depth++)
+                    {
+                        try
+                        {
+                            var available = planner.Create(_probandId, number, 0, depth).Rows.Max(row => row.Generation);
+                            maxDescendants = available;
+                            if (available < depth) break;
+                        }
+                        catch (ArgumentException) { break; }
+                    }
+                }
                 var ancestors = 0;
                 var descendants = 0;
                 while (ancestors + descendants < 5 && (ancestors < maxAncestors || descendants < maxDescendants))

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Numerics;
 using SlaegtsAssistent.Core.Export;
 using SlaegtsAssistent.Core.FamilyTrees;
 using System.Text;
@@ -177,9 +178,11 @@ public sealed class LocalExportSidecar(ILocalProcessRunner runner, string execut
             throw new InvalidOperationException("Det lokale eksportværktøj mangler i programpakken.");
         cancellationToken.ThrowIfCancellationRequested();
         var document = new FamilyTreeExportDocument(
-            $"Rodperson nr. {plan.OriginalAncestorNumber} i hovedtræet: {plan.Root.Name}",
+            "",
             plan.Rows.Select(row => new FamilyTreeExportDocumentRow(row.Label,
-                row.Cells.Select(cell => cell.Format(row.Layout).ToArray()).ToArray())).ToArray());
+                row.Cells.Select(cell => cell.Format(row.Layout).ToArray()).ToArray(),
+                row.Generation < 0 ? 1 << -row.Generation : row.GridSlots ?? row.Cells.Count,
+                row.Generation < 0 ? row.Cells.Select(cell => (int)(cell.AncestorNumbers[0] - (BigInteger.One << -row.Generation))).ToArray() : row.GridPositions?.ToArray())).ToArray());
         var content = JsonSerializer.Serialize(document, ExportJsonContext.Default.FamilyTreeExportDocument);
         if (Encoding.UTF8.GetByteCount(content) > MaximumInput)
             throw new ArgumentException("Slægtstræet er for stort til eksport.");
@@ -311,7 +314,9 @@ internal sealed record FamilyTreeExportDocument(
     [property: JsonPropertyName("rows")] FamilyTreeExportDocumentRow[] Rows);
 internal sealed record FamilyTreeExportDocumentRow(
     [property: JsonPropertyName("label")] string Label,
-    [property: JsonPropertyName("cells")] string[][] Cells);
+    [property: JsonPropertyName("cells")] string[][] Cells,
+    [property: JsonPropertyName("slots")] int Slots,
+    [property: JsonPropertyName("positions")] int[]? Positions);
 
 internal sealed record ExportOptions([property: JsonPropertyName("paper")] string Paper, [property: JsonPropertyName("orientation")] string Orientation);
 internal sealed record ExportRequest(

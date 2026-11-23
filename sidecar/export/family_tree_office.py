@@ -18,9 +18,11 @@ def _tag(namespace, local):
 
 
 def _html(layout):
-    parts = ["<html><body>", f"<p>{escape(layout.title)}</p>"]
+    parts = ["<html><body>"]
+    if layout.title:
+        parts.append(f"<p>{escape(layout.title)}</p>")
     for row in layout.rows:
-        parts.append(f"<p>{escape(row.label)}</p><table><tr>")
+        parts.append("<table><tr>")
         for cell in row.cells:
             text = "<br/>".join(escape(line) for line in cell.lines)
             parts.append(f"<td>{text}</td>")
@@ -122,12 +124,16 @@ def _word_document(layout, xml):
             width = str(round(row.width * 20))
             for column in columns:
                 column.set(_tag(WORD, "w"), width)
-            for cell in cells:
+            for cell, cell_layout in zip(cells, row.cells):
                 properties = cell.find(_tag(WORD, "tcPr"))
                 if properties is None:
                     raise ProtocolError("conversion-failed")
                 _replace_word_child(properties, "tcW", w=width, type="dxa")
-                if row.vertical:
+                if cell_layout.spacer:
+                    borders = _replace_word_child(properties, "tcBorders")
+                    for side in ("top", "left", "bottom", "right"):
+                        _word_element(borders, side, val="nil")
+                elif row.vertical:
                     _replace_word_child(properties, "textDirection", val="tbRl")
         section = body.find(_tag(WORD, "sectPr"))
         if section is None:
@@ -226,8 +232,11 @@ def _odt_content(layout, xml):
             if row.vertical:
                 properties[_tag(STYLE, "writing-mode")] = "tb-rl"
             ET.SubElement(cell_style, _tag(STYLE, "table-cell-properties"), properties)
-            for cell in cells:
-                cell.set(_tag(TABLE, "style-name"), cell_style_name)
+            spacer_name = f"SlaegtSpacer{index}"
+            spacer_style = _odf_style(styles, spacer_name, "table-cell")
+            ET.SubElement(spacer_style, _tag(STYLE, "table-cell-properties"), {_tag(FO, "border"): "none"})
+            for cell, cell_layout in zip(cells, row.cells):
+                cell.set(_tag(TABLE, "style-name"), spacer_name if cell_layout.spacer else cell_style_name)
         return ET.tostring(root, encoding="utf-8", xml_declaration=True)
     except ET.ParseError:
         raise ProtocolError("conversion-failed") from None

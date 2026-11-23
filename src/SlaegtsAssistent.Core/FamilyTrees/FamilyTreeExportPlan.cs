@@ -11,17 +11,18 @@ public sealed record FamilyTreeExportCell(
     public IReadOnlyList<string> Format(FamilyTreeExportLayout layout)
     {
         var number = AncestorNumbers.Count == 0
-            ? "Ukendt"
-            : string.Join(", ", AncestorNumbers.Select(value => value.ToString(CultureInfo.InvariantCulture)));
+            ? "#Ukendt"
+            : string.Join(", ", AncestorNumbers.Select(value => "#" + value.ToString(CultureInfo.InvariantCulture)));
         var name = Person?.Name ?? "Ukendt";
+        var heading = $"{number} {name}";
         if (layout != FamilyTreeExportLayout.Detailed)
         {
             var birth = FamilyTreeIndex.FormatYear(Person?.BirthDate);
             var death = FamilyTreeIndex.FormatYear(Person?.DeathDate);
-            return [$"Anenummer: {number}", name, $"{birth} – {death}"];
+            return [heading, $"{birth} – {death}"];
         }
 
-        return [$"Anenummer: {number}", name,
+        return [heading,
             $"Født: {Person?.BirthDate ?? "Ukendt"}",
             $"Fødested: {Person?.BirthPlace ?? "Ukendt"}",
             $"Død: {Person?.DeathDate ?? "Ukendt"}",
@@ -32,6 +33,8 @@ public sealed record FamilyTreeExportCell(
 public sealed record FamilyTreeExportRow(
     int Generation, string Label, IReadOnlyList<FamilyTreeExportCell> Cells)
 {
+    public int? GridSlots { get; init; }
+    public IReadOnlyList<int>? GridPositions { get; init; }
     public FamilyTreeExportLayout Layout => Cells.Count <= 5 ? FamilyTreeExportLayout.Detailed
         : Cells.Count <= 8 ? FamilyTreeExportLayout.Compact : FamilyTreeExportLayout.Vertical;
 }
@@ -56,7 +59,8 @@ public sealed class FamilyTreeExportPlanner
             ?? throw new ArgumentException("Anenummeret findes ikke i hovedtræet.", nameof(ancestorNumber));
         var path = new HashSet<string>(StringComparer.Ordinal) { root.Id };
         var ancestors = new List<Occurrence> { new(root, BigInteger.One, path) };
-        var descendants = new List<Occurrence> { new(root, null, path) };
+        var descendants = new List<Occurrence> { new(root, null, path, 0) };
+        var descendantSlots = 1;
         var rows = new List<FamilyTreeExportRow>
         {
             new(0, "Rodperson", [new FamilyTreeExportCell(root, [BigInteger.One])])
@@ -78,30 +82,39 @@ public sealed class FamilyTreeExportPlanner
             ancestors = next;
         }
 
-        var comparer = StringComparer.Create(CultureInfo.GetCultureInfo("da-DK"), false);
         for (var generation = 1; generation <= descendantDepth; generation++)
         {
+            var families = descendants.Select(entry => (Parent: entry,
+                Children: entry.Person is null ? [] : _index.Children(entry.Person.Id)
+                    .Where(child => !entry.Path.Contains(child.Person.Id)).ToArray())).ToArray();
+            var columnsPerParent = families.Max(family => family.Children.Length);
+            if (columnsPerParent == 0) break;
+            if (descendantSlots > 1000 / columnsPerParent)
+                throw new ArgumentException("Slægtstræet har for mange kolonnepositioner. Vælg færre generationer.");
+            descendantSlots *= columnsPerParent;
             var next = new List<Occurrence>();
-            foreach (var entry in descendants)
+            foreach (var (entry, children) in families)
             {
-                if (entry.Person is null) continue;
-                foreach (var child in _index.Children(entry.Person.Id))
+                for (var index = 0; index < children.Length; index++)
                 {
-                    if (entry.Path.Contains(child.Person.Id)) continue;
+                    var child = children[index];
                     var childPath = new HashSet<string>(entry.Path, StringComparer.Ordinal) { child.Person.Id };
-                    next.Add(new Occurrence(child.Person, null, childPath));
+                    var firstPosition = entry.Position * columnsPerParent;
+                    var offset = (columnsPerParent - children.Length) / 2;
+                    next.Add(new Occurrence(child.Person, null, childPath, firstPosition + offset + index));
                 }
             }
-            if (next.Count == 0) break;
-            var cells = next.Select(entry => entry.Person!).DistinctBy(person => person.Id, StringComparer.Ordinal)
-                .OrderBy(person => person.Name, comparer).ThenBy(person => person.Id, StringComparer.Ordinal)
-                .Select(person => new FamilyTreeExportCell(person, Array.Empty<BigInteger>())).ToArray();
-            rows.Add(new FamilyTreeExportRow(generation, DescendantLabel(generation), cells));
+            var cells = next.Select(entry => new FamilyTreeExportCell(entry.Person, Array.Empty<BigInteger>())).ToArray();
+            rows.Add(new FamilyTreeExportRow(generation, DescendantLabel(generation), cells)
+            {
+                GridSlots = descendantSlots,
+                GridPositions = next.Select(entry => entry.Position).ToArray()
+            });
             descendants = next;
         }
 
         return new FamilyTreeExportPlan(probandId, BigInteger.Parse(ancestorNumber, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
-            root, rows.OrderBy(row => row.Generation).ToArray());
+            root, rows.OrderBy(row => row.Generation == 0 ? 0 : row.Generation > 0 ? row.Generation : descendantDepth - row.Generation).ToArray());
     }
 
     private static void AddAncestor(List<Occurrence> result, FamilyTreePerson? person, BigInteger number, HashSet<string> path)
@@ -117,24 +130,14 @@ public sealed class FamilyTreeExportPlanner
 
     private static IReadOnlyList<FamilyTreeExportCell> AncestorCells(List<Occurrence> occurrences)
     {
-        var cells = new List<FamilyTreeExportCell>();
-        foreach (var entry in occurrences.OrderBy(entry => entry.Number))
-        {
-            if (entry.Person is null)
-            {
-                cells.Add(new FamilyTreeExportCell(null, [entry.Number!.Value]));
-                continue;
-            }
-            var existing = cells.FindIndex(cell => cell.Person?.Id == entry.Person.Id);
-            if (existing < 0) cells.Add(new FamilyTreeExportCell(entry.Person, [entry.Number!.Value]));
-            else cells[existing] = cells[existing] with { AncestorNumbers = cells[existing].AncestorNumbers.Append(entry.Number!.Value).ToArray() };
-        }
-        return cells;
+        return occurrences.OrderBy(entry => entry.Number)
+            .Select(entry => new FamilyTreeExportCell(entry.Person, [entry.Number!.Value])).ToArray();
     }
 
     private static string AncestorLabel(int generation) => generation switch
     {
         1 => "Forældre", 2 => "Bedsteforældre", 3 => "Oldeforældre",
+        4 => "Tipoldeforældre", 5 => "Tiptipoldeforældre",
         _ => $"Forfædre, {generation}. generation"
     };
 
@@ -144,5 +147,5 @@ public sealed class FamilyTreeExportPlanner
         _ => $"Efterkommere, {generation}. generation"
     };
 
-    private sealed record Occurrence(FamilyTreePerson? Person, BigInteger? Number, HashSet<string> Path);
+    private sealed record Occurrence(FamilyTreePerson? Person, BigInteger? Number, HashSet<string> Path, int Position = 0);
 }

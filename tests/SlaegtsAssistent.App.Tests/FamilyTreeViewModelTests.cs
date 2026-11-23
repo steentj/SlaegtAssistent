@@ -50,7 +50,7 @@ public class FamilyTreeViewModelTests
             item.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             father.IsExpanded.Should().BeTrue();
-            father.Children[0].Title.Should().Contain("Anenummer: 4");
+            father.Children[0].Title.Should().Contain("#4");
         }
         finally
         {
@@ -96,10 +96,10 @@ public class FamilyTreeViewModelTests
             var ancestorGroup = root.Children[0];
             ancestorGroup.IsExpanded.Should().BeTrue();
             var father = ancestorGroup.Children[0];
-            father.Title.Should().Contain("Anenummer: 2");
+            father.Title.Should().Contain("#2");
             father.IsExpanded.Should().BeFalse();
             father.IsExpanded = true;
-            father.Children[0].Title.Should().Contain("Anenummer: 4");
+            father.Children[0].Title.Should().Contain("#4");
             vm.DirectionIndex = 2;
             root.Children.Should().ContainSingle().Which.Title.Should().Be("Efterkommere");
             vm.DirectionIndex = 0;

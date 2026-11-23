@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 
 
-EXPECTED_SHA256 = "d9adcb0b4b30a0545c5f0e7d8af7856e058bb4dee8cb87c0277711f363793631"
+EXPECTED_SHA256 = "6ed84001006d632f7b362c9b5c0229b5e8ae6483194368ca50c7a78c6170dbfc"
 
 
 def main():

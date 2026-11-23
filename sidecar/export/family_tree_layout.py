@@ -9,6 +9,7 @@ from protocol import ProtocolError
 @dataclass(frozen=True)
 class CellLayout:
     lines: tuple[str, ...]
+    spacer: bool = False
 
 
 @dataclass(frozen=True)
@@ -33,21 +34,31 @@ def validate_document(document):
         raise ProtocolError("invalid-input")
     title = document["title"]
     rows = document["rows"]
-    if not isinstance(title, str) or not title.strip() or len(title) > 4096 or any(ord(c) < 32 for c in title):
+    if not isinstance(title, str) or len(title) > 4096 or any(ord(c) < 32 for c in title):
         raise ProtocolError("invalid-input")
     if not isinstance(rows, list) or not 1 <= len(rows) <= 6:
         raise ProtocolError("invalid-input")
     for row in rows:
-        if not isinstance(row, dict) or set(row) != {"label", "cells"}:
+        if not isinstance(row, dict) or set(row) not in ({"label", "cells"}, {"label", "cells", "slots", "positions"}):
             raise ProtocolError("invalid-input")
         if not isinstance(row["label"], str) or not row["label"].strip() or len(row["label"]) > 256 or any(ord(c) < 32 for c in row["label"]):
             raise ProtocolError("invalid-input")
         cells = row["cells"]
         if not isinstance(cells, list) or not 1 <= len(cells) <= 1000:
             raise ProtocolError("invalid-input")
-        expected = 6 if len(cells) <= 5 else 3
+        slots = row.get("slots", len(cells))
+        positions = row.get("positions")
+        if type(slots) is not int or not len(cells) <= slots <= 1000:
+            raise ProtocolError("invalid-input")
+        if positions is not None and (not isinstance(positions, list) or len(positions) != len(cells)
+                                      or any(type(position) is not int or position < 0 or position >= slots for position in positions)
+                                      or positions != sorted(set(positions))):
+            raise ProtocolError("invalid-input")
+        if positions is None and slots != len(cells):
+            raise ProtocolError("invalid-input")
+        expected = (5, 6) if len(cells) <= 5 else (2, 3)
         for cell in cells:
-            if not isinstance(cell, list) or len(cell) != expected:
+            if not isinstance(cell, list) or len(cell) not in expected:
                 raise ProtocolError("invalid-input")
             if any(not isinstance(line, str) or not line or len(line) > 4096 or
                    any(ord(character) < 32 for character in line) for line in cell):
@@ -108,38 +119,43 @@ def build_layout(document, paper, font_path):
         raise ProtocolError("missing-tool")
 
     # Alle mål er i punkter. 10 mm margin på hver side og ekstra plads til
-    # overskrift, rækkenavne og kontorprogrammernes afsluttende afsnit.
+    # kontorprogrammernes afsluttende afsnit.
     page_width, page_height = ((841.89, 595.28) if paper == "A4" else (1190.55, 841.89))
     usable_width = page_width - 56.70
     usable_height = page_height - 56.70
-    for size in range(10, 6, -1):
+    for size in range(10, 3, -1):
         font = ImageFont.truetype(str(font_path), size * 4)
         line_height = size * 1.3
         rows = []
-        total_height = size * 3 + 18
+        total_height = size * 3 + 18 if document["title"] else 0
         try:
             if font.getlength(document["title"]) > usable_width * 4:
                 raise ProtocolError("page-overflow")
             for row in document["rows"]:
-                if font.getlength(row["label"]) > usable_width * 4:
-                    raise ProtocolError("page-overflow")
                 cells = row["cells"]
-                width = usable_width / len(cells)
-                vertical = len(cells) > 8
+                slots = row.get("slots", len(cells))
+                positions = row.get("positions")
+                width = usable_width / slots
+                vertical = slots > 8
                 if vertical:
                     maximum_lines = int((width - 4) // line_height)
-                    if maximum_lines < 3:
+                    display_cells = [
+                        [cell[0], cell[1] + "  " + cell[2], cell[3] + "  " + cell[4]]
+                        if len(cell) == 5 and maximum_lines < 5 else cell
+                        for cell in cells
+                    ]
+                    if maximum_lines < max(len(cell) for cell in display_cells):
                         raise ProtocolError("page-overflow")
                     # Find den kortest mulige tekstlængde, der rummer linjerne.
                     low, high = 1.0, usable_height
                     for _ in range(14):
                         middle = (low + high) / 2
-                        wrapped = [_wrap_cell(cell, middle * 4, font, maximum_lines) for cell in cells]
+                        wrapped = [_wrap_cell(cell, middle * 4, font, maximum_lines) for cell in display_cells]
                         if all(lines is not None for lines in wrapped):
                             high = middle
                         else:
                             low = middle
-                    wrapped = [_wrap_cell(cell, high * 4, font, maximum_lines) for cell in cells]
+                    wrapped = [_wrap_cell(cell, high * 4, font, maximum_lines) for cell in display_cells]
                     if any(lines is None for lines in wrapped):
                         raise ProtocolError("page-overflow")
                     height = high + 6
@@ -147,10 +163,14 @@ def build_layout(document, paper, font_path):
                     if width <= 6:
                         raise ProtocolError("page-overflow")
                     wrapped = [_wrap_cell(cell, (width - 6) * 4, font) for cell in cells]
+                    if any(lines is None for lines in wrapped):
+                        raise ProtocolError("page-overflow")
                     height = max(len(lines) for lines in wrapped) * line_height + 6
-                total_height += height + line_height + 5
-                rows.append(RowLayout(row["label"], vertical, width, height,
-                                      tuple(CellLayout(lines) for lines in wrapped)))
+                total_height += height
+                positioned = [CellLayout((), True) for _ in range(slots)]
+                for position, lines in zip(positions if positions is not None else range(slots), wrapped):
+                    positioned[position] = CellLayout(lines)
+                rows.append(RowLayout(row["label"], vertical, width, height, tuple(positioned)))
         except ProtocolError as error:
             if error.code == "page-overflow":
                 continue

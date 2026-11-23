@@ -9,6 +9,53 @@ namespace SlaegtsAssistent.Core.Tests;
 public class FamilyTreeExportPlanTests
 {
     [Fact]
+    public void Plan_PlacererEfterkommereUnderDeresForældresKolonner()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ged");
+        File.WriteAllText(path, """
+            0 HEAD
+            0 @I0@ INDI
+            1 NAME Rod
+            0 @I1@ INDI
+            1 NAME Anna
+            0 @I2@ INDI
+            1 NAME Bo
+            0 @I3@ INDI
+            1 NAME A
+            0 @I4@ INDI
+            1 NAME B
+            0 @I5@ INDI
+            1 NAME C
+            0 @I6@ INDI
+            1 NAME D
+            0 @F0@ FAM
+            1 HUSB @I0@
+            1 CHIL @I1@
+            1 CHIL @I2@
+            0 @F1@ FAM
+            1 WIFE @I1@
+            1 CHIL @I3@
+            1 CHIL @I4@
+            1 CHIL @I5@
+            0 @F2@ FAM
+            1 HUSB @I2@
+            1 CHIL @I6@
+            0 TRLR
+            """);
+        try
+        {
+            var plan = new FamilyTreeExportPlanner(new FamilyTreeIndex(new GedcomLoader().Load(path)))
+                .Create("@I0@", "1", 0, 2);
+            plan.Rows[1].GridSlots.Should().Be(2);
+            plan.Rows[1].GridPositions.Should().Equal(0, 1);
+            plan.Rows[2].GridSlots.Should().Be(6);
+            plan.Rows[2].GridPositions.Should().Equal(0, 1, 2, 4);
+            plan.Rows[2].Cells.Select(cell => cell.Person!.Id).Should().Equal("@I3@", "@I4@", "@I5@", "@I6@");
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void Plan_UsesDeepAncestorWithoutChangingMainProband()
     {
         var data = new StringBuilder("0 HEAD\n");
@@ -23,11 +70,15 @@ public class FamilyTreeExportPlanTests
         {
             var index = new FamilyTreeIndex(new GedcomLoader().Load(path));
             var planner = new FamilyTreeExportPlanner(index);
+            var mainPlan = planner.Create("@I0@", "1", 5, 0);
+            mainPlan.Rows.Select(row => row.Generation).Should().Equal(0, -1, -2, -3, -4, -5);
+            mainPlan.Rows[4].Label.Should().Be("Tipoldeforældre");
+            mainPlan.Rows[5].Label.Should().Be("Tiptipoldeforældre");
             var plan = planner.Create("@I0@", (BigInteger.One << 7).ToString(), 1, 0);
             plan.MainProbandId.Should().Be("@I0@");
             plan.Root.Id.Should().Be("@I7@");
-            plan.Rows[0].Cells[0].Person!.Id.Should().Be("@I8@");
-            plan.Rows[0].Cells[0].AncestorNumbers.Should().Equal(2);
+            plan.Rows[1].Cells[0].Person!.Id.Should().Be("@I8@");
+            plan.Rows[1].Cells[0].AncestorNumbers.Should().Equal(2);
             index.FindAncestor("@I0@", "1")!.Id.Should().Be("@I0@");
         }
         finally { File.Delete(path); }
@@ -65,7 +116,11 @@ public class FamilyTreeExportPlanTests
             var plan = new FamilyTreeExportPlanner(new FamilyTreeIndex(new GedcomLoader().Load(path)))
                 .Create("@I1@", "1", 0, 5);
             plan.Rows.Select(row => row.Generation).Should().Equal(0, 1, 2);
-            plan.Rows[2].Cells.Should().ContainSingle().Which.Person!.Id.Should().Be("@I4@");
+            plan.Rows[2].Cells.Select(cell => cell.Person!.Id).Should().Equal("@I4@", "@I4@");
+            plan.Rows[1].GridSlots.Should().Be(2);
+            plan.Rows[1].GridPositions.Should().Equal(0, 1);
+            plan.Rows[2].GridSlots.Should().Be(2);
+            plan.Rows[2].GridPositions.Should().Equal(0, 1);
         }
         finally { File.Delete(path); }
     }
@@ -80,26 +135,27 @@ public class FamilyTreeExportPlanTests
             var plan = planner.Create("@I1@", "2", 1, 1);
             plan.Root.Id.Should().Be("@I2@");
             plan.OriginalAncestorNumber.Should().Be("2");
-            plan.Rows.Select(row => row.Generation).Should().Equal(-1, 0, 1);
-            plan.Rows[0].Cells[0].AncestorNumbers.Should().Equal(2);
-            plan.Rows[0].Cells[1].Person.Should().BeNull();
-            plan.Rows[0].Cells[1].AncestorNumbers.Should().Equal(3);
-            plan.Rows[1].Cells.Should().ContainSingle().Which.AncestorNumbers.Should().Equal(1);
-            plan.Rows[2].Cells.Should().ContainSingle().Which.Person!.Id.Should().Be("@I1@");
+            plan.Rows.Select(row => row.Generation).Should().Equal(0, 1, -1);
+            plan.Rows[2].Cells[0].AncestorNumbers.Should().Equal(2);
+            plan.Rows[2].Cells[1].Person.Should().BeNull();
+            plan.Rows[2].Cells[1].AncestorNumbers.Should().Equal(3);
+            plan.Rows[0].Cells.Should().ContainSingle().Which.AncestorNumbers.Should().Equal(1);
+            plan.Rows[1].Cells.Should().ContainSingle().Which.Person!.Id.Should().Be("@I1@");
         }
         finally { File.Delete(path); }
     }
 
     [Fact]
-    public void Plan_MergesRepeatedAncestorsAndRejectsInvalidInput()
+    public void Plan_PreservesRepeatedAncestorPositionsAndRejectsInvalidInput()
     {
         var path = Fixture();
         try
         {
             var planner = new FamilyTreeExportPlanner(new FamilyTreeIndex(new GedcomLoader().Load(path)));
             var plan = planner.Create("@I1@", "1", 2, 0);
-            plan.Rows[0].Cells.Should().HaveCount(3);
-            plan.Rows[0].Cells[0].AncestorNumbers.Should().Equal(4, 6);
+            plan.Rows[2].Cells.Should().HaveCount(4);
+            plan.Rows[2].Cells[0].AncestorNumbers.Should().Equal(4);
+            plan.Rows[2].Cells[2].AncestorNumbers.Should().Equal(6);
             Action invalidDepth = () => planner.Create("@I1@", "1", 3, 3);
             invalidDepth.Should().Throw<ArgumentOutOfRangeException>();
             Action invalidRoot = () => planner.Create("@I1@", "5", 1, 0);
@@ -127,10 +183,10 @@ public class FamilyTreeExportPlanTests
         var person = new FamilyTreePerson("@I@", "Anna Øster", "12 MAR 1900", "Århus", "ABT 1980", "Odense");
         var cell = new FamilyTreeExportCell(person, [2, 6]);
         cell.Format(FamilyTreeExportLayout.Detailed).Should().Equal(
-            "Anenummer: 2, 6", "Anna Øster", "Født: 12 MAR 1900", "Fødested: Århus",
+            "#2, #6 Anna Øster", "Født: 12 MAR 1900", "Fødested: Århus",
             "Død: ABT 1980", "Dødssted: Odense");
         cell.Format(FamilyTreeExportLayout.Vertical).Should().Equal(
-            "Anenummer: 2, 6", "Anna Øster", "1900 – ca. 1980");
+            "#2, #6 Anna Øster", "1900 – ca. 1980");
         new FamilyTreeExportCell(null, [3]).Format(FamilyTreeExportLayout.Detailed)
             .Should().Contain("Fødested: Ukendt");
     }

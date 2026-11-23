@@ -196,8 +196,8 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 
 #### Sprint 8B — Én liggende side til eksport og udskrift
 
-1. **Byg én generationsplan.** Hent de valgte grene fra samme indeks som træet. Vis én række pr. generation og én celle pr. person i rækken, inklusive eventuelle nummererede »Ukendt«-pladser. Placér forfædre over roden og efterkommere under den. Begræns resultatet til seks generationer inklusive roden på tværs af de valgte retninger.
-2. **Vælg en ane som midlertidig eksportrod.** Med et kendt anenummer fra hovedtræet kan brugeren udskrive en dybere gren. Dokumentet bruger nummer 1 for sin egen rod og viser oprindeligt anenummer i overskriften. Brugeren vælger retning og antal generationer uafhængigt af træets udfoldning.
+1. **Byg én generationsplan.** Vis roden øverst og ældste generation nederst. Forældre og børn placeres i tilhørende kolonner, også ved manglende grene og forskellige børnetal. Personer, som optræder i flere grene, vises i hver relevant position. Ved begge retninger vises efterkommere mellem roden og forfædrene. Begræns resultatet til seks generationer inklusive roden.
+2. **Vælg en ane som midlertidig eksportrod.** Med et kendt anenummer fra hovedtræet kan brugeren udskrive en dybere gren. Dokumentet bruger nummer 1 for sin egen rod. Anenumre vises som »#nummer« foran navnet. Brugeren vælger retning og antal generationer uafhængigt af træets udfoldning.
 3. **Tilpas cellerne efter rækkens bredde.** Ved op til fem celler vises anenummer, navn, fødselsdato og -sted samt dødsdato og -sted. Ved seks til otte vises anenummer, navn og fødselsår – dødsår. Fra ni celler roteres den kompakte tekst 90 grader. A4 er standard med A3 som valgmulighed. Vis en forklaring, hvis samtlige valgte celler ikke kan være læselige på det valgte papir.
 4. **Eksportér ODT, DOCX og PDF samt åbn til udskrift.** Genbrug det lokale konverterings- og PDF-flow. Prøv én liggende side med redigerbare tabelceller i Word og LibreOffice samt samme generationer ved PDF-eksport og udskrift. Dæk grænserne ved 5, 6, 8 og 9 celler, dybe rødder og den eksisterende graf- og biografieksport ved afslutning.
 

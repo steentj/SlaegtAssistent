@@ -24,14 +24,15 @@ def render_pdf(layout, output_path):
         f'width="{page_width}pt" height="{page_height}pt">',
         f'<rect x="0" y="0" width="{page_width}" height="{page_height}" fill="white"/>',
         f'<g font-family="sans-serif" font-size="{font_size}" fill="#000">',
-        f'<text x="{margin}" y="{margin + font_size}">{_text(layout.title)}</text>',
     ]
-    y = margin + font_size * 3 + 18
+    if layout.title:
+        parts.append(f'<text x="{margin}" y="{margin + font_size}">{_text(layout.title)}</text>')
+    y = margin + (font_size * 3 + 18 if layout.title else 0)
     for row in layout.rows:
-        parts.append(f'<text x="{margin}" y="{y + font_size}">{_text(row.label)}</text>')
-        y += line_height + 5
         for index, cell in enumerate(row.cells):
             x = margin + index * row.width
+            if cell.spacer:
+                continue
             parts.append(f'<rect x="{x:.3f}" y="{y:.3f}" width="{row.width:.3f}" height="{row.height:.3f}" fill="none" stroke="#666" stroke-width="0.5"/>')
             if row.vertical:
                 parts.append(f'<g transform="translate({x + row.width - 3:.3f} {y + 3:.3f}) rotate(90)">')
