@@ -27,7 +27,7 @@ public sealed class SafeMarkdownPreviewService
         "object-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none'";
 
     private const long MaximumImageBytes = 20 * 1024 * 1024;
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+    internal static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UsePipeTables()
         .UseEmphasisExtras()
         .DisableHtml()
@@ -62,7 +62,13 @@ public sealed class SafeMarkdownPreviewService
         string markdown,
         string documentPath,
         IReadOnlyCollection<string>? allowedLocalRoots = null,
-        Func<string, PersonDocumentLink?>? resolvePersonLink = null)
+        Func<string, PersonDocumentLink?>? resolvePersonLink = null) =>
+        Render(markdown, documentPath, allowedLocalRoots, resolvePersonLink, null, []);
+
+    internal SafeMarkdownPreviewResult Render(
+        string markdown, string documentPath, IReadOnlyCollection<string>? allowedLocalRoots,
+        Func<string, PersonDocumentLink?>? resolvePersonLink, DocumentMediaSection? mediaSection,
+        IReadOnlyList<DocumentMediaCard> mediaCards)
     {
         ArgumentNullException.ThrowIfNull(markdown);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentPath);
@@ -83,7 +89,14 @@ public sealed class SafeMarkdownPreviewService
             diagnostics.Add("Rå HTML vises som tekst og udføres ikke i previewet.");
         }
 
-        var html = Markdown.ToHtml(HidePortraitMarkers(markdown), Pipeline);
+        string? mediaPlaceholder = null;
+        var source = markdown;
+        if (mediaSection is not null && mediaCards.Count > 0)
+        {
+            mediaPlaceholder = $"Medieoversigt{Guid.NewGuid():N}";
+            source = markdown.Insert(mediaSection.InsertAt, $"\n\n{mediaPlaceholder}\n\n");
+        }
+        var html = Markdown.ToHtml(HidePortraitMarkers(source), Pipeline);
 
         html = ImageRegex.Replace(html, match => ResolveImage(
             match.Value,
@@ -91,6 +104,9 @@ public sealed class SafeMarkdownPreviewService
             roots,
             diagnostics));
         html = LinkRegex.Replace(html, match => ResolveLink(match, externalLinks, diagnostics, resolvePersonLink, personLinks));
+
+        if (mediaPlaceholder is not null)
+            html = html.Replace($"<p>{mediaPlaceholder}</p>", DocumentMediaCard.Render(mediaCards), StringComparison.Ordinal);
 
         if (diagnostics.Count > 0)
         {
@@ -289,6 +305,12 @@ public sealed class SafeMarkdownPreviewService
         "blockquote{border-left:4px solid #6e9eaa;margin-left:0;padding-left:12px;color:#4d626a;}" +
         ".preview-warning{display:block;margin:8px 0;padding:8px 10px;border-left:4px solid #B7791F;background:#FFF8E6;color:#6B4E16;}" +
         "a.person-link::after{content:\" ↗\";}a.person-link:focus{outline:2px solid #174a5b;outline-offset:3px;}" +
+        ".document-media{display:flex;flex-wrap:wrap;gap:12px 20px;padding:0;list-style:none;}" +
+        ".document-media li{max-width:100%;overflow-wrap:anywhere;}" +
+        ".document-media a{display:block;color:inherit;}" +
+        ".document-media a:focus-visible{outline:2px solid currentColor;outline-offset:3px;}" +
+        ".document-media img{display:block;width:160px;height:120px;object-fit:contain;object-position:left center;}" +
+        ".document-media small{display:block;max-width:240px;}" +
         "img{max-width:100%;height:auto;}</style></head><body>" + html + "</body></html>";
 
     internal static bool IsWithin(string path, string root)

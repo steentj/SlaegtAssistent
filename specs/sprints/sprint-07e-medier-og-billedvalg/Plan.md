@@ -50,3 +50,9 @@ Samlet: **15–21 effektive udviklingsdage**, omtrent tre til fire arbejdsuger f
 Alle krav i Requirements.md har automatiseret eller manuel evidens, samtlige seks featurejournaler er udfyldt, og hovedscenariet består uden ny GEDCOM-import efter genstart. PDF, DOCX og ODT er både strukturelt og visuelt kontrolleret. Ingen automatisk billedindsættelse eller tab af fri tekst ved import, genrendering, gemning eller rollback. Ressourcegrænser og målplatformenes native adfærd er verificeret; uafsluttede prøver må ikke tælles som bestået.
 
 Ingen implementering, skærmbilleder af ny UI eller beståede tests påstås i denne planlægningsleverance.
+
+## Udvidelse af dokumentforhåndsvisningen
+
+1. [Mediesektion med miniaturer](07-miniaturer-i-persondokumenter/Plan.md), 2–3 dage.
+2. [Separat billedforhåndsvisning](08-separat-billedforhaandsvisning/Plan.md), 2–3 dage.
+3. [Indstilling for miniaturer](09-indstilling-for-miniaturer/Plan.md), 1–2 dage.

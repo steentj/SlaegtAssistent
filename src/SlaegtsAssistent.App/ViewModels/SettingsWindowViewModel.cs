@@ -45,6 +45,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
         _previewPeople = previewPeople?.ToArray() ?? (previewPerson is null ? [] : [previewPerson]);
         _originalMediaFolder = NormalizeFolder(currentSettings.DefaultMediaFolder);
         DefaultMediaFolder = _originalMediaFolder;
+        ShowDocumentMediaThumbnails = currentSettings.ShowDocumentMediaThumbnails;
         UpdateMediaFolderMessage();
         DefaultGedcomInputFolder = currentSettings.DefaultGedcomInputFolder;
         DefaultMarkdownOutputFolder = currentSettings.DefaultMarkdownOutputFolder;
@@ -61,6 +62,9 @@ public partial class SettingsWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? defaultMediaFolder;
+
+    [ObservableProperty]
+    private bool showDocumentMediaThumbnails;
 
     [ObservableProperty]
     private string? mediaFolderMessage;
@@ -331,6 +335,7 @@ public partial class SettingsWindowViewModel : ViewModelBase
         CloseRequested?.Invoke(this, new AppSettings
         {
             DefaultMediaFolder = NormalizeFolder(DefaultMediaFolder),
+            ShowDocumentMediaThumbnails = ShowDocumentMediaThumbnails,
             DefaultGedcomInputFolder = NormalizeFolder(DefaultGedcomInputFolder),
             DefaultMarkdownOutputFolder = NormalizeFolder(DefaultMarkdownOutputFolder),
             GlobalBiographyTemplatePath = NormalizePath(GlobalBiographyTemplatePath),

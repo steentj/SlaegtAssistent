@@ -17,7 +17,7 @@ public sealed class LocalMediaInspectionService(
 {
     private const int MaximumBytes = 20 * 1024 * 1024;
     private MediaFileIndex? _index = index;
-    private readonly SemaphoreSlim _slots = new(2);
+    private static readonly SemaphoreSlim Slots = new(2);
 
     public void SetIndex(MediaFileIndex? index) => Volatile.Write(ref _index, index);
 
@@ -36,32 +36,64 @@ public sealed class LocalMediaInspectionService(
     public Task<MediaInspection> InspectPreviewAsync(MediaCatalogItem item, CancellationToken cancellationToken) =>
         InspectBoundedAsync(item, 480, 360, cancellationToken);
 
-    private async Task<MediaInspection> InspectBoundedAsync(MediaCatalogItem item, int maximumWidth, int maximumHeight, CancellationToken cancellationToken)
+    private Task<MediaInspection> InspectBoundedAsync(
+        MediaCatalogItem item, int maximumWidth, int maximumHeight, CancellationToken cancellationToken) =>
+        ReadImageAsync(item, new PixelSize(maximumWidth, maximumHeight), (key, bitmap) =>
+        {
+            if (thumbnailCache is null) bitmap.Dispose();
+            else thumbnailCache.Store(key, bitmap);
+        }, cancellationToken);
+
+    internal async Task<MediaInspection> ReadImageAsync(
+        MediaCatalogItem item,
+        PixelSize? maximumSize,
+        Action<string, Bitmap>? receiveBitmap,
+        CancellationToken cancellationToken,
+        Func<string, bool>? hasCachedImage = null)
     {
-        await _slots.WaitAsync(cancellationToken);
-        try { return await Task.Run(() => Inspect(item, maximumWidth, maximumHeight, cancellationToken), cancellationToken); }
-        finally { _slots.Release(); }
+        await Slots.WaitAsync(cancellationToken);
+        try
+        {
+            return await Task.Run(
+                () => Inspect(item, maximumSize, receiveBitmap, hasCachedImage, cancellationToken), cancellationToken);
+        }
+        finally { Slots.Release(); }
     }
 
-    private MediaInspection Inspect(MediaCatalogItem item, int maximumWidth, int maximumHeight, CancellationToken cancellationToken)
+    internal static bool IsSupportedImage(string? reference) =>
+        Path.GetExtension(reference) is { } extension &&
+        (extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+         extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+         extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase));
+
+    private MediaInspection Inspect(
+        MediaCatalogItem item, PixelSize? maximumSize, Action<string, Bitmap>? receiveBitmap,
+        Func<string, bool>? hasCachedImage, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var resolution = new BiographyMediaResolver().Resolve(item.Reference, gedcomDirectory, documentDirectory, mediaDirectory, Volatile.Read(ref _index));
         if (resolution.RelativePath is null || resolution.ResolvedPath is null)
             return new(false, resolution.Diagnostic ?? "Filen blev ikke fundet.", null);
         var extension = Path.GetExtension(resolution.ResolvedPath);
-        if (!extension.Equals(".png", StringComparison.OrdinalIgnoreCase) &&
-            !extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) &&
-            !extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase))
-            return new(false, "Kun PNG- og JPEG-billeder kan vælges.", null, resolution.ResolvedPath);
+        if (!IsSupportedImage(resolution.ResolvedPath))
+            return new(false, "Kun PNG- og JPEG-billeder kan vises.", null, resolution.ResolvedPath);
         try
         {
-            var information = new FileInfo(resolution.ResolvedPath);
+            var physicalPath = SafeMarkdownPreviewService.ResolvePhysicalPath(resolution.ResolvedPath);
+            var roots = new[] { documentDirectory, gedcomDirectory, mediaDirectory };
+            if (!Array.Exists(roots, root => !string.IsNullOrWhiteSpace(root) &&
+                SafeMarkdownPreviewService.IsWithin(physicalPath, SafeMarkdownPreviewService.ResolvePhysicalPath(root))))
+                return new(false, "Billedet ligger uden for de tilladte lokale mapper.", null);
+            var information = new FileInfo(physicalPath);
             var lastWrite = information.LastWriteTimeUtc;
-            using var input = new FileStream(resolution.ResolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var input = new FileStream(physicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var length = input.Length;
-            if (input.Length <= 0 || input.Length > MaximumBytes)
+            if (length <= 0 || length > MaximumBytes)
                 return new(false, "Filen er tom eller større end 20 MB.", null, resolution.ResolvedPath);
+            var key = $"{physicalPath}\0{length}\0{lastWrite.Ticks}\0{maximumSize?.Width}x{maximumSize?.Height}";
+            var success = new MediaInspection(true, "Klar til valg", resolution.RelativePath, resolution.ResolvedPath, key);
+            if (receiveBitmap is null || hasCachedImage?.Invoke(key) == true) return success;
+
             using var data = new MemoryStream();
             var buffer = new byte[81920];
             int read;
@@ -77,31 +109,22 @@ public sealed class LocalMediaInspectionService(
                 (format == ".png") != extension.Equals(".png", StringComparison.OrdinalIgnoreCase))
                 return new(false, "Billedet har ugyldigt format eller er større end 40 millioner pixels.", null, resolution.ResolvedPath);
             var orientation = format == ".jpg" ? JpegOrientation.Read(bytes) : 1;
-            var transposed = orientation >= 5;
-            var maxWidth = transposed ? maximumHeight : maximumWidth;
-            var maxHeight = transposed ? maximumWidth : maximumHeight;
             data.Position = 0;
             try
             {
-                var bitmap = (double)width / maxWidth > (double)height / maxHeight
-                    ? Bitmap.DecodeToWidth(data, Math.Min(maxWidth, width))
-                    : Bitmap.DecodeToHeight(data, Math.Min(maxHeight, height));
-                bitmap = ApplyOrientation(bitmap, orientation);
-                if (cancellationToken.IsCancellationRequested)
+                Bitmap? bitmap = ApplyOrientation(Decode(data, width, height, orientation, maximumSize), orientation);
+                try
                 {
-                    bitmap.Dispose();
                     cancellationToken.ThrowIfCancellationRequested();
+                    information.Refresh();
+                    if (!information.Exists || information.Length != length || information.LastWriteTimeUtc != lastWrite)
+                        return new(false, "Mediefilen blev ændret under indlæsningen.", null, resolution.ResolvedPath);
+                    var result = bitmap;
+                    bitmap = null;
+                    receiveBitmap(key, result);
+                    return success;
                 }
-                information.Refresh();
-                if (!information.Exists || information.Length != length || information.LastWriteTimeUtc != lastWrite)
-                {
-                    bitmap.Dispose();
-                    return new(false, "Filen er ændret. Opdatér billedvælgeren.", null, resolution.ResolvedPath);
-                }
-                var key = $"{resolution.ResolvedPath}\0{length}\0{lastWrite.Ticks}\0{maximumWidth}x{maximumHeight}";
-                if (thumbnailCache is null) bitmap.Dispose();
-                else thumbnailCache.Store(key, bitmap);
-                return new(true, "Klar til valg", resolution.RelativePath, resolution.ResolvedPath, key);
+                finally { bitmap?.Dispose(); }
             }
             catch (NullReferenceException)
             {
@@ -110,9 +133,20 @@ public sealed class LocalMediaInspectionService(
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
         {
-            return new(false, "Filen kan ikke læses eller dekodes. Vælg et andet billede.", null, resolution.ResolvedPath);
+            return new(false, "Filen kan ikke læses eller dekodes.", null, resolution.ResolvedPath);
         }
     }
+    private static Bitmap Decode(Stream data, int width, int height, int orientation, PixelSize? maximumSize)
+    {
+        if (maximumSize is not { } size) return new Bitmap(data);
+        var transposed = orientation >= 5;
+        var maxWidth = transposed ? size.Height : size.Width;
+        var maxHeight = transposed ? size.Width : size.Height;
+        return (double)width / maxWidth > (double)height / maxHeight
+            ? Bitmap.DecodeToWidth(data, Math.Min(maxWidth, width))
+            : Bitmap.DecodeToHeight(data, Math.Min(maxHeight, height));
+    }
+
     private static Bitmap ApplyOrientation(Bitmap bitmap, int orientation)
     {
         if (orientation == 1) return bitmap;

@@ -54,9 +54,12 @@ public sealed class SettingsWindowViewModelTests
             var service = new JsonApplicationSettingsService(path, new AtomicFileWriter());
             var settings = service.Load();
             settings.DefaultMediaFolder.Should().BeNull();
+            settings.ShowDocumentMediaThumbnails.Should().BeTrue();
             settings.DefaultMediaFolder = directory;
+            settings.ShowDocumentMediaThumbnails = false;
             service.Save(settings);
             service.Load().DefaultMediaFolder.Should().Be(directory);
+            service.Load().ShowDocumentMediaThumbnails.Should().BeFalse();
         }
         finally { Directory.Delete(directory, true); }
     }

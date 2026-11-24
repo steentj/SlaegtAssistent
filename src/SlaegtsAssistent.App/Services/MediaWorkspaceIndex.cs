@@ -15,6 +15,7 @@ public sealed class MediaWorkspaceIndex : IDisposable
 
     public async Task<MediaFileIndex?> GetAsync(string? folder, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(folder)) return null;
         Task<MediaFileIndex> task;
         lock (_gate)
@@ -24,7 +25,7 @@ public sealed class MediaWorkspaceIndex : IDisposable
             {
                 CancelCurrent();
                 _folder = folder;
-                _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _cancellation = new CancellationTokenSource();
                 _task = MediaFileIndex.BuildAsync(folder,
                     OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal, _cancellation.Token);
             }

@@ -44,6 +44,12 @@ public partial class EditorViewModel : ViewModelBase
     [ObservableProperty]
     private bool isDirty;
 
+    internal string DocumentPath => _filePath;
+    internal BiographyDocumentMetadata? DocumentMetadata => _metadata;
+
+    internal string RenderMediaPreview(DocumentMediaSection section, IReadOnlyList<DocumentMediaCard> cards) =>
+        _previewService.Render(MarkdownText, _filePath, _allowedPreviewRoots, _resolvePersonLink, section, cards).HtmlDocument;
+
     public long BufferRevision { get; private set; }
 
     public string PreviewHtml => string.IsNullOrWhiteSpace(MarkdownText)
@@ -148,8 +154,10 @@ public partial class EditorViewModel : ViewModelBase
         _suppressDirtyTracking = true;
         try
         {
+            var sameBody = string.Equals(MarkdownText, document.Body, StringComparison.Ordinal);
             _metadata = document.Metadata;
             MarkdownText = document.Body;
+            if (sameBody) RefreshPersonLinks();
             IsDirty = markDirty;
         }
         finally

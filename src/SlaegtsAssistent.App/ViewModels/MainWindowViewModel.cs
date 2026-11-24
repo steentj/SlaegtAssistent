@@ -115,6 +115,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
         var settings = _applicationSettingsService.Load();
         StandardMediaFolder = NormalizeFolder(settings.DefaultMediaFolder);
+        ShowDocumentMediaThumbnails = settings.ShowDocumentMediaThumbnails;
         StandardGedcomInputFolder = NormalizeFolder(settings.DefaultGedcomInputFolder);
         StandardMarkdownOutputFolder = NormalizeFolder(settings.DefaultMarkdownOutputFolder);
         GlobalBiographyTemplatePath = NormalizePath(settings.GlobalBiographyTemplatePath);
@@ -150,6 +151,8 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
 
     [ObservableProperty]
     private string? standardMediaFolder;
+
+    public bool ShowDocumentMediaThumbnails { get; private set; }
 
     [ObservableProperty]
     private string? standardGedcomInputFolder;
@@ -455,14 +458,8 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         var previewPerson = SelectedPerson is null
             ? null
             : _familyTree?.FindPerson(SelectedPerson.RecordId);
-        var updatedSettings = await _settingsDialogService.EditSettingsAsync(new AppSettings
-        {
-            DefaultMediaFolder = StandardMediaFolder,
-            DefaultGedcomInputFolder = StandardGedcomInputFolder,
-            DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
-            GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
-            Theme = Theme,
-        }, previewPerson, SelectedGedcomFilePath, StandardMarkdownOutputFolder, _familyTree?.People ?? []);
+        var updatedSettings = await _settingsDialogService.EditSettingsAsync(CreateCurrentSettings(),
+            previewPerson, SelectedGedcomFilePath, StandardMarkdownOutputFolder, _familyTree?.People ?? []);
 
         if (updatedSettings is null)
         {
@@ -473,6 +470,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         var proposedSettings = new AppSettings
         {
             DefaultMediaFolder = NormalizeFolder(updatedSettings.DefaultMediaFolder),
+            ShowDocumentMediaThumbnails = updatedSettings.ShowDocumentMediaThumbnails,
             DefaultGedcomInputFolder = NormalizeFolder(updatedSettings.DefaultGedcomInputFolder),
             DefaultMarkdownOutputFolder = NormalizeFolder(updatedSettings.DefaultMarkdownOutputFolder),
             GlobalBiographyTemplatePath = NormalizePath(updatedSettings.GlobalBiographyTemplatePath),
@@ -1461,14 +1459,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     {
         try
         {
-            _applicationSettingsService.Save(new AppSettings
-            {
-                DefaultMediaFolder = StandardMediaFolder,
-                DefaultGedcomInputFolder = StandardGedcomInputFolder,
-                DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
-                GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
-                Theme = Theme,
-            });
+            _applicationSettingsService.Save(CreateCurrentSettings());
             return true;
         }
         catch (UnauthorizedAccessException exception)
@@ -1548,6 +1539,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
         return new AppSettings
         {
             DefaultMediaFolder = StandardMediaFolder,
+            ShowDocumentMediaThumbnails = ShowDocumentMediaThumbnails,
             DefaultGedcomInputFolder = StandardGedcomInputFolder,
             DefaultMarkdownOutputFolder = StandardMarkdownOutputFolder,
             GlobalBiographyTemplatePath = GlobalBiographyTemplatePath,
@@ -1558,6 +1550,7 @@ public partial class MainWindowViewModel : ViewModelBase, IVersioningHost
     private void ApplySettings(AppSettings settings)
     {
         StandardMediaFolder = settings.DefaultMediaFolder;
+        ShowDocumentMediaThumbnails = settings.ShowDocumentMediaThumbnails;
         StandardGedcomInputFolder = settings.DefaultGedcomInputFolder;
         StandardMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder;
         GlobalBiographyTemplatePath = settings.GlobalBiographyTemplatePath;

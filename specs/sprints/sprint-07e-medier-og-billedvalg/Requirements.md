@@ -7,7 +7,7 @@ Status: **planlagt**. Detaljerne i [Mediekontrakt.md](Mediekontrakt.md) er en de
 | K01 | Mediemappe kan vælges, skrives, gemmes, genåbnes og ryddes som de eksisterende mapper; gamle indstillinger virker uden feltet. | 01: M01 |
 | K02 | GEDCOM-reference opløses deterministisk under valgte lokale rødder. Tvetydige referencer giver ingen automatisk filudvælgelse. | 01: M02 |
 | K03 | Mappeskift ændrer ikke dokumenttekst, dirty-status eller originalfiler; åbne previewkontekster opdateres. | 01: M03–M04 |
-| K04 | Genererede medieafsnit er liste/tabel og viser ingen automatisk indlagte billeder. | 02: O01–O02 |
+| K04 | Genererede medieafsnit gemmes som liste eller tabel uden automatisk indlagte billeder. Appens forhåndsvisning kan supplere sektionen med miniaturer. | 02: O01–O02 |
 | K05 | Gamle skabeloner kan åbnes; ændring af eksisterende genererede dokumentafsnit sker kun via kandidataccept. | 02: O03–O04 |
 | K06 | Én fælles vælger viser miniature, titel, filnavn og status, med søgning samt Personens medier/Alle refererede medier. | 03: B01 |
 | K07 | Kun læsbare, validerede PNG/JPEG-filer inden for grænserne kan vælges. Manglende og andre medier forbliver synlige med forklaring. | 03: B02 |

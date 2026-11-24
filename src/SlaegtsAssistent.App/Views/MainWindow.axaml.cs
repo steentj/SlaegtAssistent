@@ -386,14 +386,18 @@ public partial class MainWindow : Window
         };
         SizeChanged += (_, _) => UpdatePersonListLimit();
         SafePreviewWebViewController.Attach(PreviewWebView, this, destination =>
-            (DataContext as MainWindowViewModel)?.Editor?.TryNavigateToPerson(destination) == true);
+            (DataContext as MainWindowViewModel)?.Editor?.TryNavigateToPerson(destination) == true, OpenDocumentMedia);
         DataContextChanged += HandleDataContextChanged;
         PreviewWebView.AdapterCreated += (_, _) =>
         {
             _previewAdapterReady = true;
             RefreshPreview();
         };
-        PreviewWebView.AdapterDestroyed += (_, _) => _previewAdapterReady = false;
+        PreviewWebView.AdapterDestroyed += (_, _) =>
+        {
+            _previewAdapterReady = false;
+            CancelDocumentMediaPreview();
+        };
         Application.Current?.ActualThemeVariantChanged += HandleThemeVariantChanged;
         Closed += HandleClosed;
     }
@@ -424,6 +428,10 @@ public partial class MainWindow : Window
         {
             AttachEditor(viewModel.Editor);
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedGedcomFilePath))
+        {
+            RefreshPreview();
+        }
     }
 
     private void AttachEditor(EditorViewModel? editor)
@@ -444,8 +452,7 @@ public partial class MainWindow : Window
 
     private void HandleEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(EditorViewModel.PreviewHtml)
-            or nameof(EditorViewModel.PreviewHtmlDocument)
+        if (e.PropertyName is nameof(EditorViewModel.PreviewHtmlDocument)
             or nameof(EditorViewModel.IsWebPreviewSelected))
         {
             RefreshPreview();
@@ -454,13 +461,12 @@ public partial class MainWindow : Window
 
     private void RefreshPreview()
     {
-        if (!_previewAdapterReady ||
-            DataContext is not MainWindowViewModel { Editor: { } editor })
-        {
-            return;
-        }
-
-        PreviewWebView.NavigateToString(CheatSheetPreviewTheme.Apply(editor.PreviewHtmlDocument));
+        CancelDocumentMediaPreview();
+        if (!_previewAdapterReady) return;
+        if (DataContext is MainWindowViewModel { Editor: { IsWebPreviewSelected: true } editor, SelectedPerson: { } person } model)
+            _ = RefreshDocumentMediaPreviewAsync(model, editor, person.RecordId);
+        else
+            PreviewWebView.NavigateToString("<!doctype html><html lang=\"da\"><title>Forhåndsvisning</title></html>");
     }
 
     private void HandleThemeVariantChanged(object? sender, EventArgs e)
@@ -470,6 +476,8 @@ public partial class MainWindow : Window
 
     private void HandleClosed(object? sender, EventArgs e)
     {
+        CancelDocumentMediaPreview();
+        _documentImageWindow?.Close();
         Application.Current?.ActualThemeVariantChanged -= HandleThemeVariantChanged;
     }
 

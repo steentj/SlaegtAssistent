@@ -46,6 +46,13 @@ public sealed class LocalMediaInspectionServiceTests
                 bitmap.Should().NotBeNull();
                 bitmap!.PixelSize.Width.Should().BeLessThan(bitmap.PixelSize.Height);
                 bitmap.PixelSize.Height.Should().BeLessThanOrEqualTo(120);
+                Avalonia.PixelSize fullSize = default;
+                var original = await service.ReadImageAsync(new("a", "a", null, null, "drejet.jpg"), null, (_, image) =>
+                {
+                    using (image) fullSize = image.PixelSize;
+                }, CancellationToken.None);
+                original.CanSelect.Should().BeTrue();
+                fullSize.Should().Be(new Avalonia.PixelSize(120, 180));
             }
             finally { Directory.Delete(root, true); }
         });

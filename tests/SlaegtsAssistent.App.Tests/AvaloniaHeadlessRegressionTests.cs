@@ -94,7 +94,12 @@ public sealed class AvaloniaHeadlessRegressionTests
             buttons.Should().Contain(button => button.Content as string == "Gem som…" && button.Focusable);
             buttons.Where(button => button.Content as string is "Gem" or "Gem som…" or "Annuller")
                 .Should().OnlyContain(button => !button.GetLogicalAncestors().OfType<ScrollViewer>().Any());
-            buttons.Should().OnlyContain(button => button.Command != null);
+            buttons.Where(button => button is not CheckBox).Should().OnlyContain(button => button.Command != null);
+            var thumbnails = Descendants<CheckBox>(window).Should().ContainSingle().Which;
+            thumbnails.Focusable.Should().BeTrue();
+            thumbnails.IsChecked.Should().BeTrue();
+            thumbnails.IsChecked = false;
+            ((SettingsWindowViewModel)window.DataContext!).ShowDocumentMediaThumbnails.Should().BeFalse();
             return Task.CompletedTask;
         });
 

@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="using:Avalonia.Automation"
+        x:Class="SlaegtsAssistent.App.Views.DocumentImageWindow"
+        Title="Billedforhåndsvisning"
+        Width="900" Height="700" MinWidth="430" MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+    <Grid RowDefinitions="Auto,*" Margin="12" RowSpacing="10">
+        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+            <Button x:Name="DecreaseButton" Content="−" Click="DecreaseZoom"
+                    automation:AutomationProperties.Name="Zoom ud" />
+            <Button x:Name="IncreaseButton" Content="+" Click="IncreaseZoom"
+                    automation:AutomationProperties.Name="Zoom ind" />
+            <Button x:Name="ActualButton" Content="100 %" Click="ActualZoom"
+                    automation:AutomationProperties.Name="Vis i 100 procent" />
+            <Button x:Name="FitButton" Content="Tilpas til vindue" Click="FitZoom" />
+            <TextBlock x:Name="ZoomPercentage" Margin="6,0" VerticalAlignment="Center"
+                       automation:AutomationProperties.Name="Zoomprocent" />
+        </WrapPanel>
+        <Grid Grid.Row="1" x:Name="ImageArea">
+            <ScrollViewer x:Name="ImageScroll" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto" Focusable="True"
+                          automation:AutomationProperties.Name="Rul i billedet">
+                <Image x:Name="Photo" Stretch="Uniform"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </ScrollViewer>
+            <TextBlock x:Name="Status" TextWrapping="Wrap" HorizontalAlignment="Center"
+                       VerticalAlignment="Center" Margin="16"
+                       automation:AutomationProperties.LiveSetting="Polite" />
+        </Grid>
+    </Grid>
+</Window>

@@ -55,6 +55,10 @@
                   ItemsSource="{Binding ThemeOptions}"
                   SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
 
+        <CheckBox Grid.Row="10" Grid.ColumnSpan="2"
+                  Content="Vis miniaturer i dokumenternes mediesektion"
+                  IsChecked="{Binding ShowDocumentMediaThumbnails, Mode=TwoWay}" />
+
         <TextBlock Grid.Row="11" Grid.ColumnSpan="2"
                    Text="{Binding TemplateErrorMessage}"
                    automation:AutomationProperties.Name="Fejl i persondokumentskabelonen"

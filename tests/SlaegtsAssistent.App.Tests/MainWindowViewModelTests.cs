@@ -2435,6 +2435,7 @@ public partial class MainWindowViewModelTests
         var settingsDialog = new RecordingSettingsDialogService(new AppSettings
         {
             DefaultGedcomInputFolder = "/tmp/ged-input",
+            ShowDocumentMediaThumbnails = false,
             DefaultMarkdownOutputFolder = "/tmp/markdown-output",
         });
         var settingsService = new RecordingApplicationSettingsService(new AppSettings());
@@ -2448,6 +2449,8 @@ public partial class MainWindowViewModelTests
         settingsService.SavedSettings.Should().NotBeNull();
         settingsService.SavedSettings!.DefaultGedcomInputFolder.Should().Be("/tmp/ged-input");
         settingsService.SavedSettings!.DefaultMarkdownOutputFolder.Should().Be("/tmp/markdown-output");
+        settingsService.SavedSettings.ShowDocumentMediaThumbnails.Should().BeFalse();
+        viewModel.ShowDocumentMediaThumbnails.Should().BeFalse();
     }
 
     [Fact]
@@ -2474,6 +2477,7 @@ public partial class MainWindowViewModelTests
         var settingsDialog = new RecordingSettingsDialogService(new AppSettings
         {
             DefaultMarkdownOutputFolder = "/tmp/ny-outputmappe",
+            ShowDocumentMediaThumbnails = false,
         });
         var viewModel = CreateViewModel(
             settingsDialogService: settingsDialog,
@@ -2485,6 +2489,7 @@ public partial class MainWindowViewModelTests
         viewModel.ErrorMessage.Should().Contain("Kunne ikke gemme indstillinger");
         viewModel.ErrorMessage.Should().Contain("/tmp/settings.json");
         viewModel.ErrorMessage.Should().Contain("prøv igen");
+        viewModel.ShowDocumentMediaThumbnails.Should().BeTrue();
     }
 
     [Fact]
@@ -3153,6 +3158,7 @@ public partial class MainWindowViewModelTests
                 DefaultMarkdownOutputFolder = _loadedSettings.DefaultMarkdownOutputFolder,
                 GlobalBiographyTemplatePath = _loadedSettings.GlobalBiographyTemplatePath,
                 Theme = _loadedSettings.Theme,
+                ShowDocumentMediaThumbnails = _loadedSettings.ShowDocumentMediaThumbnails,
             };
         }
 
@@ -3164,6 +3170,7 @@ public partial class MainWindowViewModelTests
                 DefaultMarkdownOutputFolder = settings.DefaultMarkdownOutputFolder,
                 GlobalBiographyTemplatePath = settings.GlobalBiographyTemplatePath,
                 Theme = settings.Theme,
+                ShowDocumentMediaThumbnails = settings.ShowDocumentMediaThumbnails,
             };
         }
     }
