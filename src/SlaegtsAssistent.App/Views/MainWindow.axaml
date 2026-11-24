@@ -199,8 +199,8 @@
                                             SelectedItem="{Binding FamilyTreeView.SelectedNode, Mode=TwoWay}"
                                             KeyDown="FamilyTreeKeyDown" AutomationProperties.Name="Slægtstræ">
                                     <TreeView.Styles>
-                                      <Style Selector="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+                                      <Style Selector="TreeViewItem" x:DataType="vm:FamilyTreeNodeViewModel">
+                                        <Setter Property="IsExpanded" Value="{CompiledBinding IsExpanded, Mode=TwoWay}" />
                                       </Style>
                                     </TreeView.Styles>
                                     <TreeView.ItemTemplate>

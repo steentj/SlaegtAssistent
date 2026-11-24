@@ -12,7 +12,7 @@ namespace SlaegtsAssistent.App.Tests;
 public class FamilyTreeViewModelTests
 {
     [Fact]
-    public Task TreeView_BindsExpansionToNodes() => HeadlessTestApplication.RunAsync(() =>
+    public Task TreeView_ExpandsSuccessiveGenerations() => HeadlessTestApplication.RunAsync(() =>
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ged");
         File.WriteAllText(path, """
@@ -23,16 +23,26 @@ public class FamilyTreeViewModelTests
             1 NAME Far /Test/
             0 @I3@ INDI
             1 NAME Bedstefar /Test/
+            0 @I4@ INDI
+            1 NAME Oldefar /Test/
+            0 @I5@ INDI
+            1 NAME Tipoldefar /Test/
             0 @F1@ FAM
             1 HUSB @I2@
             1 CHIL @I1@
             0 @F2@ FAM
             1 HUSB @I3@
             1 CHIL @I2@
+            0 @F3@ FAM
+            1 HUSB @I4@
+            1 CHIL @I3@
+            0 @F4@ FAM
+            1 HUSB @I5@
+            1 CHIL @I4@
             0 TRLR
             """);
         var vm = new MainWindowViewModel();
-        var window = new MainWindow { DataContext = vm };
+        var window = new MainWindow { DataContext = vm, Height = 1200 };
         var webView = window.FindControl<NativeWebView>("PreviewWebView")!;
         ((Panel)webView.Parent!).Children.Remove(webView);
         try
@@ -40,17 +50,32 @@ public class FamilyTreeViewModelTests
             vm.DocumentTabIndex = 0;
             window.Show();
             vm.FamilyTreeView.SetTree(new FamilyTreeIndex(new GedcomLoader().Load(path)), "@I1@");
-            window.UpdateLayout();
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-            var father = vm.FamilyTreeView.Roots[0].Children[0].Children[0];
-            var item = window.GetVisualDescendants().OfType<TreeViewItem>()
-                .Single(control => ReferenceEquals(control.DataContext, father));
-            item.IsExpanded.Should().BeFalse();
-            item.IsExpanded = true;
-            Dispatcher.UIThread.RunJobs();
-            father.IsExpanded.Should().BeTrue();
-            father.Children[0].Title.Should().Contain("#4");
+            var node = vm.FamilyTreeView.Roots[0].Children[0].Children[0];
+            foreach (var (nextId, nextTitle) in new[]
+            {
+                ("@I3@", "#4 Bedstefar Test"),
+                ("@I4@", "#8 Oldefar Test"),
+                ("@I5@", "#16 Tipoldefar Test"),
+            })
+            {
+                window.UpdateLayout();
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                var items = window.GetVisualDescendants().OfType<TreeViewItem>()
+                    .Where(control => control.DataContext is FamilyTreeNodeViewModel).ToArray();
+                var item = items.Should().ContainSingle(control => ReferenceEquals(control.DataContext, node),
+                    "{0} skal kunne udfoldes blandt {1}", node.Title,
+                    string.Join(", ", items.Select(control => ((FamilyTreeNodeViewModel)control.DataContext!).Title))).Which;
+                node.Children.Should().ContainSingle().Which.Title.Should().Be("Indlæses…");
+                item.IsExpanded.Should().BeFalse();
+
+                item.IsExpanded = true;
+                Dispatcher.UIThread.RunJobs();
+
+                node.IsExpanded.Should().BeTrue();
+                node = node.Children.Should().Contain(child => child.PersonId == nextId).Which;
+                node.Title.Should().Be(nextTitle);
+            }
         }
         finally
         {
