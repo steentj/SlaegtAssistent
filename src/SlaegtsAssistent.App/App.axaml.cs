@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -23,6 +24,11 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                MacApplicationIcon.SetDockIcon();
+            }
+
             ExportJobDirectory.CleanupAbandoned(System.IO.Path.GetTempPath(), System.DateTime.UtcNow);
             PrintDocumentStore.Cleanup(System.IO.Path.GetTempPath(), System.DateTime.UtcNow);
             var services = ConfigureServices(desktop);

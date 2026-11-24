@@ -10,7 +10,6 @@
         d:DesignHeight="760"
         x:Class="SlaegtsAssistent.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
         Title="Slægtsassistent"
         Width="1220"
         Height="760"
