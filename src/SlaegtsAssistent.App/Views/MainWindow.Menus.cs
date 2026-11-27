@@ -7,12 +7,13 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CommunityToolkit.Mvvm.Input;
 using SlaegtsAssistent.App.ViewModels;
+using SlaegtsAssistent.App.Views.Markdown;
 
 namespace SlaegtsAssistent.App.Views;
 
 public partial class MainWindow
 {
-    private TextBox? _lastTextBox;
+    private Control? _lastTextEditor;
 
     private void InitializeMenus(MainWindowViewModel model)
     {
@@ -20,12 +21,12 @@ public partial class MainWindow
         var modifier = mac ? KeyModifiers.Meta : KeyModifiers.Control;
         var export = new RelayCommand(() => ShowBiographyExport(null, new RoutedEventArgs()));
         var close = new RelayCommand(Close);
-        var undo = new RelayCommand(() => _lastTextBox?.Undo());
-        var redo = new RelayCommand(() => _lastTextBox?.Redo());
-        var cut = new RelayCommand(() => _lastTextBox?.Cut());
-        var copy = new RelayCommand(() => _lastTextBox?.Copy());
-        var paste = new RelayCommand(() => _lastTextBox?.Paste());
-        var selectAll = new RelayCommand(() => _lastTextBox?.SelectAll());
+        var undo = new RelayCommand(() => EditFocused(text => text.Undo(), biography => biography.Undo()));
+        var redo = new RelayCommand(() => EditFocused(text => text.Redo(), biography => biography.Redo()));
+        var cut = new RelayCommand(() => EditFocused(text => text.Cut(), biography => biography.Cut()));
+        var copy = new RelayCommand(() => EditFocused(text => text.Copy(), biography => biography.Copy()));
+        var paste = new RelayCommand(() => EditFocused(text => text.Paste(), biography => biography.Paste()));
+        var selectAll = new RelayCommand(() => EditFocused(text => text.SelectAll(), biography => biography.SelectAll()));
         var file = new (string, ICommand, KeyGesture?)[]
         {
             ("Indlæs GEDCOM…", model.SelectGedcomFileCommand, new(Key.O, modifier)),
@@ -111,8 +112,16 @@ public partial class MainWindow
 
     private void RememberTextFocus(object? sender, RoutedEventArgs e)
     {
-        if (e.Source is TextBox textBox) _lastTextBox = textBox;
+        if (e.Source == BiographyEditor.TextArea || e.Source == BiographyEditor)
+            _lastTextEditor = BiographyEditor;
+        else if (e.Source is TextBox textBox) _lastTextEditor = textBox;
         else if (e.Source is Control control && control is not MenuItem && control is not Menu)
-            _lastTextBox = null;
+            _lastTextEditor = null;
+    }
+
+    private void EditFocused(Action<TextBox> editText, Action<BiographyMarkdownEditor> editBiography)
+    {
+        if (_lastTextEditor is TextBox textBox) editText(textBox);
+        else if (_lastTextEditor is BiographyMarkdownEditor biography) editBiography(biography);
     }
 }

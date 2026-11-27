@@ -204,6 +204,11 @@ Trinnumrene er fortløbende. Historiske sprintnavne og mapper (4B–4F) bevares,
 - [8B.1 — Generationsplan og valg af rod](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Plan.md) · [krav](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Requirements.md) · [validering](sprints/sprint-08b-slaegtstrae-eksport/01-generationsplan-og-rodsvalg/Validation.md)
 - [8B.2 — Filformater og udskrift](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Plan.md) · [krav](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Requirements.md) · [validering](sprints/sprint-08b-slaegtstrae-eksport/02-filformater-og-udskrift/Validation.md)
 
+### Biografiredigering med løbende formatering, sprint 8C–8D
+
+- [Sprint 8C – formateret tekst](sprints/sprint-08c-formatering-i-editoren/01-formateret-tekst/Plan.md) viser formatering direkte i editoren og gør syntaksen synlig omkring markøren.
+- [Sprint 8D – lokale billeder](sprints/sprint-08d-billeder-i-editoren/01-lokale-billeder/Plan.md) udvider samme editor med billedvisning og redigering ved klik.
+
 ### Trin 17: Den Lokale AI-Assistent SPRINT 9
 *   **Mål:** Få hjælp til at skrive prosaen.
 *   **Opgaver:**

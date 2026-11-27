@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SlaegtsAssistent.App.ViewModels"
         xmlns:views="using:SlaegtsAssistent.App.Views"
+        xmlns:markdown="using:SlaegtsAssistent.App.Views.Markdown"
         xmlns:wv="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.WebView"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -262,10 +263,12 @@
                         <TabItem Header="Editor">
                             <Grid RowDefinitions="Auto,*" RowSpacing="8">
                                 <StackPanel Spacing="8">
-                                <WrapPanel Orientation="Horizontal" IsEnabled="{Binding CanEditImages}">
-                                    <Button Content="Vælg eller skift topbillede…" Click="ChoosePortraitClick" />
-                                    <Button Content="Fjern topbillede" Click="RemovePortraitClick" />
-                                    <Button Content="Indsæt billede…" Click="InsertBiographyImageClick" />
+                                <WrapPanel Orientation="Horizontal">
+                                    <Button Content="Vælg eller skift topbillede…" Click="ChoosePortraitClick" IsEnabled="{Binding CanEditImages}" />
+                                    <Button Content="Fjern topbillede" Click="RemovePortraitClick" IsEnabled="{Binding CanEditImages}" />
+                                    <Button Content="Indsæt billede…" Click="InsertBiographyImageClick" IsEnabled="{Binding CanEditImages}" />
+                                    <CheckBox Content="Vis rå Markdown" IsChecked="{Binding #BiographyEditor.ShowMarkdown, Mode=TwoWay}"
+                                              IsVisible="{Binding !ShowNoPersonSelected}" Margin="8,0,0,0" />
                                 </WrapPanel>
                                 <StackPanel IsVisible="{Binding Editor.HasPersonLinks}" Spacing="4">
                                     <TextBlock Text="Gå til person" FontWeight="SemiBold" />
@@ -285,14 +288,12 @@
                                 </StackPanel>
                                 </StackPanel>
                             <TextBlock Grid.Row="1" Text="Vælg en person for at redigere biografien" IsVisible="{Binding ShowNoPersonSelected}" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                            <TextBox x:Name="BiographyEditor" Grid.Row="1" IsVisible="{Binding !ShowNoPersonSelected}" Text="{Binding Editor.MarkdownText, Mode=TwoWay}"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     Padding="12"
-                                     BorderThickness="1"
-                                     BorderBrush="{DynamicResource AppBorderBrush}"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                            <markdown:BiographyMarkdownEditor x:Name="BiographyEditor" Grid.Row="1" IsVisible="{Binding !ShowNoPersonSelected}"
+                                     AutomationProperties.Name="Biografitekst"
+                                     WordWrap="True" FontFamily="{DynamicResource ContentControlThemeFontFamily}" FontSize="15"
+                                     Foreground="{DynamicResource AppTextBrush}" Background="{DynamicResource AppPanelBackgroundBrush}"
+                                     Padding="12" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" />
                             </Grid>
                         </TabItem>
                         <TabItem Header="Forhåndsvisning">

@@ -45,6 +45,7 @@ public partial class EditorViewModel : ViewModelBase
     private bool isDirty;
 
     internal string DocumentPath => _filePath;
+    internal IReadOnlyCollection<string> AllowedPreviewRoots => _allowedPreviewRoots;
     internal BiographyDocumentMetadata? DocumentMetadata => _metadata;
 
     internal string RenderMediaPreview(DocumentMediaSection section, IReadOnlyList<DocumentMediaCard> cards) =>
@@ -85,6 +86,7 @@ public partial class EditorViewModel : ViewModelBase
     public void SetPreviewRoots(IReadOnlyCollection<string> roots)
     {
         _allowedPreviewRoots = roots.ToArray();
+        OnPropertyChanged(nameof(AllowedPreviewRoots));
         _cachedPreview = null;
         OnPropertyChanged(nameof(PreviewHtml));
         OnPropertyChanged(nameof(PreviewWebUri));

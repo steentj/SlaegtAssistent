@@ -35,8 +35,8 @@ public partial class MainWindow : Window
         var originalText = editor.MarkdownText;
         var mediaFolder = model.StandardMediaFolder;
         var gedcomPath = model.SelectedGedcomFilePath;
-        var selection = new EditorSelection(Math.Min(BiographyEditor.SelectionStart, BiographyEditor.SelectionEnd),
-            Math.Max(BiographyEditor.SelectionStart, BiographyEditor.SelectionEnd), revision);
+        var selection = new EditorSelection(BiographyEditor.SelectionStart,
+            BiographyEditor.SelectionStart + BiographyEditor.SelectionLength, revision);
         bool IsCurrent() => IsVisible && !model.IsImporting && ReferenceEquals(model.Editor, editor) &&
             model.SelectedPerson?.RecordId == person.RecordId && model.SelectedPerson.MarkdownFilePath == path &&
             editor.BufferRevision == revision && editor.MarkdownText == originalText &&
@@ -82,12 +82,13 @@ public partial class MainWindow : Window
             model.ErrorMessage = "Editorens indhold er ændret. Prøv billedvalget igen.";
             return;
         }
-        BiographyEditor.SelectionStart = 0;
-        BiographyEditor.SelectionEnd = BiographyEditor.Text?.Length ?? 0;
-        BiographyEditor.SelectedText = result.Body;
-        BiographyEditor.SelectionStart = result.CaretPosition;
-        BiographyEditor.SelectionEnd = result.CaretPosition;
-        BiographyEditor.Focus();
+        using (BiographyEditor.DeclareChangeBlock())
+        {
+            BiographyEditor.Select(0, BiographyEditor.Text.Length);
+            BiographyEditor.SelectedText = result.Body;
+            BiographyEditor.Select(result.CaretPosition, 0);
+        }
+        BiographyEditor.TextArea.Focus();
         model.ErrorMessage = null;
     }
 
@@ -409,16 +410,22 @@ public partial class MainWindow : Window
         Closing += HandleClosing;
     }
 
+    private MainWindowViewModel? _subscribedModel;
+
     private void HandleDataContextChanged(object? sender, EventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel)
+        if (_subscribedModel is not null)
+            _subscribedModel.PropertyChanged -= HandleViewModelPropertyChanged;
+        _subscribedModel = DataContext as MainWindowViewModel;
+        if (_subscribedModel is null)
         {
+            AttachEditor(null);
             return;
         }
 
-        InitializeMenus(viewModel);
-        viewModel.PropertyChanged += HandleViewModelPropertyChanged;
-        AttachEditor(viewModel.Editor);
+        InitializeMenus(_subscribedModel);
+        _subscribedModel.PropertyChanged += HandleViewModelPropertyChanged;
+        AttachEditor(_subscribedModel.Editor);
     }
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -442,6 +449,7 @@ public partial class MainWindow : Window
         }
 
         _subscribedEditor = editor;
+        BiographyEditor.Attach(editor);
         if (_subscribedEditor is not null)
         {
             _subscribedEditor.PropertyChanged += HandleEditorPropertyChanged;
@@ -476,6 +484,11 @@ public partial class MainWindow : Window
 
     private void HandleClosed(object? sender, EventArgs e)
     {
+        BiographyEditor.Attach(null);
+        if (_subscribedModel is not null)
+            _subscribedModel.PropertyChanged -= HandleViewModelPropertyChanged;
+        if (_subscribedEditor is not null)
+            _subscribedEditor.PropertyChanged -= HandleEditorPropertyChanged;
         CancelDocumentMediaPreview();
         _documentImageWindow?.Close();
         Application.Current?.ActualThemeVariantChanged -= HandleThemeVariantChanged;

@@ -9,6 +9,7 @@ using FluentAssertions;
 using SlaegtsAssistent.App.Services;
 using SlaegtsAssistent.App.ViewModels;
 using SlaegtsAssistent.App.Views;
+using SlaegtsAssistent.App.Views.Markdown;
 using SlaegtsAssistent.Core.Gedcom;
 
 namespace SlaegtsAssistent.App.Tests;
@@ -79,10 +80,9 @@ public sealed class PersonFilterUiRegressionTests
                 vm.SelectedPerson = vm.People.Single(person => person.DisplayName == "Anna Jensen");
                 vm.DocumentTabIndex = 1;
                 var editor = vm.Editor!;
-                var textbox = window.FindControl<TextBox>("BiographyEditor")!;
+                var textbox = window.FindControl<BiographyMarkdownEditor>("BiographyEditor")!;
                 var before = editor.MarkdownText;
-                textbox.SelectionStart = before.Length;
-                textbox.SelectionEnd = before.Length;
+                textbox.Select(before.Length, 0);
                 var button = window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "Indsæt billede…");
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 MediaPickerWindow? picker = null;
@@ -141,7 +141,7 @@ public sealed class PersonFilterUiRegressionTests
                 editor.MarkdownText.Should().StartWith(BiographyImageEditService.PortraitStartMarker)
                     .And.Contain("SlaegtsAssistent:width=50");
                 editor.IsDirty.Should().BeTrue();
-                var textbox = window.FindControl<TextBox>("BiographyEditor")!;
+                var textbox = window.FindControl<BiographyMarkdownEditor>("BiographyEditor")!;
                 textbox.Undo();
                 editor.MarkdownText.Should().Be(before);
                 textbox.Redo();

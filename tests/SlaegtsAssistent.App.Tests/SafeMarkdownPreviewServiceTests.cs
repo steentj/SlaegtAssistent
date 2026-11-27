@@ -148,6 +148,19 @@ public sealed class SafeMarkdownPreviewServiceTests
         result.Html.Should().NotContain("data:image/png;base64,");
     }
 
+    [Theory]
+    [InlineData("//eksempel.invalid/medier/foto.png")]
+    [InlineData("file://eksempel.invalid/medier/foto.png")]
+    [InlineData("%2F%2Feksempel.invalid/medier/foto.png")]
+    public void NetworkImagePathIsRejectedAsExternal(string source)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "person.md");
+        var result = new SafeMarkdownPreviewService().Render($"![Foto]({source})", path);
+
+        result.Html.Should().Contain("Eksternt billede blev blokeret").And.NotContain("<img");
+        result.NetworkRequestAttempts.Should().Be(0);
+    }
+
     [Fact]
     public void Render_ShouldKeepExternalLinkInertUntilNavigationPolicyConfirmsIt()
     {

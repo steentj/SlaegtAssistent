@@ -19,6 +19,11 @@ public sealed record SafeMarkdownPreviewResult(
     public IReadOnlyList<PersonDocumentLink> PersonLinks { get; init; } = [];
 }
 
+internal sealed record LocalMarkdownImage(byte[]? Bytes, string? MimeType, string? Warning, string? Diagnostic)
+{
+    public static LocalMarkdownImage Unavailable(string warning, string diagnostic) => new(null, null, warning, diagnostic);
+}
+
 public sealed class SafeMarkdownPreviewService
 {
     public const string ContentSecurityPolicy =
@@ -31,6 +36,7 @@ public sealed class SafeMarkdownPreviewService
         .UsePipeTables()
         .UseEmphasisExtras()
         .DisableHtml()
+        .UsePreciseSourceLocation()
         .Build();
     private static readonly Regex ImageRegex = new(
         "<img\\b[^>]*>",
@@ -73,14 +79,7 @@ public sealed class SafeMarkdownPreviewService
         ArgumentNullException.ThrowIfNull(markdown);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentPath);
 
-        var documentDirectory = Path.GetDirectoryName(Path.GetFullPath(documentPath))
-            ?? throw new ArgumentException("Dokumentstien mangler en mappe.", nameof(documentPath));
-        var roots = (allowedLocalRoots ?? [])
-            .Append(documentDirectory)
-            .Where(root => !string.IsNullOrWhiteSpace(root))
-            .Select(Path.GetFullPath)
-            .Distinct(PathComparer)
-            .ToArray();
+        var (documentDirectory, roots) = GetLocalImageRoots(documentPath, allowedLocalRoots);
         var diagnostics = new List<string>();
         var externalLinks = new List<Uri>();
         var personLinks = new List<PersonDocumentLink>();
@@ -172,12 +171,43 @@ public sealed class SafeMarkdownPreviewService
         }
 
         var source = WebUtility.HtmlDecode(sourceMatch.Groups["src"].Value);
-        if (Uri.TryCreate(source, UriKind.Absolute, out var absolute) &&
-            !absolute.IsFile)
+        var image = ReadLocalImage(source, documentDirectory, allowedRoots);
+        if (image.Bytes is not { } bytes)
         {
-            diagnostics.Add($"Eksternt billede blev blokeret: {SafeDestination(absolute)}");
-            return Warning("Eksternt billede blev blokeret");
+            diagnostics.Add(image.Diagnostic!);
+            return Warning(image.Warning!);
         }
+
+        var width = ImageWidthTitleRegex.Match(imageTag);
+        if (width.Success)
+        {
+            imageTag = ImageWidthTitleRegex.Replace(imageTag, string.Empty, 1);
+            imageTag = imageTag.Insert(4, $" style=\"max-width:{width.Groups["width"].Value}%;height:auto;\"");
+        }
+        var data = Convert.ToBase64String(bytes);
+        return SourceRegex.Replace(imageTag, $"src=\"data:{image.MimeType};base64,{data}\"", 1);
+    }
+
+    internal static (string DocumentDirectory, string[] Roots) GetLocalImageRoots(
+        string documentPath, IReadOnlyCollection<string>? allowedLocalRoots)
+    {
+        var documentDirectory = Path.GetDirectoryName(Path.GetFullPath(documentPath))
+            ?? throw new ArgumentException("Dokumentstien mangler en mappe.", nameof(documentPath));
+        var roots = (allowedLocalRoots ?? [])
+            .Append(documentDirectory)
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(Path.GetFullPath)
+            .Distinct(PathComparer)
+            .ToArray();
+        return (documentDirectory, roots);
+    }
+
+    internal static LocalMarkdownImage ReadLocalImage(string source, string documentDirectory, IReadOnlyList<string> allowedRoots)
+    {
+        if (Uri.TryCreate(source, UriKind.Absolute, out var absolute) &&
+            (!absolute.IsFile || absolute.IsUnc || !string.IsNullOrEmpty(absolute.Host)))
+            return LocalMarkdownImage.Unavailable("Eksternt billede blev blokeret",
+                $"Eksternt billede blev blokeret: {SafeDestination(absolute)}");
 
         string resolved;
         try
@@ -185,6 +215,9 @@ public sealed class SafeMarkdownPreviewService
             var localSource = absolute?.IsFile == true
                 ? absolute.LocalPath
                 : Uri.UnescapeDataString(source.Split(['?', '#'], 2)[0]);
+            if (localSource.Length >= 2 && localSource[0] is ('/' or '\\') && localSource[1] is ('/' or '\\'))
+                return LocalMarkdownImage.Unavailable("Eksternt billede blev blokeret", "En ekstern billedsti blev blokeret.");
+
             resolved = Path.GetFullPath(
                 Path.IsPathRooted(localSource)
                     ? localSource
@@ -192,8 +225,7 @@ public sealed class SafeMarkdownPreviewService
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException or UriFormatException)
         {
-            diagnostics.Add("En ugyldig lokal billedsti blev blokeret.");
-            return Warning("Lokalt billede blev blokeret");
+            return LocalMarkdownImage.Unavailable("Lokalt billede blev blokeret", "En ugyldig lokal billedsti blev blokeret.");
         }
 
         string physicalPath;
@@ -201,56 +233,37 @@ public sealed class SafeMarkdownPreviewService
         try
         {
             physicalPath = ResolvePhysicalPath(resolved);
-            isWithinAllowedRoot = allowedRoots.Any(root =>
-                IsWithin(physicalPath, ResolvePhysicalPath(root)));
+            isWithinAllowedRoot = allowedRoots.Any(root => IsWithin(physicalPath, ResolvePhysicalPath(root)));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            diagnostics.Add("En lokal billedsti kunne ikke kontrolleres sikkert.");
-            return Warning("Lokalt billede blev blokeret");
+            return LocalMarkdownImage.Unavailable("Lokalt billede blev blokeret", "En lokal billedsti kunne ikke kontrolleres sikkert.");
         }
 
         if (!isWithinAllowedRoot)
-        {
-            diagnostics.Add("Et lokalt billede uden for de tilladte mapper blev blokeret.");
-            return Warning("Lokalt billede blev blokeret");
-        }
+            return LocalMarkdownImage.Unavailable("Lokalt billede blev blokeret", "Et lokalt billede uden for de tilladte mapper blev blokeret.");
 
-        var extension = Path.GetExtension(resolved);
-        if (!ImageMimeTypes.TryGetValue(extension, out var mimeType))
-        {
-            diagnostics.Add("Et lokalt billede med et ikke-tilladt filformat blev blokeret.");
-            return Warning("Lokalt billede blev blokeret");
-        }
+        if (!ImageMimeTypes.TryGetValue(Path.GetExtension(resolved), out var mimeType))
+            return LocalMarkdownImage.Unavailable("Lokalt billede blev blokeret", "Et lokalt billede med et ikke-tilladt filformat blev blokeret.");
 
         try
         {
-            var info = new FileInfo(physicalPath);
-            if (!info.Exists)
-            {
-                diagnostics.Add("En lokal billedfil blev ikke fundet.");
-                return Warning("Lokalt billede mangler");
-            }
+            using var stream = new FileStream(physicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var length = stream.Length;
+            if (length > MaximumImageBytes)
+                return LocalMarkdownImage.Unavailable("Lokalt billede var for stort", "En lokal billedfil var større end den tilladte previewgrænse på 20 MB.");
 
-            if (info.Length > MaximumImageBytes)
-            {
-                diagnostics.Add("En lokal billedfil var større end den tilladte previewgrænse på 20 MB.");
-                return Warning("Lokalt billede var for stort");
-            }
-
-            var data = Convert.ToBase64String(File.ReadAllBytes(physicalPath));
-            var width = ImageWidthTitleRegex.Match(imageTag);
-            if (width.Success)
-            {
-                imageTag = ImageWidthTitleRegex.Replace(imageTag, string.Empty, 1);
-                imageTag = imageTag.Insert(4, $" style=\"max-width:{width.Groups["width"].Value}%;height:auto;\"");
-            }
-            return SourceRegex.Replace(imageTag, $"src=\"data:{mimeType};base64,{data}\"", 1);
+            var bytes = new byte[(int)length];
+            stream.ReadExactly(bytes);
+            return new LocalMarkdownImage(bytes, mimeType, null, null);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return LocalMarkdownImage.Unavailable("Lokalt billede mangler", "En lokal billedfil blev ikke fundet.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            diagnostics.Add("En lokal billedfil kunne ikke læses.");
-            return Warning("Lokalt billede kunne ikke læses");
+            return LocalMarkdownImage.Unavailable("Lokalt billede kunne ikke læses", "En lokal billedfil kunne ikke læses.");
         }
     }
 

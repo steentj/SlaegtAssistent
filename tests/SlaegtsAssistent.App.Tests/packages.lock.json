@@ -67,6 +67,14 @@
         "resolved": "2.1.27548.20260419",
         "contentHash": "l17nI3XVDN3oMnpjf2pnmJg0YTwK4m6NLsn/itAjDMdObTFxN77D5F1M9sRMSfViSY3KKcse1ROczwgoWLJsnA=="
       },
+      "Avalonia.AvaloniaEdit": {
+        "type": "Transitive",
+        "resolved": "12.0.0",
+        "contentHash": "VNfaYdTbiQ2DlSkSMoLg4DhTbQmQR0cFT6nqEqLkaYGLjBWmUdv5BNIuoObK4c9cgzFqnEJXBaOp4R/bxgFKfQ==",
+        "dependencies": {
+          "Avalonia": "12.0.0"
+        }
+      },
       "Avalonia.BuildServices": {
         "type": "Transitive",
         "resolved": "11.3.2",
@@ -348,6 +356,7 @@
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.0, )",
+          "Avalonia.AvaloniaEdit": "[12.0.0, )",
           "Avalonia.BuildServices": "[11.3.2, )",
           "Avalonia.Controls.WebView": "[12.0.1, )",
           "Avalonia.Desktop": "[12.1.0, )",
