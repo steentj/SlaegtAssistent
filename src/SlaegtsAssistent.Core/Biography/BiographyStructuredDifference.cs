@@ -187,16 +187,34 @@ public sealed class BiographyStructuredDifferenceService
         IReadOnlyList<T> approved,
         IReadOnlyList<T> imported,
         Func<T, string> identity)
-        where T : notnull
+        where T : class
     {
+        foreach (var pair in PairOrderedItems(path, approved, imported, identity))
+        {
+            AddObject(result, pair.Path, label, pair.Approved, pair.Imported);
+        }
+    }
+
+    internal static IEnumerable<(string Path, T? Approved, T? Imported)> PairOrderedItems<T>(
+        string path,
+        IReadOnlyList<T> approved,
+        IReadOnlyList<T> imported,
+        Func<T, string> identity)
+        where T : class
+    {
+        var occurrences = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var index = 0; index < Math.Max(approved.Count, imported.Count); index++)
         {
-            var hasApproved = index < approved.Count;
-            var hasImported = index < imported.Count;
-            var oldValue = hasApproved ? approved[index] : default;
-            var newValue = hasImported ? imported[index] : default;
-            var stableIdentity = hasApproved ? identity(oldValue!) : identity(newValue!);
-            AddObject(result, $"{path}[{stableIdentity}]", label, oldValue, newValue);
+            var oldValue = index < approved.Count ? approved[index] : null;
+            var newValue = index < imported.Count ? imported[index] : null;
+            var stableIdentity = identity(oldValue ?? newValue!);
+            occurrences.TryGetValue(stableIdentity, out var count);
+            var occurrence = count + 1;
+            occurrences[stableIdentity] = occurrence;
+
+            // Suffikset står uden for klammen, så det er adskilt fra identitetens eget suffiks.
+            var fieldPath = $"{path}[{stableIdentity}]";
+            yield return (occurrence == 1 ? fieldPath : $"{fieldPath}#{occurrence}", oldValue, newValue);
         }
     }
 
@@ -395,22 +413,15 @@ public sealed class BiographySnapshotDecisionService
             IReadOnlyList<T> oldItems,
             IReadOnlyList<T> newItems,
             Func<T, string> identity)
-            where T : notnull
+            where T : class
         {
             var result = new List<T>();
-            for (var index = 0; index < Math.Max(oldItems.Count, newItems.Count); index++)
+            foreach (var pair in BiographyStructuredDifferenceService.PairOrderedItems(path, oldItems, newItems, identity))
             {
-                var hasOld = index < oldItems.Count;
-                var hasNew = index < newItems.Count;
-                var stableIdentity = hasOld ? identity(oldItems[index]) : identity(newItems[index]);
-                var useNew = UseImported($"{path}[{stableIdentity}]");
-                if (useNew && hasNew)
+                var selected = UseImported(pair.Path) ? pair.Imported : pair.Approved;
+                if (selected is not null)
                 {
-                    result.Add(newItems[index]);
-                }
-                else if (!useNew && hasOld)
-                {
-                    result.Add(oldItems[index]);
+                    result.Add(selected);
                 }
             }
 

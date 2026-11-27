@@ -56,6 +56,43 @@ public sealed class BiographyConflictResolutionTests
     }
 
     [Fact]
+    public void GentagneFeltidentiteterKanVaelgesUafhaengigt()
+    {
+        var previousEvent = Event("Oprindelig");
+        var newEvent = Event("Ny");
+        var previousCensus = new CanonicalCensusData("odense", null, "Odense", null, []);
+        var newCensus = new CanonicalCensusData("aarhus", null, "Aarhus", null, []);
+        var previousMedia = Media("@M1@", "gammel.jpg");
+        var newMedia = Media("@M1@", "ny.jpg");
+        var approved = Snapshot(person => person with
+        {
+            Events = [previousEvent],
+            Census = [previousCensus],
+            Media = [previousMedia],
+        });
+        var imported = Snapshot(person => person with
+        {
+            Events = [newEvent, previousEvent],
+            Census = [newCensus, previousCensus],
+            Media = [previousMedia, newMedia],
+        });
+
+        var differences = new BiographyStructuredDifferenceService().Compare(State(approved, imported));
+
+        differences.Select(item => item.Path).Should().HaveCount(5).And.OnlyHaveUniqueItems();
+        var choices = differences.ToDictionary(
+            item => item.Path,
+            item => item.Kind == BiographyDifferenceKind.Changed ||
+                item.Path.StartsWith("person.media[", StringComparison.Ordinal),
+            StringComparer.Ordinal);
+        var selected = new BiographySnapshotDecisionService().Apply(approved, imported, choices);
+
+        selected.Person.Events.Should().Equal(newEvent);
+        selected.Person.Census.Should().Equal(newCensus);
+        selected.Person.Media.Should().Equal(previousMedia, newMedia);
+    }
+
+    [Fact]
     public void Apply_ShouldCombineIndependentChoicesWithoutChangingInputs()
     {
         var approved = Snapshot(person => person with
